@@ -308,6 +308,65 @@ function openTaskCount(key) {
   return _store.todos.filter((t) => !t.done && (!t.due_date || t.due_date <= key)).length;
 }
 
+// Anneau SVG de progression (faites / total).
+function ringHtml(done, total) {
+  const r = 17, C = 2 * Math.PI * r;
+  const off = C * (1 - (total ? done / total : 0));
+  return `<span class="ph-lab">${done} sur ${total}</span>
+    <div class="ring" title="${done} faites sur ${total} aujourd'hui" aria-label="${done} sur ${total} tâches du jour">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle class="bg" cx="20" cy="20" r="${r}"/><circle class="fg" cx="20" cy="20" r="${r}" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg>
+      <span class="n">${done}/${total}</span>
+    </div>`;
+}
+
+// Met à jour l'anneau (en-tête panneau) et le petit mot d'avancement.
+function setDayProgress(total, done) {
+  const ring = document.getElementById("dash-ring");
+  if (ring) ring.innerHTML = total ? ringHtml(done, total) : "";
+  const nudge = document.getElementById("day-nudge");
+  if (!nudge) return;
+  const left = total - done;
+  if (!total) { nudge.hidden = true; nudge.innerHTML = ""; }
+  else if (left <= 0) { nudge.hidden = false; nudge.className = "nudge is-done"; nudge.innerHTML = `${ico("i-check")}<b>Journée pliée</b> — tout est coché.`; }
+  else { nudge.hidden = false; nudge.className = "nudge"; nudge.innerHTML = `${ico("i-bolt")}Plus que <b>${left} tâche${left > 1 ? "s" : ""}</b> pour plier ta journée.`; }
+}
+
+// Capture rapide : saisir une tâche en 1 geste, choisir le jour, Entrée.
+function wireCapture(root) {
+  const form = root.querySelector("#capture");
+  if (!form) return;
+  const input = form.querySelector("#cap-input");
+  const dateInput = form.querySelector("#cap-date");
+  const chips = [...form.querySelectorAll(".cap-chip")];
+  const dateChip = form.querySelector('[data-day="date"]');
+  let selDue = dayKey(now());
+
+  const activate = (el) => chips.forEach((c) => c.classList.toggle("on", c === el));
+  const clearDateLabel = () => { const l = dateChip.querySelector(".cap-dlabel"); if (l) l.remove(); };
+  form.querySelector('[data-day="today"]').addEventListener("click", (e) => { selDue = dayKey(now()); clearDateLabel(); activate(e.currentTarget); });
+  form.querySelector('[data-day="tomorrow"]').addEventListener("click", (e) => { selDue = addDays(dayKey(now()), 1); clearDateLabel(); activate(e.currentTarget); });
+  dateInput.addEventListener("change", () => {
+    if (!dateInput.value) return;
+    selDue = dateInput.value;
+    activate(dateChip);
+    let l = dateChip.querySelector(".cap-dlabel");
+    if (!l) { l = document.createElement("span"); l.className = "cap-dlabel"; dateChip.appendChild(l); }
+    l.textContent = fmtWdDay.format(new Date(dateInput.value + "T12:00:00Z"));
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = input.value.trim();
+    if (!title || !_store?.session) return;
+    input.value = "";
+    const { error } = await _store.sb.from("todos").insert({ title, due_date: selDue });
+    if (error) { alert("Ajout impossible : " + error.message); return; }
+    await refreshTodos();
+    rerender();
+    document.getElementById("cap-input")?.focus(); // garder le flux pour enchaîner
+  });
+}
+
 function renderToday() {
   titleEl.textContent = "Aujourd'hui";
   const N = now();
@@ -333,11 +392,26 @@ function renderToday() {
   const authKnown = !!_store || _storeTried;
   const signedOutPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div class="empty-ill">${illus("art-done")}<div class="ei-t">Tes tâches ici</div><div class="ei-d">Connecte-toi dans l'onglet « À faire » pour les retrouver sur tous tes appareils.</div></div></div>`;
   let tasksPanel;
-  if (SUPA_READY && signed) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2><span class="count" id="dash-tcount"></span></div><div id="dash-tasks"></div></div>`;
+  if (SUPA_READY && signed) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2><div class="ph-prog" id="dash-ring"></div></div><div id="dash-tasks"></div></div>`;
   else if (SUPA_READY && !authKnown) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div id="dash-tasks"></div></div>`; // auth en cours de résolution
   else tasksPanel = signedOutPanel;
 
+  // Capture rapide : le premier réflexe en ouvrant l'app (connecté uniquement).
+  const captureHtml = signed ? `
+    <form class="capture" id="capture">
+      <svg class="cap-ico" aria-hidden="true"><use href="#i-pen"/></svg>
+      <input class="cap-input" id="cap-input" placeholder="Qu'est-ce que tu dois faire ?" autocomplete="off" maxlength="200" aria-label="Noter une tâche">
+      <div class="cap-chips">
+        <button type="button" class="cap-chip on" data-day="today">Aujourd'hui</button>
+        <button type="button" class="cap-chip" data-day="tomorrow">Demain</button>
+        <label class="cap-chip cap-ic" data-day="date" aria-label="Choisir un autre jour"><svg aria-hidden="true"><use href="#i-today"/></svg><input type="date" class="cap-date" id="cap-date" aria-label="Jour de la tâche"></label>
+      </div>
+      <button class="cap-send" type="submit" aria-label="Ajouter"><svg aria-hidden="true"><use href="#i-plus"/></svg></button>
+    </form>
+    <div class="nudge" id="day-nudge" hidden></div>` : "";
+
   viewEl.innerHTML = `
+    ${captureHtml}
     <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
     <section class="dash">
       <div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>
@@ -345,6 +419,7 @@ function renderToday() {
     </section>`;
 
   wireEventTaps(viewEl);
+  wireCapture(viewEl);
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
   if (SUPA_READY && !_store && !_storeTried) {
@@ -366,8 +441,10 @@ async function renderDashTasks() {
   const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
   const upcoming = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK).sort((a, b) => a.due_date.localeCompare(b.due_date));
   const total = late.length + today.length + upcoming.length;
-  const cnt = document.getElementById("dash-tcount");
-  if (cnt) cnt.textContent = total ? `${total} tâche${total > 1 ? "s" : ""}` : "";
+
+  // Progression du jour : tâches datées d'aujourd'hui (faites / total).
+  const dueToday = todos.filter((t) => t.due_date === todayK);
+  setDayProgress(dueToday.length, dueToday.filter((t) => t.done).length);
 
   if (!total) {
     mount.innerHTML = `<div class="empty-ill">${illus("art-done")}<div class="ei-t">Tout est fait</div><div class="ei-d">Aucune tâche en attente.</div></div>`;

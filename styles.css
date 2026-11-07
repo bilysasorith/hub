@@ -590,3 +590,41 @@ main { padding-top: 18px; display: grid; gap: 14px; }
   .hero-next .cd { font-size: 34px; }
   .hero-art { width: 150px; }
 }
+
+/* === Capture rapide (le réflexe pense-bête, en tête de la vue Aujourd'hui) === */
+.capture { display: flex; align-items: center; gap: 10px; padding: 9px 11px 9px 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); transition: border-color .15s, box-shadow .15s; }
+.capture:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+.capture .cap-ico { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.cap-input { flex: 1; min-width: 0; height: 30px; border: 0; background: none; color: var(--fg); font-size: 15px; caret-color: var(--accent); }
+.cap-input::placeholder { color: var(--muted); }
+.cap-chips { display: flex; gap: 6px; flex: none; }
+.cap-chip { height: 28px; padding: 0 11px; border-radius: 99px; background: var(--surface-2); color: var(--muted); font-size: 12.5px; font-weight: 600; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cap-chip:hover { color: var(--fg); }
+.cap-chip.on { color: #fff; background: var(--accent-fill); }
+.cap-chip.cap-ic { position: relative; width: 30px; padding: 0; justify-content: center; }
+.cap-chip.cap-ic.on { width: auto; padding: 0 11px; }
+.cap-chip svg { width: 15px; height: 15px; flex: none; }
+.cap-chip .cap-date { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.cap-send { flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+.cap-send:hover { filter: brightness(1.06); }
+.cap-send svg { width: 20px; height: 20px; }
+
+/* Petit mot d'avancement sous la capture */
+.nudge { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; padding: 0 2px; margin-top: -4px; }
+.nudge[hidden] { display: none; }
+.nudge svg { width: 15px; height: 15px; color: var(--accent); flex: none; }
+.nudge.is-done svg { color: var(--ok); }
+.nudge b { color: var(--fg); font-weight: 600; }
+
+/* Anneau de progression du jour (en-tête du panneau À faire) */
+.ph-prog { display: inline-flex; align-items: center; gap: 10px; }
+.ph-lab { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.ring { position: relative; width: 40px; height: 40px; flex: none; }
+.ring svg { width: 40px; height: 40px; transform: rotate(-90deg); }
+.ring .bg { fill: none; stroke: var(--surface-2); stroke-width: 4; }
+.ring .fg { fill: none; stroke: var(--ok); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset .5s cubic-bezier(.2,.7,.3,1); }
+.ring .n { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-mono); font-size: 11px; font-weight: 600; color: var(--fg); }
+
+@media (max-width: 560px) {
+  .cap-chips .cap-chip[data-day="tomorrow"] { display: none; }
+}
