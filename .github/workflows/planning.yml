@@ -15,6 +15,8 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,12 +30,11 @@ jobs:
         run: node scripts/fetch-planning.mjs
 
       - name: Importer les réunions Teams (privé -> Supabase)
-        if: ${{ secrets.SUPABASE_SERVICE_KEY != '' }}
+        if: ${{ env.SUPABASE_SERVICE_KEY != '' }}
         env:
           OUTLOOK_FREELANCE_ICS_URL: ${{ secrets.OUTLOOK_FREELANCE_ICS_URL }}
           OUTLOOK_EFREI_ICS_URL: ${{ secrets.OUTLOOK_EFREI_ICS_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/import-outlook.mjs
 
       - name: Commit si le planning a changé
