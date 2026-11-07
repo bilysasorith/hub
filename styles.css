@@ -32,6 +32,8 @@
   --r-sm: 10px;
   color-scheme: dark;
 }
+/* Variante claire : appliquée quand le système est clair (sauf forçage sombre),
+   OU quand l'utilisateur force le clair via le bouton (data-theme="light"). */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
@@ -40,6 +42,13 @@
     --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
     color-scheme: light;
   }
+}
+:root[data-theme="light"] {
+  --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
+  --fg: #11161B; --muted: #5C6772; --accent: #1F5BD8; --on-accent: #FFFFFF;
+  --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B;
+  --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -101,6 +110,15 @@ h1 {
 }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .live.is-stale i { background: var(--warn); }
+.top-actions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 99px;
+  background: var(--surface-2); color: var(--muted);
+  transition: color .15s, background .15s;
+}
+.icon-btn:hover { color: var(--fg); background: var(--line); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon-btn-ico { width: 18px; height: 18px; }
 
 main { padding-top: 18px; display: grid; gap: 14px; }
 

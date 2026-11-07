@@ -5,6 +5,8 @@
 <title>Hub</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0D1013">
+<!-- Applique le thème mémorisé avant le rendu (évite le flash de couleur). -->
+<script>try{var t=localStorage.getItem("hub-theme");if(t){document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==="dark"?"#0D1013":"#F1F3F5";}}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hub">
@@ -47,6 +49,12 @@
     <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="8.4"/><path d="M12 7.3v5l3.2 2"/>
     </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 13.4A8 8 0 1 1 10.6 4a6.3 6.3 0 0 0 9.4 9.4z"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -57,7 +65,12 @@
         <h1 id="top-title">Aujourd'hui</h1>
         <p class="top-date num" id="top-date">—</p>
       </div>
-      <span class="live" id="live" title="Planning à jour"><i></i><span class="num" id="live-time">··:··</span></span>
+      <div class="top-actions">
+        <span class="live" id="live" title="Planning à jour"><i></i><span class="num" id="live-time">··:··</span></span>
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Changer de thème">
+          <svg class="icon-btn-ico" aria-hidden="true"><use id="theme-icon" href="#i-moon"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 

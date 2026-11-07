@@ -827,6 +827,34 @@ document.querySelectorAll(".tab").forEach((btn) => {
 let _rsz;
 window.addEventListener("resize", () => { clearTimeout(_rsz); _rsz = setTimeout(() => { if (current === "week") renderWeek(); }, 200); });
 
+// ---------- Thème (clair / sombre) ----------
+// Par défaut on suit le système. Dès que l'utilisateur bascule, on force son choix
+// (data-theme sur <html>) et on le mémorise par appareil (localStorage).
+const THEME_KEY = "hub-theme";
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+const themeIcon = document.getElementById("theme-icon");
+const themeBtn = document.getElementById("theme-toggle");
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const storedTheme = () => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } };
+// Thème réellement affiché : choix forcé, sinon préférence système.
+const effectiveTheme = () => storedTheme() || (systemDark.matches ? "dark" : "light");
+function syncThemeUI() {
+  const dark = effectiveTheme() === "dark";
+  // On propose l'inverse : lune pour passer au clair… non : lune = sombre actif.
+  themeIcon?.setAttribute("href", dark ? "#i-moon" : "#i-sun");
+  themeBtn?.setAttribute("aria-label", dark ? "Passer au thème clair" : "Passer au thème sombre");
+  themeMeta?.setAttribute("content", dark ? "#0D1013" : "#F1F3F5");
+}
+themeBtn?.addEventListener("click", () => {
+  const next = effectiveTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  syncThemeUI();
+});
+// Si aucun choix forcé, on reflète les changements de thème du système.
+systemDark.addEventListener("change", () => { if (!storedTheme()) syncThemeUI(); });
+syncThemeUI();
+
 // ---------- Démarrage ----------
 await Promise.all([loadPlanning(), loadAlternance()]);
 rerender();
