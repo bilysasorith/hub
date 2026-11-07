@@ -262,7 +262,9 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .wk-pill.is-we { color: var(--muted); }
 
 /* Conteneur grille */
-.cal { position: relative; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+/* overflow: clip (pas hidden) : clippe les coins arrondis SANS créer de conteneur de défilement,
+   sinon l'en-tête sticky se cale 62px sous le haut de .cal au lieu de suivre le défilement de la page. */
+.cal { position: relative; border: 1px solid var(--line); border-radius: 18px; overflow: clip; background: var(--surface); box-shadow: var(--shadow); }
 .cal-head { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 6; display: grid; grid-template-columns: var(--axisW) repeat(7, 1fr); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .cal-corner { border-right: 1px solid var(--line); }
 .cal-colh { position: relative; padding: 10px 6px; text-align: center; border-right: 1px solid var(--line); transition: background .2s; }
