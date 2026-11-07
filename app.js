@@ -10,11 +10,33 @@ const fmtTime = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, hour: "2-digit"
 const fmtDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" });
 const fmtDayLabel = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" });
 const fmtWeekday = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
+const fmtWdShort = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short" });
+const fmtDayNum = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, day: "numeric" });
+const fmtHM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false });
+const fmtRange = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, day: "numeric", month: "short" });
+// Minutes depuis minuit (heure de Paris) pour positionner dans la grille
+const parisMinutes = (iso) => { const [h, m] = fmtHM.format(new Date(iso)).split(":").map(Number); return h * 60 + m; };
+const desktop = () => window.matchMedia("(min-width: 900px)").matches;
 
 const dayKey = (d) => fmtDayKey.format(d);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ico = (id, cls = "mi") => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Décale une clé YYYY-MM-DD de n jours
+const addDays = (key, n) => {
+  const [Y, M, D] = key.split("-").map(Number);
+  const x = new Date(Date.UTC(Y, M - 1, D + n));
+  return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
+};
+const fmtWdDay = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "short", day: "numeric" });
+// Libellé relatif d'une échéance (auj. / demain / lun 10)
+function dueLabel(due) {
+  if (!due) return "";
+  const todayK = dayKey(new Date());
+  if (due === todayK) return "auj.";
+  if (due === addDays(todayK, 1)) return "demain";
+  return fmtWdDay.format(new Date(due + "T12:00:00Z"));
+}
 
 const viewEl = document.getElementById("view");
 const titleEl = document.getElementById("top-title");
@@ -24,6 +46,7 @@ const liveTimeEl = document.getElementById("live-time");
 
 let PLANNING = null;        // { generatedAt, events: [...] }
 let current = "today";      // onglet actif
+let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
 
 // ---------- Chargement du planning (réseau d'abord, cache de secours) ----------
 async function loadPlanning() {
@@ -135,33 +158,134 @@ async function renderTodayTasks() {
 }
 
 // ---------- Vue Semaine ----------
+// Jours (lun→dim) de la semaine décalée de `offset` par rapport à la semaine courante.
+function weekDays(offset) {
+  const [Y, M, D] = fmtDayKey.format(new Date()).split("-").map(Number);
+  const d = new Date(Date.UTC(Y, M - 1, D));
+  const dow = (d.getUTCDay() + 6) % 7; // Lundi = 0
+  d.setUTCDate(d.getUTCDate() - dow + offset * 7);
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const x = new Date(d); x.setUTCDate(d.getUTCDate() + i);
+    const key = `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
+    out.push({ key, date: x });
+  }
+  return out;
+}
+
+// Événements d'un jour, toutes sources fusionnées (myefrei pour l'instant ; perso/Teams viendront).
+function mergedEventsForDay(key) {
+  return (PLANNING?.events || [])
+    .filter((e) => dayKey(new Date(e.start)) === key)
+    .map((e) => ({ ...e, source: e.source || "course" }))
+    .sort((a, b) => new Date(a.start) - new Date(b.start));
+}
+
+// Répartit les événements qui se chevauchent en colonnes côte à côte.
+function packDay(evs) {
+  evs.sort((a, b) => a.s - b.s || a.e2 - b.e2);
+  const clusters = []; let cur = []; let curEnd = -1;
+  for (const ev of evs) {
+    if (cur.length && ev.s >= curEnd) { clusters.push(cur); cur = []; curEnd = -1; }
+    cur.push(ev); curEnd = Math.max(curEnd, ev.e2);
+  }
+  if (cur.length) clusters.push(cur);
+  for (const cl of clusters) {
+    const laneEnds = [];
+    for (const ev of cl) {
+      let lane = 0; while (lane < laneEnds.length && laneEnds[lane] > ev.s) lane++;
+      if (lane === laneEnds.length) laneEnds.push(ev.e2); else laneEnds[lane] = ev.e2;
+      ev.lane = lane;
+    }
+    for (const ev of cl) ev.cols = laneEnds.length;
+  }
+  return evs;
+}
+
+function weekNav(days) {
+  const label = weekOffset === 0 ? "Cette semaine"
+    : weekOffset === 1 ? "Semaine prochaine"
+    : weekOffset === -1 ? "Semaine dernière"
+    : `${fmtRange.format(days[0].date)} – ${fmtRange.format(days[6].date)}`;
+  const chevron = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M${d === "l" ? "15 6l-6 6 6 6" : "9 6l6 6-6 6"}"/></svg>`;
+  return `<div class="wknav">
+    <button class="nav-btn" data-wk="-1" aria-label="Semaine précédente">${chevron("l")}</button>
+    <button class="nav-now" data-wk="0">${label}</button>
+    <button class="nav-btn" data-wk="1" aria-label="Semaine suivante">${chevron("r")}</button>
+  </div>`;
+}
+
+function wireWeekNav() {
+  viewEl.querySelectorAll("[data-wk]").forEach((b) => b.addEventListener("click", () => {
+    const v = b.dataset.wk;
+    weekOffset = v === "0" ? 0 : weekOffset + Number(v);
+    renderWeek(); window.scrollTo({ top: 0 });
+  }));
+}
+
 function renderWeek() {
   titleEl.textContent = "Semaine";
-  const now = new Date();
-  dateEl.textContent = "7 prochains jours";
-  if (!PLANNING || !(PLANNING.events || []).length) {
-    viewEl.innerHTML = `<div class="note"><h3>Rien à afficher</h3><p>Planning indisponible pour le moment.</p></div>`;
-    return;
+  const days = weekDays(weekOffset);
+  dateEl.textContent = `${fmtRange.format(days[0].date)} – ${fmtRange.format(days[6].date)}`;
+  if (!PLANNING) {
+    viewEl.innerHTML = weekNav(days) + `<div class="note"><h3>Rien à afficher</h3><p>Planning indisponible.</p></div>`;
+    wireWeekNav(); return;
   }
-  const todayK = dayKey(now);
-  const byDay = new Map();
-  for (const e of PLANNING.events) {
-    const k = dayKey(new Date(e.start));
-    if (k < todayK) continue;
-    if (!byDay.has(k)) byDay.set(k, []);
-    byDay.get(k).push(e);
-  }
-  const keys = [...byDay.keys()].sort().slice(0, 7);
-  if (!keys.length) { viewEl.innerHTML = `<div class="note"><h3>Pas de cours à venir</h3></div>`; return; }
-  viewEl.innerHTML = keys.map((k) => {
-    const evs = byDay.get(k).sort((a, b) => new Date(a.start) - new Date(b.start));
-    const d = new Date(evs[0].start);
-    const label = k === todayK ? "Aujourd'hui" : cap(fmtWeekday.format(d));
-    return `<section class="group">
-      <h2 class="group-day">${label} <span class="d">· ${evs.length} cours</span></h2>
-      <div class="card">${evs.map((e) => courseRow(e, now)).join("")}</div>
-    </section>`;
+  viewEl.innerHTML = weekNav(days) + (desktop() ? weekGrid(days) : weekList(days));
+  wireWeekNav();
+}
+
+// Mobile : liste par jour.
+function weekList(days) {
+  const todayK = dayKey(new Date());
+  const blocks = days.map((d) => {
+    const evs = mergedEventsForDay(d.key);
+    if (!evs.length) return "";
+    const label = d.key === todayK ? "Aujourd'hui" : cap(fmtWeekday.format(d.date));
+    return `<section class="group"><h2 class="group-day">${label} <span class="d">· ${evs.length}</span></h2>
+      <div class="card">${evs.map((e) => courseRow(e, new Date())).join("")}</div></section>`;
   }).join("");
+  return blocks || `<div class="note"><h3>Rien cette semaine</h3><p>Aucun cours sur ces 7 jours.</p></div>`;
+}
+
+// Desktop : grille horaire (colonnes par jour).
+function weekGrid(days) {
+  const todayK = dayKey(new Date());
+  const perDay = days.map((d) => packDay(mergedEventsForDay(d.key).map((e) => ({
+    ...e, s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60,
+  }))));
+  let minH = 8, maxH = 20;
+  perDay.flat().forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
+  minH = Math.max(0, minH); maxH = Math.min(24, maxH);
+  const PX = 56, top0 = minH * 60, H = (maxH - minH) * PX;
+  const hours = []; for (let h = minH; h <= maxH; h++) hours.push(h);
+
+  const head = `<div class="wk-head"><div class="wk-corner"></div>${days.map((d) => {
+    const t = d.key === todayK;
+    return `<div class="wk-colh${t ? " is-today" : ""}"><span class="wd">${cap(fmtWdShort.format(d.date))}</span><span class="dn num">${fmtDayNum.format(d.date)}</span></div>`;
+  }).join("")}</div>`;
+
+  const axis = `<div class="wk-axis" style="height:${H}px">${hours.map((h) =>
+    `<div class="wk-hr" style="top:${(h * 60 - top0) / 60 * PX}px">${String(h).padStart(2, "0")}:00</div>`).join("")}</div>`;
+
+  const cols = days.map((d, i) => {
+    const t = d.key === todayK;
+    const lines = hours.map((h) => `<div class="wk-line" style="top:${(h * 60 - top0) / 60 * PX}px"></div>`).join("");
+    const blocks = perDay[i].map((ev) => {
+      const top = (ev.s - top0) / 60 * PX;
+      const height = Math.max(24, (ev.e2 - ev.s) / 60 * PX - 2);
+      const w = 100 / ev.cols, left = ev.lane * w;
+      const room = (ev.rooms && ev.rooms[0]) || ev.location || "";
+      return `<div class="wk-ev src-${ev.source}" style="top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px)" title="${esc(ev.title)}">
+        <span class="wk-ev-h mono">${fmtTime.format(new Date(ev.start))}</span>
+        <span class="wk-ev-t">${esc(ev.title)}</span>
+        ${room ? `<span class="wk-ev-r">${esc(room)}</span>` : ""}
+      </div>`;
+    }).join("");
+    return `<div class="wk-col${t ? " is-today" : ""}" style="height:${H}px">${lines}${blocks}</div>`;
+  }).join("");
+
+  return `<div class="wk">${head}<div class="wk-scroll"><div class="wk-body">${axis}${cols}</div></div></div>`;
 }
 
 // ---------- Vue À faire ----------
@@ -175,16 +299,29 @@ async function renderTasks() {
 
   if (!store.session) { viewEl.innerHTML = signInView(); wireSignIn(store); return; }
 
-  const open = store.todos.filter((t) => !t.done);
-  const done = store.todos.filter((t) => t.done);
+  const todayK = dayKey(new Date());
+  const todos = store.todos;
+  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK);
+  const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
+  const upcoming = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK)
+    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const done = todos.filter((t) => t.done).slice(-30).reverse();
+
+  const section = (label, list, cls = "") => list.length
+    ? `<p class="section-label${cls ? " " + cls : ""}">${label} · ${list.length}</p><div>${list.map(todoRow).join("")}</div>` : "";
+
+  const body = (late.length + today.length + upcoming.length)
+    ? section("En retard", late, "is-late") + section("Aujourd'hui", today) + section("À venir", upcoming)
+    : `<div class="note"><h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
+
   viewEl.innerHTML = `
     <form class="add" id="add-form">
       <input id="add-input" placeholder="Ajouter une tâche…" autocomplete="off" maxlength="200" aria-label="Nouvelle tâche">
+      <input id="add-date" type="date" value="${todayK}" class="add-date" aria-label="Jour de la tâche">
       <button class="btn btn-sq" type="submit" aria-label="Ajouter">${ico("i-plus", "")}</button>
     </form>
-    ${open.length ? `<div>${open.map(todoRow).join("")}</div>`
-      : `<div class="note"><h3>Rien en attente</h3><p>Tout est fait. 🎯 Ajoute une tâche ci-dessus.</p></div>`}
-    ${done.length ? `<p class="section-label">Terminé · ${done.length}</p><div>${done.map(todoRow).join("")}</div>` : ""}
+    ${body}
+    ${done.length ? section("Terminé", done) : ""}
   `;
   wireAdd(store);
   wireTodos(viewEl, store);
@@ -193,7 +330,8 @@ async function renderTasks() {
 function todoRow(t) {
   const todayK = dayKey(new Date());
   const late = t.due_date && t.due_date < todayK && !t.done;
-  const due = t.due_date ? `<span class="todo-due${late ? " is-late" : ""}">${esc(t.due_date.slice(5))}</span>` : "";
+  const lbl = dueLabel(t.due_date);
+  const due = lbl ? `<span class="todo-due${late ? " is-late" : ""}">${esc(lbl)}</span>` : "";
   return `<div class="todo${t.done ? " is-done" : ""}" data-id="${esc(t.id)}">
     <button class="check" role="checkbox" aria-checked="${t.done}" aria-label="${t.done ? "Décocher" : "Cocher"}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>
@@ -283,12 +421,14 @@ function subscribeRealtime() {
 function wireAdd(store) {
   const form = document.getElementById("add-form");
   const input = document.getElementById("add-input");
+  const date = document.getElementById("add-date");
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = input.value.trim();
     if (!title) return;
     input.value = "";
-    const { error } = await store.sb.from("todos").insert({ title });
+    const due_date = date && date.value ? date.value : null;
+    const { error } = await store.sb.from("todos").insert({ title, due_date });
     if (error) { alert("Ajout impossible : " + error.message); return; }
     await refreshTodos(); rerender();
   });
@@ -328,6 +468,7 @@ function wireSignIn(store) {
 
 // ---------- Navigation ----------
 function rerender() {
+  viewEl.dataset.view = current;
   if (current === "today") renderToday();
   else if (current === "week") renderWeek();
   else renderTasks();
@@ -345,6 +486,10 @@ document.querySelectorAll(".tab").forEach((btn) => {
     rerender();
   });
 });
+
+// Bascule liste/grille de la vue Semaine au redimensionnement
+let _rsz;
+window.addEventListener("resize", () => { clearTimeout(_rsz); _rsz = setTimeout(() => { if (current === "week") renderWeek(); }, 200); });
 
 // ---------- Démarrage ----------
 await loadPlanning();

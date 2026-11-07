@@ -14,6 +14,11 @@
   --on-ok: #06150D;
   --warn: #E8AA3A;
   --danger: #E8695B;
+  /* Couleurs par source d'événement */
+  --ev-course: #4C86FF;  /* cours efrei */
+  --ev-perso:  #3DBE7E;  /* événement perso ajouté */
+  --ev-fl:     #B98BFF;  /* Teams freelance */
+  --ev-ef:     #45D0DC;  /* Teams efrei */
   --shadow: 0 8px 24px rgba(0,0,0,.42);
   --shadow-sm: 0 2px 8px rgba(0,0,0,.35);
 
@@ -161,6 +166,8 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 }
 .add input::placeholder { color: var(--muted); }
 .add input:focus { border-color: var(--accent); outline: none; }
+.add-date { flex: 0 0 auto; width: 130px; color: var(--muted); }
+.section-label.is-late { color: var(--warn); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 46px; padding-inline: 16px; border-radius: var(--r-sm);
@@ -203,9 +210,52 @@ main { padding-top: 18px; display: grid; gap: 14px; }
   * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
-/* Desktop : colonne confortable, la semaine respire */
-@media (min-width: 720px) {
-  .app { max-width: 680px; }
-  .tabs { max-width: 680px; }
+/* Navigation de semaine */
+.wknav { display: flex; align-items: center; gap: 8px; }
+.nav-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); color: var(--fg); }
+.nav-btn:hover { background: var(--surface-2); }
+.nav-now { flex: 1; height: 40px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; text-transform: capitalize; }
+.nav-now:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Grille horaire (desktop) */
+.wk { margin-top: 4px; }
+.wk-scroll { overflow-x: auto; }
+.wk-head, .wk-body { display: grid; grid-template-columns: 54px repeat(7, minmax(112px, 1fr)); }
+.wk-head { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 4; background: var(--bg); }
+.wk-corner { border-bottom: 1px solid var(--line); }
+.wk-colh { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 4px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
+.wk-colh .wd { font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.wk-colh .dn { font-family: var(--f-display); font-size: 18px; }
+.wk-colh.is-today { color: var(--accent); }
+.wk-colh.is-today .wd, .wk-colh.is-today .dn { color: var(--accent); }
+.wk-body { position: relative; }
+.wk-axis { position: relative; }
+.wk-hr { position: absolute; right: 8px; transform: translateY(-50%); font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.wk-col { position: relative; border-left: 1px solid var(--line); }
+.wk-col.is-today { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.wk-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: .5; }
+.wk-ev {
+  position: absolute; overflow: hidden; border-radius: 7px; padding: 4px 7px;
+  background: color-mix(in srgb, var(--c) 20%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 46%, var(--line));
+  display: flex; flex-direction: column; gap: 1px; cursor: default;
+}
+.wk-ev.src-course { --c: var(--ev-course); }
+.wk-ev.src-perso  { --c: var(--ev-perso); }
+.wk-ev.src-freelance { --c: var(--ev-fl); }
+.wk-ev.src-efrei  { --c: var(--ev-ef); }
+.wk-ev-h { font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--c) 70%, var(--fg)); }
+.wk-ev-t { font-size: 12.5px; font-weight: 500; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.wk-ev-r { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Desktop : plus large, la semaine respire ; lecture confortable pour Aujourd'hui / À faire */
+@media (min-width: 900px) {
+  .app { max-width: 1060px; }
+  .tabs { max-width: 1060px; }
   h1 { font-size: 36px; }
+  #view[data-view="today"], #view[data-view="tasks"] { max-width: 660px; margin-inline: auto; }
+}
+@media (min-width: 560px) and (max-width: 899px) {
+  .app { max-width: 620px; }
+  .tabs { max-width: 620px; }
 }
