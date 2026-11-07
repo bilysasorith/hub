@@ -17,6 +17,9 @@ const fmtRange = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, day: "numeric"
 // Minutes depuis minuit (heure de Paris) pour positionner dans la grille
 const parisMinutes = (iso) => { const [h, m] = fmtHM.format(new Date(iso)).split(":").map(Number); return h * 60 + m; };
 const desktop = () => window.matchMedia("(min-width: 900px)").matches;
+// Référence "maintenant". Surchargeable en localhost (window.__setNow) pour tester une autre date.
+let nowRef = null;
+const now = () => nowRef || new Date();
 
 const dayKey = (d) => fmtDayKey.format(d);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -151,63 +154,235 @@ function courseRow(ev, now) {
   </div>`;
 }
 
-// ---------- Vue Aujourd'hui ----------
-function renderToday() {
-  titleEl.textContent = "Aujourd'hui";
-  const now = new Date();
-  dateEl.textContent = cap(fmtDayLabel.format(now));
-  const todays = mergedEventsForDay(dayKey(now));
+// ---------- Vue Aujourd'hui (tableau de bord) ----------
 
-  let html = "";
-  const tb = modeBadge(dayKey(now));
-  if (tb) html += `<div class="daymode">${tb}</div>`;
-  if (!PLANNING) {
-    html += `<div class="note"><h3>Planning indisponible</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
-  } else if (todays.length === 0) {
-    html += `<div class="note"><h3>Rien de prévu aujourd'hui</h3><p>Journée libre${_store?.session ? " — touche ＋ pour ajouter un événement." : "."}</p></div>`;
-  } else {
-    const curIdx = todays.findIndex((e) => new Date(e.start) <= now && now < new Date(e.end || e.start));
-    const nextIdx = todays.findIndex((e) => new Date(e.start) > now);
-    const featIdx = curIdx !== -1 ? curIdx : (nextIdx !== -1 ? nextIdx : -1);
+const illus = (id) => `<svg class="ill" viewBox="0 0 220 170" aria-hidden="true"><use href="#${id}"/></svg>`;
+const hmMin = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(Math.round(m % 60)).padStart(2, "0")}`;
+const durMin = (e) => Math.max(0, (e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60) - parisMinutes(e.start));
 
-    if (featIdx !== -1) {
-      const ev = todays[featIdx];
-      const isNow = curIdx !== -1;
-      html += `<section class="card card-now src-${ev.source}" ${evAttrs(ev)}>
-        <div class="now-head"><span class="dot"></span>${isNow ? "En cours" : "À suivre"}${ev.source !== "course" ? ` · ${SRC_LABEL[ev.source]}` : ""}</div>
-        <div class="now-time">${fmtTime.format(new Date(ev.start))} <small>→ ${ev.end ? fmtTime.format(new Date(ev.end)) : ""}</small></div>
-        <div class="now-title">${esc(ev.title)}</div>
-        ${courseMeta(ev, { big: true })}
-      </section>`;
-      const rest = todays.filter((_, i) => i !== featIdx);
-      if (rest.length) {
-        html += `<p class="section-label">Reste de la journée</p><div class="card">${rest.map((e) => courseRow(e, now)).join("")}</div>`;
-      }
-    } else {
-      html += `<p class="section-label">Journée terminée</p><div class="card">${todays.map((e) => courseRow(e, now)).join("")}</div>`;
-    }
-  }
-
-  // Tâches du jour (si la to-do est configurée)
-  html += `<div id="today-tasks"></div>`;
-  viewEl.innerHTML = html;
-  wireEventTaps(viewEl);
-  updateFab();
-  if (SUPA_READY) renderTodayTasks();
+// "dans 1 h 02" / "45 min" / "2 j"
+function countdown(ms) {
+  const min = Math.max(0, Math.round(ms / 60000));
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h < 24) return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
+  return `${Math.round(h / 24)} j`;
+}
+// "6h" / "6h30" / "45 min"
+function hoursLabel(min) {
+  if (min <= 0) return "0h";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m >= 30 ? `${h}h30` : `${h}h`;
 }
 
-async function renderTodayTasks() {
-  const mount = document.getElementById("today-tasks");
+// Emblème (icône) par matière : d'abord la source, puis des mots-clés du titre.
+function subjectIcon(ev) {
+  if (ev.source === "fl" || ev.source === "ef") return "i-video";
+  if (ev.source === "perso") return "i-user";
+  const t = (ev.title || "").toLowerCase();
+  if (/archi|logiciel|génie|conception|uml/.test(t)) return "i-cube";
+  if (/base de don|bdd|sql|donnée|data/.test(t)) return "i-db";
+  if (/web|front|back|dévelop|develop|program|code|java|python|algo|\binfo/.test(t)) return "i-code";
+  return "i-cap";
+}
+const SRC_HC = { course: "var(--ev-course)", perso: "var(--ev-perso)", fl: "var(--ev-fl)", ef: "var(--ev-ef)" };
+
+// Trous libres (≥ 45 min) entre les créneaux de la journée (sur l'union des créneaux).
+function freeGaps(items) {
+  if (!items.length) return [];
+  const iv = items.map((e) => [e.s, e.e2]).sort((a, b) => a[0] - b[0]);
+  const merged = [iv[0].slice()];
+  for (const [s, e] of iv.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (s <= last[1]) last[1] = Math.max(last[1], e); else merged.push([s, e]);
+  }
+  const gaps = [];
+  for (let i = 1; i < merged.length; i++) {
+    const s = merged[i - 1][1], e = merged[i][0];
+    if (e - s >= 45) gaps.push({ s, e, len: e - s });
+  }
+  return gaps;
+}
+// Prochain trou libre se terminant après maintenant.
+function nextFreeGap(items, N) {
+  const nm = parisMinutes(N.toISOString());
+  return freeGaps(items).find((g) => g.e > nm) || null;
+}
+
+// Timeline verticale d'une journée : créneaux positionnés à l'heure, trous libres, ligne "maintenant".
+function dayTimeline(evs) {
+  const items = packDay(evs.map((e) => ({ ...e, s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60 })));
+  const PX = desktop() ? 62 : 56;
+  let minH = 8, maxH = 19;
+  items.forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
+  minH = Math.max(0, minH); maxH = Math.min(24, maxH);
+  const top0 = minH * 60, rows = Math.max(1, maxH - minH);
+  const y = (min) => (min - top0) / 60 * PX;
+
+  const rowsHtml = Array.from({ length: rows }, (_, k) =>
+    `<div class="tl-row"><span class="tl-ax">${String(minH + k).padStart(2, "0")}:00</span><span class="tl-line"></span></div>`).join("");
+
+  const gapsHtml = freeGaps(items).map((g) => {
+    const h = Math.floor(g.len / 60), m = g.len % 60;
+    const lab = h ? `${h} h${m ? " " + m : ""} de libre` : `${m} min de libre`;
+    return `<div class="tl-gap" style="top:${y(g.s) + 3}px;height:${g.len / 60 * PX - 6}px"><span>${ico("i-coffee")}${lab} · ${hmMin(g.s)}–${hmMin(g.e)}</span></div>`;
+  }).join("");
+
+  const evHtml = items.map((ev) => {
+    const h = Math.max(30, (ev.e2 - ev.s) / 60 * PX - 4);
+    const w = 100 / ev.cols, left = ev.lane * w;
+    const dur = ev.e2 - ev.s;
+    const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
+    const conf = ev.cols > 1;
+    const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
+    return `<div class="tev src-${ev.source}${size}${conf ? " is-conf" : ""}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}"
+      style="top:${y(ev.s)}px;height:${h}px;left:calc(${left}% + ${left ? 3 : 0}px);width:calc(${w}% - ${ev.cols > 1 ? 6 : 0}px)">
+      <div class="hd"><span class="emb">${ico(subjectIcon(ev))}</span><span class="t">${hmMin(ev.s)} – ${hmMin(ev.e2)}</span>${conf ? ico("i-alert") : ""}</div>
+      <div class="ti">${esc(ev.title)}</div>
+      ${loc ? `<div class="lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
+    </div>`;
+  }).join("");
+
+  const nowMin = parisMinutes(now().toISOString());
+  const showNow = nowMin >= top0 && nowMin <= maxH * 60;
+  const nowHtml = showNow ? `<div class="tl-now" style="top:${y(nowMin)}px"><b>${fmtTime.format(now())}</b></div>` : "";
+
+  return `<div class="tl" style="--px:${PX}px">${rowsHtml}<div class="tl-area">${gapsHtml}${evHtml}${nowHtml}</div></div>`;
+}
+
+// Héros "prochain créneau" (ou journée libre / terminée).
+function heroNext(evs, curIdx, nextIdx, N) {
+  const art = `<svg class="hero-art" viewBox="0 0 200 140" aria-hidden="true"><use href="#art-plan"/></svg>`;
+  if (!evs.length) {
+    return `<div class="hero-next" style="--hc:var(--ok)">
+      <div class="kicker"><i></i>Aujourd'hui</div>
+      <div class="cd">Journée libre</div>
+      <div class="ti">Rien de prévu — profites-en.</div>${art}</div>`;
+  }
+  if (curIdx === -1 && nextIdx === -1) {
+    return `<div class="hero-next" style="--hc:var(--muted)">
+      <div class="kicker"><i></i>Terminé</div>
+      <div class="cd">Journée terminée</div>
+      <div class="ti">Tous tes créneaux sont passés.</div>${art}</div>`;
+  }
+  const isNow = curIdx !== -1;
+  const ev = evs[isNow ? curIdx : nextIdx];
+  const hc = SRC_HC[ev.source] || "var(--ev-course)";
+  const start = new Date(ev.start), end = ev.end ? new Date(ev.end) : null;
+  const cd = isNow
+    ? (end ? `encore ${countdown(end - N)} <small>· fin ${fmtTime.format(end)}</small>` : "En cours")
+    : `dans ${countdown(start - N)} <small>· ${fmtTime.format(start)}</small>`;
+  const place = (ev.rooms && ev.rooms[0]) || ev.location;
+  const meta = [`<span>${ico("i-clock")}${fmtTime.format(start)}${end ? " – " + fmtTime.format(end) : ""}</span>`];
+  if (place) meta.push(`<span>${ico("i-pin")}${esc(place)}</span>`);
+  meta.push(`<span>${ico(subjectIcon(ev))}${SRC_LABEL[ev.source] || "Cours"}</span>`);
+  return `<div class="hero-next" style="--hc:${hc}" ${evAttrs(ev)}>
+    <div class="kicker"><i></i>${isNow ? "En ce moment" : "Prochain créneau"}</div>
+    <div class="cd">${cd}</div>
+    <div class="ti">${esc(ev.title)}</div>
+    <div class="meta">${meta.join("")}</div>${art}</div>`;
+}
+
+// Carte contexte : badge école/entreprise, prochain trou libre, compteurs.
+function ctxCard(evs, key, N, signed) {
+  const items = evs.map((e) => ({ s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60 }));
+  const badge = modeBadge(key);
+  const gap = nextFreeGap(items, N);
+  const freeChip = gap ? `<span class="free-chip">${ico("i-coffee")}Libre ${hmMin(gap.s)}–${hmMin(gap.e)}</span>` : "";
+  const nCours = evs.filter((e) => e.source === "course").length;
+  const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
+  const nTasks = signed ? openTaskCount(key) : null;
+  const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
+  const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
+  const stats = [stat("i-cap", nCours, "cours"), stat("i-clock", hoursLabel(totalMin), "aujourd'hui")];
+  if (nTasks != null) stats.push(stat("i-tasks", nTasks, nTasks > 1 ? "tâches" : "tâche"));
+  return `<div class="hero-ctx"><div class="ctx-card">
+    ${topRow}
+    <div class="ctx-row ctx-stats">${stats.join("")}</div>
+  </div></div>`;
+}
+
+function openTaskCount(key) {
+  if (!_store?.session) return 0;
+  return _store.todos.filter((t) => !t.done && (!t.due_date || t.due_date <= key)).length;
+}
+
+function renderToday() {
+  titleEl.textContent = "Aujourd'hui";
+  const N = now();
+  dateEl.textContent = cap(fmtDayLabel.format(N));
+  const key = dayKey(N);
+  const signed = !!_store?.session;
+
+  if (!PLANNING) {
+    viewEl.innerHTML = `<div class="note"><h3>Planning indisponible</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
+    updateFab(); return;
+  }
+
+  const evs = mergedEventsForDay(key);
+  const curIdx = evs.findIndex((e) => new Date(e.start) <= N && N < new Date(e.end || e.start));
+  const nextIdx = evs.findIndex((e) => new Date(e.start) > N);
+
+  const countTxt = evs.length ? `${cap(fmtWeekday.format(N))} · ${evs.length} créneau${evs.length > 1 ? "x" : ""}` : "";
+  const timeline = evs.length
+    ? dayTimeline(evs)
+    : `<div class="empty-ill">${illus("art-free")}<div class="ei-t">Journée libre</div><div class="ei-d">Aucun cours ni réunion aujourd'hui.</div></div>`;
+
+  // État d'authentification : connu dès que le store est initialisé (ou qu'une tentative a échoué).
+  const authKnown = !!_store || _storeTried;
+  const signedOutPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div class="empty-ill">${illus("art-done")}<div class="ei-t">Tes tâches ici</div><div class="ei-d">Connecte-toi dans l'onglet « À faire » pour les retrouver sur tous tes appareils.</div></div></div>`;
+  let tasksPanel;
+  if (SUPA_READY && signed) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2><span class="count" id="dash-tcount"></span></div><div id="dash-tasks"></div></div>`;
+  else if (SUPA_READY && !authKnown) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div id="dash-tasks"></div></div>`; // auth en cours de résolution
+  else tasksPanel = signedOutPanel;
+
+  viewEl.innerHTML = `
+    <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
+    <section class="dash">
+      <div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>
+      ${tasksPanel}
+    </section>`;
+
+  wireEventTaps(viewEl);
+  updateFab();
+  // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
+  if (SUPA_READY && !_store && !_storeTried) {
+    _storeTried = true;
+    getStore().then(() => { if (current === "today") rerender(); });
+  } else if (signed) {
+    renderDashTasks();
+  }
+}
+
+async function renderDashTasks() {
+  const mount = document.getElementById("dash-tasks");
   if (!mount) return;
   const store = await getStore();
-  if (!store?.session) return; // non connecté : on ne pollue pas la vue Aujourd'hui
-  const todayK = dayKey(new Date());
-  const open = store.todos.filter((t) => !t.done && (!t.due_date || t.due_date <= todayK));
-  if (!open.length) return;
-  const shown = open.slice(0, 3);
-  mount.innerHTML = `<p class="section-label">À faire aujourd'hui${open.length > 3 ? ` · ${open.length}` : ""}</p>
-    <div class="today-tasks">${shown.map(todoRow).join("")}</div>`;
+  if (!store?.session) return;
+  const todayK = dayKey(now());
+  const todos = store.todos;
+  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK);
+  const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
+  const upcoming = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const total = late.length + today.length + upcoming.length;
+  const cnt = document.getElementById("dash-tcount");
+  if (cnt) cnt.textContent = total ? `${total} tâche${total > 1 ? "s" : ""}` : "";
+
+  if (!total) {
+    mount.innerHTML = `<div class="empty-ill">${illus("art-done")}<div class="ei-t">Tout est fait</div><div class="ei-d">Aucune tâche en attente.</div></div>`;
+    return;
+  }
+  const groups = [
+    ["late", "En retard", "i-alert", late],
+    ["", "Aujourd'hui", "i-today", today],
+    ["", "À venir", "i-clock", upcoming],
+  ].filter((g) => g[3].length);
+  mount.innerHTML = `<div class="tasks">${groups.map(([cls, label, icn, list]) =>
+    `<div class="tgroup ${cls}"><div class="tl-h">${ico(icn, "")}${label}<span class="n">${list.length}</span></div>${list.map(todoRow).join("")}</div>`).join("")}
+    <button class="addbox" id="dash-add">${ico("i-plus", "")}Ajouter une tâche…</button></div>`;
   wireTodos(mount, store);
+  mount.querySelector("#dash-add")?.addEventListener("click", () => openTaskAdd(todayK));
 }
 
 // ---------- Vue Semaine ----------
@@ -531,16 +706,25 @@ async function renderTasks() {
 }
 
 function todoRow(t) {
-  const todayK = dayKey(new Date());
+  const todayK = dayKey(now());
   const late = t.due_date && t.due_date < todayK && !t.done;
+  const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+  const doneN = subs.filter((s) => s.done).length;
+  const hasSubs = !t.done && subs.length > 0;
   const lbl = dueLabel(t.due_date);
-  const due = lbl ? `<span class="todo-due${late ? " is-late" : ""}">${esc(lbl)}</span>` : "";
+  const pill = lbl ? `<span class="pill${late ? " late" : ""}">${late ? ico("i-alert") : ""}${esc(cap(lbl))}</span>` : "";
+  const prog = hasSubs ? `<span class="prog">${doneN}/${subs.length}</span>` : "";
+  const sub = pill ? `<div class="sub">${pill}</div>` : "";
+  const pbar = hasSubs ? `<div class="pbar"><i style="width:${Math.round(doneN / subs.length * 100)}%"></i></div>` : "";
+  const list = hasSubs
+    ? `<ul class="subs">${subs.map((s) => `<li class="${s.done ? "done" : ""}" data-sid="${esc(s.id)}"><span class="sc${s.done ? " on" : ""}">${ico("i-check")}</span><span class="ss-t">${esc(s.title)}</span></li>`).join("")}</ul>`
+    : "";
   return `<div class="todo${t.done ? " is-done" : ""}" data-id="${esc(t.id)}">
-    <button class="check" role="checkbox" aria-checked="${t.done}" aria-label="${t.done ? "Décocher" : "Cocher"}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>
-    </button>
-    <span class="todo-title">${esc(t.title)}</span>
-    ${due}
+    <button class="check" role="checkbox" aria-checked="${t.done}" aria-label="${t.done ? "Décocher" : "Cocher"}">${ico("i-check")}</button>
+    <div class="tx">
+      <div class="tt-row"><span class="tt todo-title">${esc(t.title)}</span>${prog}</div>
+      ${sub}${pbar}${list}
+    </div>
     <button class="todo-del" aria-label="Supprimer">
       <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 7h12M9 7V5h6v2M8 7l1 13h6l1-13"/></svg>
     </button>
@@ -574,6 +758,7 @@ function signInView() {
 
 // ---------- Supabase ----------
 let _store = null;
+let _storeTried = false; // a-t-on déjà tenté d'initialiser le store (évite les boucles si hors-ligne) ?
 async function getStore() {
   if (_store) return _store;
   if (!SUPA_READY) return null;
@@ -671,6 +856,16 @@ function wireTodos(root, store) {
       if (error) { alert("Suppression impossible : " + error.message); return; }
       await refreshTodos(); rerender();
     });
+    // Ouvre la tâche (sous-tâches) au tap sur le titre.
+    el.querySelector(".tt")?.addEventListener("click", () => {
+      const t = store.todos.find((x) => String(x.id) === String(id));
+      if (t) openTaskSheet(t);
+    });
+    // Coche/décoche une sous-tâche directement dans la liste.
+    el.querySelectorAll(".subs li").forEach((li) => li.addEventListener("click", () => {
+      const sid = li.dataset.sid;
+      mutateSubs(id, (subs) => subs.map((s) => (s.id === sid ? { ...s, done: !s.done } : s)));
+    }));
   });
 }
 
@@ -801,6 +996,109 @@ function openEventActions(ev) {
   }
 }
 
+// ---------- Sous-tâches ----------
+// Les sous-tâches vivent dans une colonne jsonb `subtasks` de la table `todos`
+// (tableau d'objets { id, title, done }). On relit-modifie-réécrit le tableau entier.
+async function mutateSubs(id, fn) {
+  if (!_store?.session) return;
+  const t = _store.todos.find((x) => String(x.id) === String(id));
+  if (!t) return;
+  const next = fn(Array.isArray(t.subtasks) ? t.subtasks : []);
+  t.subtasks = next; // optimiste
+  const { error } = await _store.sb.from("todos").update({ subtasks: next }).eq("id", id);
+  if (error) { alert("Sous-tâches indisponibles : " + error.message + "\n(As-tu lancé le SQL d'activation ?)"); }
+  await refreshTodos(); rerender();
+}
+
+const SUB_UID = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+
+// Feuille d'une tâche : liste des sous-tâches, ajout, et suppression de la tâche.
+function openTaskSheet(t0) {
+  if (!_store?.session) return;
+  const id = t0.id;
+  const ov = openSheet(`
+    <h3 class="sheet-h" id="ts-title"></h3>
+    <p class="sheet-sub" id="ts-sub"></p>
+    <div id="ts-subs"></div>
+    <form class="add" id="sub-form" style="margin-top:14px">
+      <input id="sub-input" placeholder="Nouvelle sous-tâche…" autocomplete="off" maxlength="160" aria-label="Nouvelle sous-tâche">
+      <button class="btn btn-sq" type="submit" aria-label="Ajouter">${ico("i-plus", "")}</button>
+    </form>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" id="ts-close">Fermer</button>
+      <button class="btn btn-danger" id="ts-del">Supprimer la tâche</button>
+    </div>`);
+  const cur = () => _store.todos.find((x) => String(x.id) === String(id));
+
+  function paint() {
+    const t = cur();
+    if (!t) { closeSheet(); return; }
+    ov.querySelector("#ts-title").textContent = t.title;
+    ov.querySelector("#ts-sub").textContent = t.due_date ? "Échéance : " + cap(dueLabel(t.due_date)) : "Sans échéance";
+    const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+    const mount = ov.querySelector("#ts-subs");
+    mount.innerHTML = subs.length
+      ? `<ul class="subs">${subs.map((s) => `<li class="${s.done ? "done" : ""}">
+          <span class="sc${s.done ? " on" : ""}" data-tog="${esc(s.id)}">${ico("i-check")}</span>
+          <span class="ss-t">${esc(s.title)}</span>
+          <button class="ss-del" data-del="${esc(s.id)}" aria-label="Supprimer la sous-tâche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </li>`).join("")}</ul>`
+      : `<p class="sheet-note">Découpe cette tâche en sous-tâches à cocher.</p>`;
+    mount.querySelectorAll("[data-tog]").forEach((b) => b.onclick = async () => {
+      await mutateSubs(id, (subs) => subs.map((s) => (s.id === b.dataset.tog ? { ...s, done: !s.done } : s)));
+      paint();
+    });
+    mount.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
+      await mutateSubs(id, (subs) => subs.filter((s) => s.id !== b.dataset.del));
+      paint();
+    });
+  }
+
+  ov.querySelector("#sub-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const inp = ov.querySelector("#sub-input");
+    const v = inp.value.trim();
+    if (!v) return;
+    inp.value = "";
+    await mutateSubs(id, (subs) => [...subs, { id: SUB_UID(), title: v, done: false }]);
+    paint(); inp.focus();
+  });
+  ov.querySelector("#ts-close").onclick = closeSheet;
+  ov.querySelector("#ts-del").onclick = async () => {
+    const { error } = await _store.sb.from("todos").delete().eq("id", id);
+    if (error) { alert("Suppression impossible : " + error.message); return; }
+    closeSheet(); await refreshTodos(); rerender();
+  };
+  paint();
+  setTimeout(() => ov.querySelector("#sub-input")?.focus(), 50);
+}
+
+// Feuille d'ajout rapide d'une tâche (depuis le tableau de bord).
+function openTaskAdd(defaultDate) {
+  if (!_store?.session) return;
+  const ov = openSheet(`
+    <h3 class="sheet-h">Nouvelle tâche</h3>
+    <form id="ta-form" class="sheet-form">
+      <label>Tâche<input id="ta-title" required maxlength="200" autocomplete="off" placeholder="Ex. réviser, rendre le TP…"></label>
+      <label>Jour<input id="ta-date" type="date" value="${defaultDate || dayKey(now())}"></label>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="ta-cancel">Annuler</button>
+        <button type="submit" class="btn">Ajouter</button>
+      </div>
+    </form>`);
+  ov.querySelector("#ta-cancel").onclick = closeSheet;
+  ov.querySelector("#ta-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = ov.querySelector("#ta-title").value.trim();
+    if (!title) return;
+    const due_date = ov.querySelector("#ta-date").value || null;
+    const { error } = await _store.sb.from("todos").insert({ title, due_date });
+    if (error) { alert("Ajout impossible : " + error.message); return; }
+    closeSheet(); await refreshTodos(); rerender();
+  });
+  setTimeout(() => ov.querySelector("#ta-title")?.focus(), 50);
+}
+
 // ---------- Navigation ----------
 function rerender() {
   viewEl.dataset.view = current;
@@ -854,6 +1152,11 @@ themeBtn?.addEventListener("click", () => {
 // Si aucun choix forcé, on reflète les changements de thème du système.
 systemDark.addEventListener("change", () => { if (!storedTheme()) syncThemeUI(); });
 syncThemeUI();
+
+// Outil de dev (localhost seulement) : simuler une autre date/heure pour tester le tableau de bord.
+if (location.hostname === "localhost") {
+  window.__setNow = (iso) => { nowRef = iso ? new Date(iso) : null; rerender(); };
+}
 
 // ---------- Démarrage ----------
 await Promise.all([loadPlanning(), loadAlternance()]);
