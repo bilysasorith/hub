@@ -38,6 +38,23 @@ function dueLabel(due) {
   return fmtWdDay.format(new Date(due + "T12:00:00Z"));
 }
 
+// Heure murale Paris (saisie date+heure du formulaire) -> instant ISO UTC (gère l'heure d'été).
+function parisToISO(dateStr, timeStr) {
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const [h, mi] = timeStr.split(":").map(Number);
+  const t0 = Date.UTC(Y, M - 1, D, h, mi, 0);
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const m = {}; for (const p of f.formatToParts(new Date(t0))) m[p.type] = p.value;
+  let H = +m.hour; if (H === 24) H = 0;
+  const wall = Date.UTC(+m.year, +m.month - 1, +m.day, H, +m.minute, +m.second);
+  return new Date(t0 - (wall - t0)).toISOString();
+}
+
+// Sources d'événements : cours myefrei / perso ajouté / Teams pro / Teams école.
+const SRC_LABEL = { course: "Cours", perso: "Perso", fl: "Pro", ef: "École" };
+const normCustom = (c) => ({ source: "perso", cid: c.id, title: c.title, start: c.start_at, end: c.end_at, location: c.location, rooms: [], teacher: null });
+const normTeams = (t) => ({ source: t.source === "efrei" ? "ef" : "fl", tid: t.id, title: t.title, start: t.start_at, end: t.end_at, location: t.location, rooms: [], teacher: null });
+
 const viewEl = document.getElementById("view");
 const titleEl = document.getElementById("top-title");
 const dateEl = document.getElementById("top-date");
@@ -45,8 +62,28 @@ const liveEl = document.getElementById("live");
 const liveTimeEl = document.getElementById("live-time");
 
 let PLANNING = null;        // { generatedAt, events: [...] }
+let ALT = null;             // alternance : { start, end, schoolSet, sgHours }
 let current = "today";      // onglet actif
 let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
+let showHidden = false;     // afficher les cours ignorés ?
+let sgOn = false;           // afficher les blocs horaires SG (jours entreprise) ?
+
+// Mode d'un jour selon le calendrier d'alternance : "ecole" | "entreprise" | null (week-end/hors période).
+function dayMode(key) {
+  if (!ALT || key < ALT.start || key > ALT.end) return null;
+  const wd = new Date(key + "T12:00:00Z").getUTCDay(); // 0 dim .. 6 sam
+  if (wd === 0 || wd === 6) return null;
+  return ALT.schoolSet.has(key) ? "ecole" : "entreprise";
+}
+const isTelework = (key) => ALT && new Date(key + "T12:00:00Z").getUTCDay() === (ALT.sgHours?.teleworkWeekday ?? 2);
+const MODE_LABEL = { ecole: "École", entreprise: "Entreprise" };
+function modeBadge(key, { compact = false } = {}) {
+  const m = dayMode(key);
+  if (!m) return "";
+  const tt = m === "entreprise" && isTelework(key);
+  const txt = compact ? (m === "ecole" ? "École" : "Entr.") : MODE_LABEL[m];
+  return `<span class="badge badge-${m}">${txt}${tt && !compact ? " · Télétravail" : ""}</span>`;
+}
 
 // ---------- Chargement du planning (réseau d'abord, cache de secours) ----------
 async function loadPlanning() {
@@ -59,6 +96,15 @@ async function loadPlanning() {
     try { PLANNING = JSON.parse(localStorage.getItem("hub.planning") || "null"); } catch { PLANNING = null; }
   }
   updateLive();
+}
+
+async function loadAlternance() {
+  try {
+    const res = await fetch("alternance.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    ALT = { start: j.start, end: j.end, sgHours: j.sgHours, schoolSet: new Set(j.school || []) };
+  } catch { ALT = null; }
 }
 
 function updateLive() {
@@ -88,18 +134,16 @@ function courseMeta(ev, { big = false } = {}) {
 }
 
 function courseRow(ev, now) {
+  const src = ev.source || "course";
   const past = new Date(ev.end || ev.start) < now;
-  return `<div class="row${past ? " is-past" : ""}">
+  const sub = (ev.rooms && ev.rooms[0]) || ev.location || (src !== "course" ? SRC_LABEL[src] : "");
+  return `<div class="row src-${src}${past ? " is-past" : ""}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)}>
     <div class="row-time mono">${fmtTime.format(new Date(ev.start))}<br><span class="end">${ev.end ? fmtTime.format(new Date(ev.end)) : ""}</span></div>
     <div>
       <div class="row-title">${esc(ev.title)}</div>
-      <div class="row-sub">${esc((ev.rooms && ev.rooms[0]) || ev.location || "")}${ev.teacher ? " — " + esc(ev.teacher) : ""}</div>
+      <div class="row-sub">${esc(sub)}${ev.teacher ? " — " + esc(ev.teacher) : ""}</div>
     </div>
   </div>`;
-}
-
-function eventsForDay(key) {
-  return (PLANNING?.events || []).filter((e) => dayKey(new Date(e.start)) === key).sort((a, b) => new Date(a.start) - new Date(b.start));
 }
 
 // ---------- Vue Aujourd'hui ----------
@@ -107,13 +151,15 @@ function renderToday() {
   titleEl.textContent = "Aujourd'hui";
   const now = new Date();
   dateEl.textContent = cap(fmtDayLabel.format(now));
-  const todays = eventsForDay(dayKey(now));
+  const todays = mergedEventsForDay(dayKey(now));
 
   let html = "";
+  const tb = modeBadge(dayKey(now));
+  if (tb) html += `<div class="daymode">${tb}</div>`;
   if (!PLANNING) {
     html += `<div class="note"><h3>Planning indisponible</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
   } else if (todays.length === 0) {
-    html += `<div class="note"><h3>Pas de cours aujourd'hui</h3><p>Journée libre côté planning.</p></div>`;
+    html += `<div class="note"><h3>Rien de prévu aujourd'hui</h3><p>Journée libre${_store?.session ? " — touche ＋ pour ajouter un événement." : "."}</p></div>`;
   } else {
     const curIdx = todays.findIndex((e) => new Date(e.start) <= now && now < new Date(e.end || e.start));
     const nextIdx = todays.findIndex((e) => new Date(e.start) > now);
@@ -122,8 +168,8 @@ function renderToday() {
     if (featIdx !== -1) {
       const ev = todays[featIdx];
       const isNow = curIdx !== -1;
-      html += `<section class="card card-now">
-        <div class="now-head"><span class="dot"></span>${isNow ? "En cours" : "Prochain cours"}</div>
+      html += `<section class="card card-now src-${ev.source}" ${evAttrs(ev)}>
+        <div class="now-head"><span class="dot"></span>${isNow ? "En cours" : "À suivre"}${ev.source !== "course" ? ` · ${SRC_LABEL[ev.source]}` : ""}</div>
         <div class="now-time">${fmtTime.format(new Date(ev.start))} <small>→ ${ev.end ? fmtTime.format(new Date(ev.end)) : ""}</small></div>
         <div class="now-title">${esc(ev.title)}</div>
         ${courseMeta(ev, { big: true })}
@@ -140,6 +186,8 @@ function renderToday() {
   // Tâches du jour (si la to-do est configurée)
   html += `<div id="today-tasks"></div>`;
   viewEl.innerHTML = html;
+  wireEventTaps(viewEl);
+  updateFab();
   if (SUPA_READY) renderTodayTasks();
 }
 
@@ -173,12 +221,53 @@ function weekDays(offset) {
   return out;
 }
 
-// Événements d'un jour, toutes sources fusionnées (myefrei pour l'instant ; perso/Teams viendront).
+// Événements d'un jour, toutes sources fusionnées : cours myefrei (hors masqués) + perso + Teams.
 function mergedEventsForDay(key) {
-  return (PLANNING?.events || [])
-    .filter((e) => dayKey(new Date(e.start)) === key)
-    .map((e) => ({ ...e, source: e.source || "course" }))
-    .sort((a, b) => new Date(a.start) - new Date(b.start));
+  const out = [];
+  const hidden = _store?.hidden || new Set();
+  for (const e of (PLANNING?.events || [])) {
+    if (dayKey(new Date(e.start)) !== key) continue;
+    const isHidden = hidden.has(e.uid);
+    if (isHidden && !showHidden) continue;
+    out.push({ ...e, source: "course", _hidden: isHidden });
+  }
+  if (_store?.session) {
+    for (const c of (_store.custom || [])) if (c.start_at && dayKey(new Date(c.start_at)) === key) out.push(normCustom(c));
+    for (const t of (_store.teams || [])) if (t.start_at && dayKey(new Date(t.start_at)) === key) out.push(normTeams(t));
+  }
+  return out.sort((a, b) => new Date(a.start) - new Date(b.start));
+}
+
+// Reconstruit l'objet événement depuis les data-attributes d'un bloc cliqué.
+function findEventFromDataset(ds) {
+  if (ds.src === "course") {
+    const e = (PLANNING?.events || []).find((x) => x.uid === ds.uid);
+    return e ? { ...e, source: "course", _hidden: (_store?.hidden || new Set()).has(e.uid) } : null;
+  }
+  if (ds.src === "perso") {
+    const c = (_store?.custom || []).find((x) => String(x.id) === ds.cid);
+    return c ? normCustom(c) : null;
+  }
+  const t = (_store?.teams || []).find((x) => String(x.id) === ds.tid);
+  return t ? normTeams(t) : null;
+}
+
+// Attributs d'identification posés sur chaque bloc cliquable.
+function evAttrs(ev) {
+  const id = ev.source === "course" ? `data-uid="${esc(ev.uid)}"`
+    : ev.source === "perso" ? `data-cid="${esc(ev.cid)}"`
+    : `data-tid="${esc(ev.tid)}"`;
+  return `data-ev data-src="${ev.source}" ${id} role="button" tabindex="0"`;
+}
+
+// Branche le tap/entrée sur les blocs événements d'un conteneur (si connecté).
+function wireEventTaps(root) {
+  if (!_store?.session) return;
+  root.querySelectorAll("[data-ev]").forEach((el) => {
+    const open = () => { const ev = findEventFromDataset(el.dataset); if (ev) openEventActions(ev); };
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+  });
 }
 
 // Répartit les événements qui se chevauchent en colonnes côte à côte.
@@ -223,6 +312,28 @@ function wireWeekNav() {
   }));
 }
 
+// Nombre de cours ignorés tombant dans la semaine affichée.
+function hiddenCountWeek(days) {
+  if (!_store?.session) return 0;
+  const hidden = _store.hidden || new Set();
+  const keys = new Set(days.map((d) => d.key));
+  let n = 0;
+  for (const e of (PLANNING?.events || [])) if (hidden.has(e.uid) && keys.has(dayKey(new Date(e.start)))) n++;
+  return n;
+}
+
+function weekTools(days) {
+  const eye = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  const clock = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+  const chips = [];
+  const n = hiddenCountWeek(days);
+  if (n) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden">${eye}${showHidden ? "Masquer" : "Voir"} les cours ignorés · ${n}</button>`);
+  if (desktop() && days.some((d) => dayMode(d.key) === "entreprise")) {
+    chips.push(`<button class="chip${sgOn ? " is-on" : ""}" id="toggle-sg">${clock}Horaires SG</button>`);
+  }
+  return chips.length ? `<div class="wk-tools">${chips.join("")}</div>` : "";
+}
+
 function renderWeek() {
   titleEl.textContent = "Semaine";
   const days = weekDays(weekOffset);
@@ -231,8 +342,12 @@ function renderWeek() {
     viewEl.innerHTML = weekNav(days) + `<div class="note"><h3>Rien à afficher</h3><p>Planning indisponible.</p></div>`;
     wireWeekNav(); return;
   }
-  viewEl.innerHTML = weekNav(days) + (desktop() ? weekGrid(days) : weekList(days));
+  viewEl.innerHTML = weekNav(days) + weekTools(days) + (desktop() ? weekGrid(days) : weekList(days));
   wireWeekNav();
+  viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
+  viewEl.querySelector("#toggle-sg")?.addEventListener("click", () => { sgOn = !sgOn; renderWeek(); });
+  wireEventTaps(viewEl);
+  updateFab();
 }
 
 // Mobile : liste par jour.
@@ -242,7 +357,7 @@ function weekList(days) {
     const evs = mergedEventsForDay(d.key);
     if (!evs.length) return "";
     const label = d.key === todayK ? "Aujourd'hui" : cap(fmtWeekday.format(d.date));
-    return `<section class="group"><h2 class="group-day">${label} <span class="d">· ${evs.length}</span></h2>
+    return `<section class="group"><h2 class="group-day">${label} <span class="d">· ${evs.length}</span>${modeBadge(d.key, { compact: true })}</h2>
       <div class="card">${evs.map((e) => courseRow(e, new Date())).join("")}</div></section>`;
   }).join("");
   return blocks || `<div class="note"><h3>Rien cette semaine</h3><p>Aucun cours sur ces 7 jours.</p></div>`;
@@ -262,11 +377,19 @@ function weekGrid(days) {
 
   const head = `<div class="wk-head"><div class="wk-corner"></div>${days.map((d) => {
     const t = d.key === todayK;
-    return `<div class="wk-colh${t ? " is-today" : ""}"><span class="wd">${cap(fmtWdShort.format(d.date))}</span><span class="dn num">${fmtDayNum.format(d.date)}</span></div>`;
+    return `<div class="wk-colh${t ? " is-today" : ""}"><span class="wk-colh-d"><span class="wd">${cap(fmtWdShort.format(d.date))}</span><span class="dn num">${fmtDayNum.format(d.date)}</span></span>${modeBadge(d.key, { compact: true })}</div>`;
   }).join("")}</div>`;
 
   const axis = `<div class="wk-axis" style="height:${H}px">${hours.map((h) =>
     `<div class="wk-hr" style="top:${(h * 60 - top0) / 60 * PX}px">${String(h).padStart(2, "0")}:00</div>`).join("")}</div>`;
+
+  const toMin = (hm) => { const [h, m] = hm.split(":").map(Number); return h * 60 + m; };
+  const sgBands = (key) => {
+    if (!sgOn || dayMode(key) !== "entreprise" || !ALT?.sgHours) return "";
+    const seg = (a, b, label) => `<div class="wk-sg" style="top:${(a - top0) / 60 * PX}px;height:${(b - a) / 60 * PX}px">${label ? `<span>${label}</span>` : ""}</div>`;
+    const { am, pm } = ALT.sgHours;
+    return seg(toMin(am[0]), toMin(am[1]), isTelework(key) ? "SG · TT" : "SG") + seg(toMin(pm[0]), toMin(pm[1]), "");
+  };
 
   const cols = days.map((d, i) => {
     const t = d.key === todayK;
@@ -276,13 +399,13 @@ function weekGrid(days) {
       const height = Math.max(24, (ev.e2 - ev.s) / 60 * PX - 2);
       const w = 100 / ev.cols, left = ev.lane * w;
       const room = (ev.rooms && ev.rooms[0]) || ev.location || "";
-      return `<div class="wk-ev src-${ev.source}" style="top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px)" title="${esc(ev.title)}">
+      return `<div class="wk-ev src-${ev.source}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} style="top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px)" title="${esc(ev.title)}">
         <span class="wk-ev-h mono">${fmtTime.format(new Date(ev.start))}</span>
         <span class="wk-ev-t">${esc(ev.title)}</span>
         ${room ? `<span class="wk-ev-r">${esc(room)}</span>` : ""}
       </div>`;
     }).join("");
-    return `<div class="wk-col${t ? " is-today" : ""}" style="height:${H}px">${lines}${blocks}</div>`;
+    return `<div class="wk-col${t ? " is-today" : ""}" style="height:${H}px">${sgBands(d.key)}${lines}${blocks}</div>`;
   }).join("");
 
   return `<div class="wk">${head}<div class="wk-scroll"><div class="wk-body">${axis}${cols}</div></div></div>`;
@@ -377,15 +500,15 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [] };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [] };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
-      if (session) refreshTodos().then(() => rerender());
-      else { _store.todos = []; rerender(); }
+      if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; rerender(); }
     });
-    if (_store.session) await refreshTodos();
+    if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
   } catch (e) {
     console.error("Supabase indisponible", e);
@@ -406,14 +529,32 @@ async function refreshTodos() {
   }
 }
 
+// Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
+// Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
+async function refreshPersonal() {
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; return; }
+  const [c, o, t] = await Promise.all([
+    _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
+    _store.sb.from("event_overrides").select("event_uid,hidden"),
+    _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
+  ]);
+  _store.custom = c.error ? [] : (c.data || []);
+  _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
+  _store.teams = t.error ? [] : (t.data || []);
+  subscribeRealtime();
+}
+
 let _sub = null;
 function subscribeRealtime() {
   if (_sub || !_store?.session) return;
-  _sub = _store.sb.channel("todos-sync")
-    .on("postgres_changes", { event: "*", schema: "public", table: "todos" }, async () => {
-      await refreshTodos();
-      rerender();
-    })
+  const pg = "postgres_changes";
+  const onTodos = async () => { await refreshTodos(); rerender(); };
+  const onPerso = async () => { await refreshPersonal(); rerender(); };
+  _sub = _store.sb.channel("hub-sync")
+    .on(pg, { event: "*", schema: "public", table: "todos" }, onTodos)
+    .on(pg, { event: "*", schema: "public", table: "custom_events" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "event_overrides" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "calendar_events" }, onPerso)
     .subscribe();
 }
 
@@ -466,12 +607,127 @@ function wireSignIn(store) {
   });
 }
 
+// ---------- Édition : bouton +, feuille d'action, formulaires ----------
+let fabEl = null;
+function ensureFab() {
+  if (fabEl) return fabEl;
+  fabEl = document.createElement("button");
+  fabEl.className = "fab"; fabEl.type = "button";
+  fabEl.setAttribute("aria-label", "Nouvel événement");
+  fabEl.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  fabEl.addEventListener("click", () => openEventForm());
+  document.body.appendChild(fabEl);
+  return fabEl;
+}
+function updateFab() {
+  const f = ensureFab();
+  f.classList.toggle("is-show", (current === "today" || current === "week") && !!_store?.session);
+}
+
+function openSheet(inner) {
+  closeSheet();
+  const ov = document.createElement("div");
+  ov.className = "sheet-overlay"; ov.id = "sheet-ov";
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${inner}</div>`;
+  ov.addEventListener("click", (e) => { if (e.target === ov) closeSheet(); });
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("is-open"));
+  return ov;
+}
+function closeSheet() { document.getElementById("sheet-ov")?.remove(); }
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+
+function evWhen(ev) {
+  const s = new Date(ev.start);
+  const range = ev.end ? `${fmtTime.format(s)} – ${fmtTime.format(new Date(ev.end))}` : fmtTime.format(s);
+  return `${cap(fmtWeekday.format(s))} · ${range}`;
+}
+
+function openEventForm(date) {
+  if (!_store?.session) return;
+  const d = date || dayKey(new Date());
+  const ov = openSheet(`
+    <h3 class="sheet-h">Nouvel événement</h3>
+    <form id="ev-form" class="sheet-form">
+      <label>Titre<input id="ev-title" required maxlength="120" autocomplete="off" placeholder="Ex. RDV, révisions, sport…"></label>
+      <label>Jour<input id="ev-date" type="date" value="${d}" required></label>
+      <div class="sheet-two">
+        <label>Début<input id="ev-start" type="time" value="09:00" required></label>
+        <label>Fin<input id="ev-end" type="time" value="10:00" required></label>
+      </div>
+      <label>Lieu <span class="opt">(optionnel)</span><input id="ev-loc" maxlength="120" autocomplete="off"></label>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="ev-cancel">Annuler</button>
+        <button type="submit" class="btn">Ajouter</button>
+      </div>
+    </form>`);
+  ov.querySelector("#ev-cancel").onclick = closeSheet;
+  ov.querySelector("#ev-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = ov.querySelector("#ev-title").value.trim();
+    if (!title) return;
+    const dd = ov.querySelector("#ev-date").value;
+    const start_at = parisToISO(dd, ov.querySelector("#ev-start").value);
+    let end_at = parisToISO(dd, ov.querySelector("#ev-end").value);
+    if (new Date(end_at) <= new Date(start_at)) end_at = null;
+    const location = ov.querySelector("#ev-loc").value.trim() || null;
+    const { error } = await _store.sb.from("custom_events").insert({ title, start_at, end_at, location });
+    if (error) { alert("Ajout impossible : " + error.message); return; }
+    closeSheet(); await refreshPersonal(); rerender();
+  });
+  setTimeout(() => ov.querySelector("#ev-title")?.focus(), 50);
+}
+
+function openEventActions(ev) {
+  if (!_store?.session) return;
+  const head = `<h3 class="sheet-h">${esc(ev.title)}</h3><p class="sheet-sub">${evWhen(ev)}${(ev.location) ? " · " + esc(ev.location) : ""}</p>`;
+
+  if (ev.source === "perso") {
+    const ov = openSheet(`${head}<div class="sheet-actions">
+      <button class="btn btn-ghost" id="s-close">Fermer</button>
+      <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
+    ov.querySelector("#s-close").onclick = closeSheet;
+    ov.querySelector("#s-del").onclick = async () => {
+      const { error } = await _store.sb.from("custom_events").delete().eq("id", ev.cid);
+      if (error) { alert("Suppression impossible : " + error.message); return; }
+      closeSheet(); await refreshPersonal(); rerender();
+    };
+  } else if (ev.source === "course") {
+    if (ev._hidden) {
+      const ov = openSheet(`${head}<p class="sheet-note">Tu as marqué « je n'y vais pas » pour ce cours.</p>
+        <div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+        <button class="btn" id="s-show">Y retourner</button></div>`);
+      ov.querySelector("#s-close").onclick = closeSheet;
+      ov.querySelector("#s-show").onclick = async () => {
+        const { error } = await _store.sb.from("event_overrides").delete().eq("event_uid", ev.uid);
+        if (error) { alert("Erreur : " + error.message); return; }
+        closeSheet(); await refreshPersonal(); rerender();
+      };
+    } else {
+      const ov = openSheet(`${head}<div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+        <button class="btn btn-danger" id="s-hide">Je n'y vais pas</button></div>`);
+      ov.querySelector("#s-close").onclick = closeSheet;
+      ov.querySelector("#s-hide").onclick = async () => {
+        const { error } = await _store.sb.from("event_overrides")
+          .upsert({ user_id: _store.session.user.id, event_uid: ev.uid, hidden: true }, { onConflict: "user_id,event_uid" });
+        if (error) { alert("Erreur : " + error.message); return; }
+        closeSheet(); await refreshPersonal(); rerender();
+      };
+    }
+  } else { // Teams (lecture seule)
+    const ov = openSheet(`${head}<p class="sheet-note">Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.</p>
+      <div class="sheet-actions"><button class="btn" id="s-close">Fermer</button></div>`);
+    ov.querySelector("#s-close").onclick = closeSheet;
+  }
+}
+
 // ---------- Navigation ----------
 function rerender() {
   viewEl.dataset.view = current;
   if (current === "today") renderToday();
   else if (current === "week") renderWeek();
   else renderTasks();
+  updateFab();
 }
 
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -492,7 +748,7 @@ let _rsz;
 window.addEventListener("resize", () => { clearTimeout(_rsz); _rsz = setTimeout(() => { if (current === "week") renderWeek(); }, 200); });
 
 // ---------- Démarrage ----------
-await loadPlanning();
+await Promise.all([loadPlanning(), loadAlternance()]);
 rerender();
 // Rafraîchit l'état "en cours / prochain" quand on revient sur l'app
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { loadPlanning().then(rerender); } });

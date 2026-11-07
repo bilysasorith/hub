@@ -138,6 +138,15 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .row-time .end { color: var(--muted); font-weight: 500; }
 .row-title { font-size: 15.5px; font-weight: 500; line-height: 1.25; }
 .row-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+/* Pastille de couleur par source sur l'heure */
+.row[data-ev] { cursor: pointer; }
+.row.src-course { --c: var(--ev-course); }
+.row.src-perso  { --c: var(--ev-perso); }
+.row.src-fl     { --c: var(--ev-fl); }
+.row.src-ef     { --c: var(--ev-ef); }
+.row[data-src] .row-time::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--ev-course)); margin-right: 6px; vertical-align: middle; transform: translateY(-1px); }
+.row.is-hidden { opacity: .5; }
+.row.is-hidden .row-title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 
 .group { margin-top: 2px; }
 .group-day { position: sticky; top: calc(64px + env(safe-area-inset-top, 0px)); z-index: 5; background: var(--bg); padding: 10px 2px 4px; font-family: var(--f-display); font-weight: 600; font-size: 18px; text-transform: uppercase; letter-spacing: .02em; }
@@ -223,7 +232,8 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .wk-head, .wk-body { display: grid; grid-template-columns: 54px repeat(7, minmax(112px, 1fr)); }
 .wk-head { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 4; background: var(--bg); }
 .wk-corner { border-bottom: 1px solid var(--line); }
-.wk-colh { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 4px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
+.wk-colh { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
+.wk-colh-d { display: flex; align-items: baseline; gap: 6px; }
 .wk-colh .wd { font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .wk-colh .dn { font-family: var(--f-display); font-size: 18px; }
 .wk-colh.is-today { color: var(--accent); }
@@ -242,8 +252,11 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 }
 .wk-ev.src-course { --c: var(--ev-course); }
 .wk-ev.src-perso  { --c: var(--ev-perso); }
-.wk-ev.src-freelance { --c: var(--ev-fl); }
-.wk-ev.src-efrei  { --c: var(--ev-ef); }
+.wk-ev.src-fl     { --c: var(--ev-fl); }
+.wk-ev.src-ef     { --c: var(--ev-ef); }
+.wk-ev[data-ev] { cursor: pointer; }
+.wk-ev.is-hidden { opacity: .4; }
+.wk-ev.is-hidden .wk-ev-t { text-decoration: line-through; }
 .wk-ev-h { font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--c) 70%, var(--fg)); }
 .wk-ev-t { font-size: 12.5px; font-weight: 500; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .wk-ev-r { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -259,3 +272,81 @@ main { padding-top: 18px; display: grid; gap: 14px; }
   .app { max-width: 620px; }
   .tabs { max-width: 620px; }
 }
+
+/* Carte "en cours / à suivre" recolorée selon la source */
+.card-now.src-perso { --accent: var(--ev-perso); }
+.card-now.src-fl    { --accent: var(--ev-fl); }
+.card-now.src-ef    { --accent: var(--ev-ef); }
+.card-now[data-ev]  { cursor: pointer; }
+
+/* Outils de semaine : voir/masquer les cours ignorés */
+.wk-tools { display: flex; justify-content: flex-end; margin-top: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px;
+  border-radius: 99px; background: var(--surface); border: 1px solid var(--line);
+  color: var(--muted); font-size: 13px; font-weight: 600;
+}
+.chip:hover { color: var(--fg); border-color: var(--accent); }
+.chip.is-on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+
+/* Bouton flottant "+" (ajout d'événement) */
+.fab {
+  position: fixed; z-index: 16;
+  right: max(18px, env(safe-area-inset-right)); bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  width: 56px; height: 56px; border-radius: 18px; display: none; place-items: center;
+  background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow);
+  transition: transform .12s ease;
+}
+.fab.is-show { display: grid; }
+.fab:hover { transform: translateY(-2px); }
+.fab:active { transform: translateY(0) scale(.96); }
+@media (min-width: 900px) { .fab { bottom: 28px; } }
+
+/* Feuille d'action (modale centrée) */
+.sheet-overlay {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: end center;
+  background: rgba(0,0,0,.5); opacity: 0; transition: opacity .18s ease;
+  padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+.sheet-overlay.is-open { opacity: 1; }
+.sheet {
+  width: 100%; max-width: 440px; background: var(--sheet); border: 1px solid var(--line);
+  border-radius: 20px; padding: 20px; box-shadow: var(--shadow);
+  transform: translateY(12px); transition: transform .18s ease;
+}
+.sheet-overlay.is-open .sheet { transform: translateY(0); }
+@media (min-width: 560px) { .sheet-overlay { place-items: center; } }
+.sheet-h { font-family: var(--f-display); font-weight: 600; font-size: 22px; line-height: 1.15; text-transform: uppercase; letter-spacing: .01em; }
+.sheet-sub { color: var(--muted); font-size: 14px; margin-top: 5px; text-transform: capitalize; }
+.sheet-note { color: var(--muted); font-size: 14px; margin-top: 10px; line-height: 1.5; }
+.sheet-form { display: grid; gap: 12px; margin-top: 16px; }
+.sheet-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.sheet-form .opt { font-weight: 500; }
+.sheet-form input {
+  height: 46px; padding: 0 13px; border-radius: var(--r-sm);
+  background: var(--surface); border: 1px solid var(--line); color: var(--fg); caret-color: var(--accent);
+}
+.sheet-form input:focus { border-color: var(--accent); outline: none; }
+.sheet-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sheet-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.btn-ghost { background: var(--surface); color: var(--fg); border: 1px solid var(--line); box-shadow: none; }
+.btn-ghost:hover { border-color: var(--accent); }
+.btn-danger { background: color-mix(in srgb, var(--danger) 16%, var(--surface)); color: var(--danger); box-shadow: none; }
+.btn-danger:hover { background: color-mix(in srgb, var(--danger) 26%, var(--surface)); }
+
+/* Badge École / Entreprise (calendrier d'alternance) */
+.badge { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 99px; font-size: 12px; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.badge-ecole { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }
+.badge-entreprise { background: color-mix(in srgb, var(--ok) 20%, var(--surface)); color: var(--ok); }
+.daymode { display: flex; }
+.wk-colh .badge { height: 17px; padding: 0 7px; font-size: 10px; }
+.group-day .badge { height: 18px; padding: 0 8px; font-size: 10.5px; margin-left: 8px; vertical-align: middle; }
+
+/* Blocs horaires SG (fond des jours entreprise, grille desktop) */
+.wk-sg {
+  position: absolute; left: 3px; right: 3px; z-index: 0; pointer-events: none; border-radius: 6px;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ok) 9%, transparent) 0 6px, transparent 6px 12px);
+  border: 1px dashed color-mix(in srgb, var(--ok) 32%, var(--line));
+}
+.wk-sg span { position: absolute; top: 3px; left: 7px; font-size: 10px; font-weight: 600; letter-spacing: .03em; color: color-mix(in srgb, var(--ok) 65%, var(--fg)); }
+.wk-ev { z-index: 1; }
