@@ -29,6 +29,9 @@ function slug(s) {
   return (s || "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120) || "x";
 }
 
+// Réunion annulée (titre préfixé « Annulé : » / « Canceled: ») — on ne l'importe pas.
+const isCanceled = (title) => /^\s*(annul[ée]e?s?\s*:|cancell?ed\s*:)/i.test(title || "");
+
 async function fetchICS(url) {
   const res = await fetch(url, { headers: { "User-Agent": "hub-planning-bot" } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -77,6 +80,7 @@ async function run() {
 
     const rows = parseEvents(raw, { expand: { from: FROM, to: TO } })
       .filter((e) => e.start && !e.allDay)
+      .filter((e) => !isCanceled(e.title))
       .filter((e) => {
         const t = new Date(e.start).getTime();
         return t >= FROM && t <= TO;

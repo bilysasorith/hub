@@ -65,6 +65,7 @@ let PLANNING = null;        // { generatedAt, events: [...] }
 let ALT = null;             // alternance : { start, end, schoolSet, sgHours }
 let current = "today";      // onglet actif
 let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
+let weekDay = -1;           // mobile : index du jour affiché (-1 = auto = aujourd'hui)
 let showHidden = false;     // afficher les cours ignorés ?
 let sgOn = false;           // afficher les blocs horaires SG (jours entreprise) ?
 
@@ -81,9 +82,13 @@ function modeBadge(key, { compact = false } = {}) {
   const m = dayMode(key);
   if (!m) return "";
   const tt = m === "entreprise" && isTelework(key);
+  const icon = ico(m === "ecole" ? "i-cap" : "i-brief", "bi");
   const txt = compact ? (m === "ecole" ? "École" : "Entr.") : MODE_LABEL[m];
-  return `<span class="badge badge-${m}">${txt}${tt && !compact ? " · Télétravail" : ""}</span>`;
+  return `<span class="badge badge-${m}">${icon}${txt}${tt && !compact ? " · Télétravail" : ""}</span>`;
 }
+
+// Réunion Teams annulée : titre préfixé « Annulé : » / « Canceled: » — on ne l'affiche pas.
+const isCanceledMeeting = (title) => /^\s*(annul[ée]e?s?\s*:|cancell?ed\s*:)/i.test(title || "");
 
 // ---------- Chargement du planning (réseau d'abord, cache de secours) ----------
 async function loadPlanning() {
@@ -233,7 +238,11 @@ function mergedEventsForDay(key) {
   }
   if (_store?.session) {
     for (const c of (_store.custom || [])) if (c.start_at && dayKey(new Date(c.start_at)) === key) out.push(normCustom(c));
-    for (const t of (_store.teams || [])) if (t.start_at && dayKey(new Date(t.start_at)) === key) out.push(normTeams(t));
+    for (const t of (_store.teams || [])) {
+      if (!t.start_at || dayKey(new Date(t.start_at)) !== key) continue;
+      if (isCanceledMeeting(t.title)) continue; // réunions annulées masquées
+      out.push(normTeams(t));
+    }
   }
   return out.sort((a, b) => new Date(a.start) - new Date(b.start));
 }
@@ -291,16 +300,17 @@ function packDay(evs) {
   return evs;
 }
 
+// Segmented control de navigation (‹ Cette semaine ›).
 function weekNav(days) {
   const label = weekOffset === 0 ? "Cette semaine"
     : weekOffset === 1 ? "Semaine prochaine"
     : weekOffset === -1 ? "Semaine dernière"
     : `${fmtRange.format(days[0].date)} – ${fmtRange.format(days[6].date)}`;
-  const chevron = (d) => `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M${d === "l" ? "15 6l-6 6 6 6" : "9 6l6 6-6 6"}"/></svg>`;
-  return `<div class="wknav">
-    <button class="nav-btn" data-wk="-1" aria-label="Semaine précédente">${chevron("l")}</button>
-    <button class="nav-now" data-wk="0">${label}</button>
-    <button class="nav-btn" data-wk="1" aria-label="Semaine suivante">${chevron("r")}</button>
+  const chevron = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M${d === "l" ? "15 6l-6 6 6 6" : "9 6l6 6-6 6"}"/></svg>`;
+  return `<div class="wk-seg">
+    <button class="wk-seg-ic" data-wk="-1" aria-label="Semaine précédente">${chevron("l")}</button>
+    <button class="wk-seg-now${weekOffset === 0 ? " is-current" : ""}" data-wk="0">${label}</button>
+    <button class="wk-seg-ic" data-wk="1" aria-label="Semaine suivante">${chevron("r")}</button>
   </div>`;
 }
 
@@ -308,8 +318,51 @@ function wireWeekNav() {
   viewEl.querySelectorAll("[data-wk]").forEach((b) => b.addEventListener("click", () => {
     const v = b.dataset.wk;
     weekOffset = v === "0" ? 0 : weekOffset + Number(v);
+    weekDay = -1; // on repasse en mode auto (aujourd'hui) à chaque changement de semaine
     renderWeek(); window.scrollTo({ top: 0 });
   }));
+}
+
+// Bandeau de stats (cours, heures planifiées, réunions pro) à partir des blocs déjà positionnés.
+function weekStats(perDay) {
+  let nCours = 0, nPro = 0, totalMin = 0;
+  perDay.flat().forEach((e) => {
+    totalMin += Math.max(0, e.e2 - e.s);
+    if (e.source === "course") nCours++;
+    if (e.source === "fl") nPro++;
+  });
+  const hours = Math.round(totalMin / 60);
+  const stat = (id, k, l) => `<div class="wk-stat">${ico(id, "si")}<span class="k num">${k}</span><span class="l">${l}</span></div>`;
+  let html = stat("i-cap", nCours, nCours > 1 ? "cours" : "cours");
+  html += stat("i-clock", `${hours}h`, "planifiées");
+  if (_store?.session && nPro) html += stat("i-brief", nPro, nPro > 1 ? "réunions pro" : "réunion pro");
+  return `<div class="wk-stats">${html}</div>`;
+}
+
+// Légende des sources réellement présentes dans la semaine (+ Entreprise si jour entreprise).
+function weekLegend(perDay, days) {
+  const present = new Set(perDay.flat().map((e) => e.source));
+  const items = [];
+  if (present.has("course")) items.push(["var(--ev-course)", "Cours"]);
+  if (present.has("perso")) items.push(["var(--ev-perso)", "Perso"]);
+  if (present.has("fl")) items.push(["var(--ev-fl)", "Pro"]);
+  if (present.has("ef")) items.push(["var(--ev-ef)", "École (Teams)"]);
+  if (days.some((d) => dayMode(d.key) === "entreprise")) items.push(["var(--warn)", "Entreprise"]);
+  if (!items.length) return "";
+  return `<div class="wk-legend">${items.map(([c, l]) =>
+    `<span class="wk-chip" style="--c:${c}"><i></i>${l}</span>`).join("")}</div>`;
+}
+
+// Pastilles de jours (mobile) pour choisir le jour affiché.
+function weekPills(days, sel) {
+  const todayK = dayKey(new Date());
+  return `<div class="wk-pills" id="wk-pills">${days.map((d, i) => {
+    const wd = new Date(d.key + "T12:00:00Z").getUTCDay();
+    const we = wd === 0 || wd === 6;
+    return `<button class="wk-pill${i === sel ? " is-on" : ""}${we ? " is-we" : ""}" data-i="${i}" aria-pressed="${i === sel}">
+      <span class="pd">${cap(fmtWdShort.format(d.date)).replace(/\.$/, "")}</span><span class="pn num">${fmtDayNum.format(d.date)}</span>
+    </button>`;
+  }).join("")}</div>`;
 }
 
 // Nombre de cours ignorés tombant dans la semaine affichée.
@@ -324,91 +377,118 @@ function hiddenCountWeek(days) {
 
 function weekTools(days) {
   const eye = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
-  const clock = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
   const chips = [];
   const n = hiddenCountWeek(days);
   if (n) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden">${eye}${showHidden ? "Masquer" : "Voir"} les cours ignorés · ${n}</button>`);
-  if (desktop() && days.some((d) => dayMode(d.key) === "entreprise")) {
-    chips.push(`<button class="chip${sgOn ? " is-on" : ""}" id="toggle-sg">${clock}Horaires SG</button>`);
+  if (days.some((d) => dayMode(d.key) === "entreprise")) {
+    chips.push(`<button class="chip${sgOn ? " is-on" : ""}" id="toggle-sg">${ico("i-clock", "si")}Horaires SG</button>`);
   }
   return chips.length ? `<div class="wk-tools">${chips.join("")}</div>` : "";
 }
+
+let weekSlide = 0;          // mobile : direction de l'animation de glissement entre jours
 
 function renderWeek() {
   titleEl.textContent = "Semaine";
   const days = weekDays(weekOffset);
   dateEl.textContent = `${fmtRange.format(days[0].date)} – ${fmtRange.format(days[6].date)}`;
   if (!PLANNING) {
-    viewEl.innerHTML = weekNav(days) + `<div class="note"><h3>Rien à afficher</h3><p>Planning indisponible.</p></div>`;
+    viewEl.innerHTML = `<div class="wk"><div class="wk-bar">${weekNav(days)}</div>
+      <div class="note"><h3>Rien à afficher</h3><p>Planning indisponible.</p></div></div>`;
     wireWeekNav(); return;
   }
-  viewEl.innerHTML = weekNav(days) + weekTools(days) + (desktop() ? weekGrid(days) : weekList(days));
-  wireWeekNav();
-  viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
-  viewEl.querySelector("#toggle-sg")?.addEventListener("click", () => { sgOn = !sgOn; renderWeek(); });
-  wireEventTaps(viewEl);
-  updateFab();
-}
 
-// Mobile : liste par jour.
-function weekList(days) {
-  const todayK = dayKey(new Date());
-  const blocks = days.map((d) => {
-    const evs = mergedEventsForDay(d.key);
-    if (!evs.length) return "";
-    const label = d.key === todayK ? "Aujourd'hui" : cap(fmtWeekday.format(d.date));
-    return `<section class="group"><h2 class="group-day">${label} <span class="d">· ${evs.length}</span>${modeBadge(d.key, { compact: true })}</h2>
-      <div class="card">${evs.map((e) => courseRow(e, new Date())).join("")}</div></section>`;
-  }).join("");
-  return blocks || `<div class="note"><h3>Rien cette semaine</h3><p>Aucun cours sur ces 7 jours.</p></div>`;
-}
-
-// Desktop : grille horaire (colonnes par jour).
-function weekGrid(days) {
-  const todayK = dayKey(new Date());
+  // Une seule passe de positionnement, réutilisée pour les stats, la légende et la grille.
   const perDay = days.map((d) => packDay(mergedEventsForDay(d.key).map((e) => ({
     ...e, s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60,
   }))));
+  const todayIdx = days.findIndex((d) => d.key === dayKey(new Date()));
+  const sel = weekDay >= 0 ? weekDay : (todayIdx >= 0 ? todayIdx : 0);
+
+  const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay, days)}</div>`;
+  viewEl.innerHTML = `<div class="wk">${bar}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel)}</div>`;
+
+  wireWeekNav();
+  viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
+  viewEl.querySelector("#toggle-sg")?.addEventListener("click", () => { sgOn = !sgOn; renderWeek(); });
+  wirePills();
+  wireEventTaps(viewEl);
+  updateFab();
+  weekSlide = 0;
+}
+
+// Sélecteur de jour mobile : change le jour affiché (avec sens de glissement).
+function wirePills() {
+  const cur = weekDay >= 0 ? weekDay : 0;
+  viewEl.querySelectorAll("#wk-pills .wk-pill").forEach((b) => b.addEventListener("click", () => {
+    const n = +b.dataset.i;
+    if (n === weekDay) return;
+    weekSlide = n > cur ? 14 : -14;
+    weekDay = n;
+    renderWeek();
+  }));
+}
+
+const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief" };
+
+// Grille horaire 7 jours (desktop) / 1 jour qui défile (mobile), câblée aux vraies sources.
+function weekGrid(days, perDay, sel) {
+  const todayK = dayKey(new Date());
+  const mobile = !desktop();
+  const PX = mobile ? 60 : 56;
+
+  // Plage horaire affichée (heures entières), bornée 8→20 puis élargie aux événements.
   let minH = 8, maxH = 20;
   perDay.flat().forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
   minH = Math.max(0, minH); maxH = Math.min(24, maxH);
-  const PX = 56, top0 = minH * 60, H = (maxH - minH) * PX;
-  const hours = []; for (let h = minH; h <= maxH; h++) hours.push(h);
+  const top0 = minH * 60, rows = maxH - minH;
+  const yTop = (min) => (min - top0) / 60 * PX;
+  const nowMin = parisMinutes(new Date().toISOString());
 
-  const head = `<div class="wk-head"><div class="wk-corner"></div>${days.map((d) => {
-    const t = d.key === todayK;
-    return `<div class="wk-colh${t ? " is-today" : ""}"><span class="wk-colh-d"><span class="wd">${cap(fmtWdShort.format(d.date))}</span><span class="dn num">${fmtDayNum.format(d.date)}</span></span>${modeBadge(d.key, { compact: true })}</div>`;
-  }).join("")}</div>`;
+  const dow = (key) => new Date(key + "T12:00:00Z").getUTCDay();
+  const wd = (date) => cap(fmtWdShort.format(date)).replace(/\.$/, "");
 
-  const axis = `<div class="wk-axis" style="height:${H}px">${hours.map((h) =>
-    `<div class="wk-hr" style="top:${(h * 60 - top0) / 60 * PX}px">${String(h).padStart(2, "0")}:00</div>`).join("")}</div>`;
+  const head = `<div class="cal-corner"></div>` + days.map((d, i) => {
+    const t = d.key === todayK, we = dow(d.key) === 0 || dow(d.key) === 6;
+    const hide = mobile && i !== sel ? " is-hiddenM" : "";
+    return `<div class="cal-colh${t ? " is-today" : ""}${we ? " we" : ""}${hide}">
+      <div class="cd">${wd(d.date)}</div><div class="cn num">${fmtDayNum.format(d.date)}</div>${modeBadge(d.key, { compact: true })}</div>`;
+  }).join("");
+
+  const slots = Array.from({ length: rows }, () => `<div class="cal-slot"></div>`).join("");
+  const axis = `<div class="cal-axis">${Array.from({ length: rows }, (_, k) =>
+    `<div class="cal-slot"><b>${String(minH + k).padStart(2, "0")}h</b></div>`).join("")}</div>`;
 
   const toMin = (hm) => { const [h, m] = hm.split(":").map(Number); return h * 60 + m; };
   const sgBands = (key) => {
     if (!sgOn || dayMode(key) !== "entreprise" || !ALT?.sgHours) return "";
-    const seg = (a, b, label) => `<div class="wk-sg" style="top:${(a - top0) / 60 * PX}px;height:${(b - a) / 60 * PX}px">${label ? `<span>${label}</span>` : ""}</div>`;
+    const seg = (a, b, label) => `<div class="ev-sg" style="top:${yTop(a)}px;height:${(b - a) / 60 * PX}px">${label ? `<b>${label}</b>` : ""}</div>`;
     const { am, pm } = ALT.sgHours;
     return seg(toMin(am[0]), toMin(am[1]), isTelework(key) ? "SG · TT" : "SG") + seg(toMin(pm[0]), toMin(pm[1]), "");
   };
 
   const cols = days.map((d, i) => {
-    const t = d.key === todayK;
-    const lines = hours.map((h) => `<div class="wk-line" style="top:${(h * 60 - top0) / 60 * PX}px"></div>`).join("");
-    const blocks = perDay[i].map((ev) => {
-      const top = (ev.s - top0) / 60 * PX;
-      const height = Math.max(24, (ev.e2 - ev.s) / 60 * PX - 2);
+    const t = d.key === todayK, we = dow(d.key) === 0 || dow(d.key) === 6;
+    const hide = mobile && i !== sel ? " is-hiddenM" : "";
+    const showNow = t && nowMin >= top0 && nowMin <= maxH * 60 && (!mobile || i === sel);
+    const blocks = perDay[i].map((ev, j) => {
+      const height = Math.max(22, (ev.e2 - ev.s) / 60 * PX - 4);
       const w = 100 / ev.cols, left = ev.lane * w;
-      const room = (ev.rooms && ev.rooms[0]) || ev.location || "";
-      return `<div class="wk-ev src-${ev.source}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} style="top:${top}px;height:${height}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px)" title="${esc(ev.title)}">
-        <span class="wk-ev-h mono">${fmtTime.format(new Date(ev.start))}</span>
-        <span class="wk-ev-t">${esc(ev.title)}</span>
-        ${room ? `<span class="wk-ev-r">${esc(room)}</span>` : ""}
+      const dur = ev.e2 - ev.s;
+      const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
+      const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
+      const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
+      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+        <div class="ev-hd">${ico(SRC_ICON[ev.source] || "i-cap")}<span class="ev-t mono">${range}</span></div>
+        <div class="ev-ti">${esc(ev.title)}</div>
+        ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
       </div>`;
     }).join("");
-    return `<div class="wk-col${t ? " is-today" : ""}" style="height:${H}px">${sgBands(d.key)}${lines}${blocks}</div>`;
+    const now = showNow ? `<div class="cal-now" style="top:${yTop(nowMin)}px"><span class="cal-now-ln"></span><span class="cal-now-dot"></span><span class="cal-now-lab mono">${fmtTime.format(new Date())}</span></div>` : "";
+    return `<div class="cal-col${t ? " is-today" : ""}${we ? " we" : ""}${hide}">${sgBands(d.key)}${slots}${blocks}${now}</div>`;
   }).join("");
 
-  return `<div class="wk">${head}<div class="wk-scroll"><div class="wk-body">${axis}${cols}</div></div></div>`;
+  return `<div class="cal" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
 }
 
 // ---------- Vue À faire ----------
