@@ -1,0 +1,41 @@
+name: Mise à jour du planning
+
+on:
+  schedule:
+    - cron: "0 */3 * * *" # toutes les 3 heures
+  workflow_dispatch: {} # déclenchement manuel depuis l'onglet Actions
+
+permissions:
+  contents: write # autorise le commit de planning.json
+
+concurrency:
+  group: planning
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Récupérer le planning myefrei
+        env:
+          MYEFREI_ICS_URL: ${{ secrets.MYEFREI_ICS_URL }}
+        run: node scripts/fetch-planning.mjs
+
+      - name: Commit si le planning a changé
+        run: |
+          if [[ -n "$(git status --porcelain planning.json)" ]]; then
+            git config user.name "planning-bot"
+            git config user.email "actions@github.com"
+            git add planning.json
+            git commit -m "chore: mise à jour du planning"
+            git push
+            echo "Planning mis à jour."
+          else
+            echo "Aucun changement."
+          fi
