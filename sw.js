@@ -1,5 +1,5 @@
 // Service worker Hub : coquille en cache-first, planning en network-first.
-const CACHE = "hub-v5";
+const CACHE = "hub-v6";
 const SHELL = [
   ".", "index.html", "styles.css", "app.js", "config.js", "manifest.json",
   "icons/icon-192.png", "icons/icon-512.png",

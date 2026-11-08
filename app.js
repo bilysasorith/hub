@@ -235,7 +235,7 @@ function dayTimeline(evs) {
     const w = 100 / ev.cols, left = ev.lane * w;
     const dur = ev.e2 - ev.s;
     const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
-    const conf = ev.cols > 1;
+    const conf = ev.conflict;
     const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
     return `<div class="tev src-${ev.source}${size}${conf ? " is-conf" : ""}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}"
       style="top:${y(ev.s)}px;height:${h}px;left:calc(${left}% + ${left ? 3 : 0}px);width:calc(${w}% - ${ev.cols > 1 ? 6 : 0}px)">
@@ -533,6 +533,12 @@ function wireEventTaps(root) {
 }
 
 // Répartit les événements qui se chevauchent en colonnes côte à côte.
+// Deux créneaux ne sont mis côte à côte (et signalés en conflit) que s'ils se
+// chevauchent de plus de MIN_OVERLAP minutes. Un simple bord qui se touche
+// (ex. un RDV qui démarre quand un cours finit) reste plein largeur et lisible.
+const MIN_OVERLAP = 15;
+const overlapMin = (a, b) => Math.min(a.e2, b.e2) - Math.max(a.s, b.s);
+
 function packDay(evs) {
   evs.sort((a, b) => a.s - b.s || a.e2 - b.e2);
   const clusters = []; let cur = []; let curEnd = -1;
@@ -544,13 +550,31 @@ function packDay(evs) {
   for (const cl of clusters) {
     const laneEnds = [];
     for (const ev of cl) {
-      let lane = 0; while (lane < laneEnds.length && laneEnds[lane] > ev.s) lane++;
-      if (lane === laneEnds.length) laneEnds.push(ev.e2); else laneEnds[lane] = ev.e2;
+      // On ne passe à une colonne suivante que pour un VRAI chevauchement (> seuil).
+      let lane = 0; while (lane < laneEnds.length && laneEnds[lane] - ev.s > MIN_OVERLAP) lane++;
+      if (lane === laneEnds.length) laneEnds.push(ev.e2); else laneEnds[lane] = Math.max(laneEnds[lane], ev.e2);
       ev.lane = lane;
     }
     for (const ev of cl) ev.cols = laneEnds.length;
   }
+  // Drapeau de conflit, par paire : au moins un autre créneau chevauche de > seuil.
+  for (const a of evs) a.conflict = false;
+  for (let i = 0; i < evs.length; i++)
+    for (let j = i + 1; j < evs.length; j++)
+      if (overlapMin(evs[i], evs[j]) > MIN_OVERLAP) { evs[i].conflict = true; evs[j].conflict = true; }
   return evs;
+}
+
+// Paires de créneaux en conflit sur la semaine (pour le bandeau + le saut).
+function weekConflicts(perDay) {
+  const out = [];
+  perDay.forEach((items, i) => {
+    for (let a = 0; a < items.length; a++)
+      for (let b = a + 1; b < items.length; b++)
+        if (overlapMin(items[a], items[b]) > MIN_OVERLAP)
+          out.push({ i, s: Math.max(items[a].s, items[b].s) });
+  });
+  return out.sort((x, y) => x.i - y.i || x.s - y.s);
 }
 
 // Segmented control de navigation (‹ Cette semaine ›).
@@ -660,11 +684,28 @@ function renderWeek() {
   const sel = weekDay >= 0 ? weekDay : (todayIdx >= 0 ? todayIdx : 0);
 
   const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay, days)}</div>`;
-  viewEl.innerHTML = `<div class="wk">${bar}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel)}</div>`;
+  const conflicts = weekConflicts(perDay);
+  const alert = conflicts.length
+    ? `<button class="wk-alert" id="wk-alert" data-i="${conflicts[0].i}">${ico("i-alert", "si")}
+        <span><b>${conflicts.length} conflit${conflicts.length > 1 ? "s" : ""} à vérifier</b> cette semaine — deux créneaux se chevauchent.</span>
+        <span class="wk-alert-go">Voir&nbsp;›</span></button>`
+    : "";
+  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel)}</div>`;
 
   wireWeekNav();
   viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
   viewEl.querySelector("#toggle-sg")?.addEventListener("click", () => { sgOn = !sgOn; renderWeek(); });
+  viewEl.querySelector("#wk-alert")?.addEventListener("click", () => {
+    const i = conflicts[0].i;
+    if (!desktop() && weekDay !== i) { weekDay = i; renderWeek(); }
+    requestAnimationFrame(() => {
+      const els = [...viewEl.querySelectorAll(".ev.is-conf")].filter((e) => e.offsetParent !== null);
+      const el = els[0] || viewEl.querySelector(".ev.is-conf");
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse");
+    });
+  });
   wirePills();
   wireEventTaps(viewEl);
   updateFab();
@@ -732,7 +773,8 @@ function weekGrid(days, perDay, sel) {
       const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
       const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
       const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
-      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+        ${ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : ""}
         <div class="ev-hd">${ico(SRC_ICON[ev.source] || "i-cap")}<span class="ev-t mono">${range}</span></div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
