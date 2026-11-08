@@ -40,10 +40,11 @@ jobs:
 
       - name: Commit si le planning a changé
         run: |
-          if [[ -n "$(git status --porcelain planning.json)" ]]; then
+          if [[ -n "$(git status --porcelain planning.json changes.json)" ]]; then
             git config user.name "planning-bot"
             git config user.email "actions@github.com"
             git add planning.json
+            [ -f changes.json ] && git add changes.json
             git commit -m "chore: mise à jour du planning"
             git push
             echo "Planning mis à jour."

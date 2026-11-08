@@ -2,13 +2,14 @@
 // Parsing ICS mutualisé via ics.mjs ; ici on enrichit seulement avec les champs myefrei (DESCRIPTION).
 // L'URL vient de la variable d'env MYEFREI_ICS_URL (secret GitHub), jamais en clair dans le dépôt.
 
-import { writeFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parseEvents } from "./ics.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = join(__dirname, "..", "planning.json");
+const CHANGES_OUT = join(__dirname, "..", "changes.json");
 
 const URL = process.env.MYEFREI_ICS_URL;
 if (!URL) {
@@ -91,5 +92,47 @@ const payload = {
   events: kept,
 };
 
+// --- Journal des changements (ajout / suppression / modification) venant du flux ---
+// Compare le planning qu'on vient de générer avec l'ancien (déjà dans le dépôt).
+// On ne retient que les cours à venir, pour éviter le bruit des cours qui tombent du passé.
+const readJson = async (p, fallback) => { try { return JSON.parse(await readFile(p, "utf8")); } catch { return fallback; } };
+const roomOf = (e) => ((e.rooms && e.rooms.join(", ")) || e.location || "").trim();
+const nowISO = new Date().toISOString();
+const nowMs = Date.now();
+const upcoming = (e) => e.start && new Date(e.start).getTime() >= nowMs;
+
+const old = await readJson(OUT, null);
+const fresh = [];
+if (old && Array.isArray(old.events)) {
+  const oldMap = new Map(old.events.map((e) => [e.uid, e]));
+  const newMap = new Map(kept.map((e) => [e.uid, e]));
+  for (const e of kept) if (upcoming(e) && !oldMap.has(e.uid))
+    fresh.push({ ts: nowISO, type: "added", uid: e.uid, title: e.title, start: e.start, room: roomOf(e) });
+  for (const e of old.events) if (upcoming(e) && !newMap.has(e.uid))
+    fresh.push({ ts: nowISO, type: "removed", uid: e.uid, title: e.title, start: e.start, room: roomOf(e) });
+  for (const e of kept) {
+    const o = oldMap.get(e.uid);
+    if (!o || !(upcoming(e) || upcoming(o))) continue;
+    const ch = {};
+    if (o.start !== e.start || o.end !== e.end) ch.time = { from: o.start, to: e.start };
+    if (roomOf(o) !== roomOf(e)) ch.room = { from: roomOf(o), to: roomOf(e) };
+    if ((o.title || "") !== (e.title || "")) ch.title = { from: o.title, to: e.title };
+    if (Object.keys(ch).length)
+      fresh.push({ ts: nowISO, type: "modified", uid: e.uid, title: e.title, start: e.start, changes: ch });
+  }
+}
+
 await writeFile(OUT, JSON.stringify(payload, null, 2) + "\n", "utf8");
 console.log(`planning.json écrit : ${kept.length} cours (sur ${events.length} au total dans le flux).`);
+
+if (fresh.length) {
+  const PRUNE_MS = 21 * 24 * 3600 * 1000;
+  const prev = await readJson(CHANGES_OUT, { items: [] });
+  const items = [...fresh, ...(prev.items || [])]
+    .filter((c) => nowMs - new Date(c.ts).getTime() < PRUNE_MS)
+    .slice(0, 120);
+  await writeFile(CHANGES_OUT, JSON.stringify({ generatedAt: nowISO, items }, null, 2) + "\n", "utf8");
+  console.log(`changes.json : ${fresh.length} changement(s) détecté(s) (${items.length} au journal).`);
+} else {
+  console.log("Aucun changement de cours détecté.");
+}

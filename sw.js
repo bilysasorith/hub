@@ -1,5 +1,5 @@
 // Service worker Hub : coquille en cache-first, planning en network-first.
-const CACHE = "hub-v7";
+const CACHE = "hub-v8";
 const SHELL = [
   ".", "index.html", "styles.css", "app.js", "config.js", "manifest.json",
   "icons/icon-192.png", "icons/icon-512.png",
@@ -23,8 +23,8 @@ self.addEventListener("fetch", (e) => {
   // On ne gère que notre propre origine (Supabase / fonts passent directement au réseau).
   if (url.origin !== location.origin) return;
 
-  // planning.json / training.json : réseau d'abord, cache si hors-ligne.
-  if (url.pathname.endsWith("planning.json") || url.pathname.endsWith("training.json")) {
+  // planning.json / training.json / changes.json : réseau d'abord, cache si hors-ligne.
+  if (url.pathname.endsWith("planning.json") || url.pathname.endsWith("training.json") || url.pathname.endsWith("changes.json")) {
     e.respondWith(
       fetch(req).then((res) => {
         const copy = res.clone();

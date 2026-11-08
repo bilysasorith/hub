@@ -122,6 +122,31 @@ h1 {
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-btn-ico { width: 18px; height: 18px; }
 
+/* Cloche changements de planning */
+.icon-btn.notif { position: relative; }
+.icon-btn.notif.has-unseen { color: var(--warn); }
+.notif-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;
+  display: grid; place-items: center; border-radius: 99px; background: var(--danger); color: #fff;
+  font-family: var(--f-display); font-weight: 700; font-size: 10.5px; line-height: 1;
+  border: 2px solid var(--bg);
+}
+
+/* Panneau des changements */
+.ch-list { margin-top: 14px; max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.ch-sec-h { font-family: var(--f-display); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+.ch-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ch-sec .ch-row:first-of-type { border-top: 0; }
+.ch-row.is-unseen .ch-ti { font-weight: 700; }
+.ch-tag { flex: none; margin-top: 1px; padding: 2px 8px; border-radius: 7px; font-family: var(--f-display); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+.ch-tag.ch-add { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent); }
+.ch-tag.ch-rem { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent); }
+.ch-tag.ch-mod { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
+.ch-body { flex: 1; min-width: 0; }
+.ch-ti { font-size: 14px; color: var(--fg); line-height: 1.3; }
+.ch-de { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+.ch-ago { flex: none; font-size: 11px; color: var(--muted); white-space: nowrap; margin-top: 2px; }
+
 main { padding-top: 18px; display: grid; gap: 14px; }
 
 /* Libellé de section (pas d'eyebrow décoratif : c'est un vrai repère de liste) */

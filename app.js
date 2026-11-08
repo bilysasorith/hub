@@ -68,6 +68,7 @@ const liveTimeEl = document.getElementById("live-time");
 let PLANNING = null;        // { generatedAt, events: [...] }
 let ALT = null;             // alternance : { start, end, schoolSet, sgHours }
 let TRAINING = null;        // rotation muscu : { anchor:{date,index}, cycle:[...] }
+let CHANGES = [];           // journal des changements de planning (ajout/suppr/modif), récents d'abord
 let current = "today";      // onglet actif
 let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
 let weekDay = -1;           // mobile : index du jour affiché (-1 = auto = aujourd'hui)
@@ -124,6 +125,99 @@ async function loadTraining() {
     const j = await res.json();
     if (j?.anchor?.date && Array.isArray(j.cycle) && j.cycle.length) TRAINING = j;
   } catch { TRAINING = null; }
+}
+
+const SEEN_KEY = "hub.changesSeen";
+async function loadChanges() {
+  try {
+    const res = await fetch("changes.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    const cut = Date.now() - 21 * 24 * 3600 * 1000;
+    CHANGES = (j.items || [])
+      .filter((c) => c.ts && new Date(c.ts).getTime() >= cut)
+      .sort((a, b) => b.ts.localeCompare(a.ts));
+  } catch { CHANGES = []; }
+  // Première ouverture (aucun "vu" enregistré) : on part propre, seuls les PROCHAINS changements alertent.
+  if (!localStorage_get(SEEN_KEY) && !(_store?.seenAt)) {
+    try { localStorage.setItem(SEEN_KEY, CHANGES[0]?.ts || new Date().toISOString()); } catch {}
+  }
+}
+const localStorage_get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+
+// Horodatage "vu" effectif : la plus récente valeur entre le serveur (Supabase) et l'appareil.
+function seenAt() {
+  const local = localStorage_get(SEEN_KEY) || "";
+  const srv = (_store?.session && _store.seenAt) || "";
+  return srv > local ? srv : local;
+}
+const unseenChanges = () => { const s = seenAt(); return CHANGES.filter((c) => c.ts > s); };
+
+function fmtChWhen(iso) { const d = new Date(iso); return `${cap(fmtWeekday.format(d))} · ${fmtTime.format(d)}`; }
+function agoLabel(iso) {
+  const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
+  if (h < 1) return "à l'instant";
+  if (h < 24) return `il y a ${h} h`;
+  return `il y a ${Math.floor(h / 24)} j`;
+}
+function changeDetail(c) {
+  if (c.type === "added") return `Nouveau cours · ${fmtChWhen(c.start)}`;
+  if (c.type === "removed") return `Cours retiré · ${fmtChWhen(c.start)}`;
+  const ch = c.changes || {}, parts = [];
+  if (ch.time) parts.push(`Déplacé : ${fmtChWhen(ch.time.from)} → ${fmtChWhen(ch.time.to)}`);
+  if (ch.room) parts.push(`Salle : ${esc(ch.room.from || "—")} → ${esc(ch.room.to || "—")}`);
+  if (ch.title) parts.push("Renommé");
+  let s = parts.join(" · ") || "Modifié";
+  if (!ch.time) s = `${fmtChWhen(c.start)} · ${s}`;
+  return s;
+}
+const CH_META = { added: ["Ajouté", "ch-add"], removed: ["Supprimé", "ch-rem"], modified: ["Modifié", "ch-mod"] };
+function changeRow(c, isUnseen) {
+  const [label, cls] = CH_META[c.type] || ["Changement", ""];
+  return `<div class="ch-row${isUnseen ? " is-unseen" : ""}">
+    <span class="ch-tag ${cls}">${label}</span>
+    <div class="ch-body"><div class="ch-ti">${esc(c.title)}</div><div class="ch-de">${changeDetail(c)}</div></div>
+    <span class="ch-ago">${agoLabel(c.ts)}</span>
+  </div>`;
+}
+
+function updateBell() {
+  const bell = document.getElementById("notif-bell");
+  const badge = document.getElementById("notif-badge");
+  if (!bell) return;
+  const n = unseenChanges().length;
+  bell.hidden = CHANGES.length === 0;
+  bell.classList.toggle("has-unseen", n > 0);
+  if (badge) { badge.hidden = n === 0; badge.textContent = n > 9 ? "9+" : String(n); }
+}
+
+function openChangesSheet() {
+  const s = seenAt();
+  const unseen = CHANGES.filter((c) => c.ts > s);
+  const seen = CHANGES.filter((c) => c.ts <= s);
+  const section = (t, list) => list.length ? `<div class="ch-sec"><div class="ch-sec-h">${t}</div>${list.map((c) => changeRow(c, c.ts > s)).join("")}</div>` : "";
+  const body = CHANGES.length
+    ? `${section("Nouveau", unseen)}${section("Déjà vu", seen)}`
+    : `<p class="sheet-note">Aucun changement récent. Tu seras prévenu ici si l'école ajoute, retire ou déplace un cours dans ton planning.</p>`;
+  const footer = unseen.length
+    ? `<div class="sheet-actions"><button class="btn btn-ghost" id="ch-close">Fermer</button><button class="btn" id="ch-seen">Marquer comme vu</button></div>`
+    : `<div class="sheet-actions"><button class="btn" id="ch-close">Fermer</button></div>`;
+  const ov = openSheet(`<h3 class="sheet-h">Changements du planning</h3>
+    <p class="sheet-sub">Ce que l'école a modifié dans ton emploi du temps.</p>
+    <div class="ch-list">${body}</div>${footer}`);
+  ov.querySelector("#ch-close")?.addEventListener("click", closeSheet);
+  ov.querySelector("#ch-seen")?.addEventListener("click", () => { markChangesSeen(); closeSheet(); });
+}
+
+async function markChangesSeen() {
+  const latest = CHANGES[0]?.ts || new Date().toISOString();
+  try { localStorage.setItem(SEEN_KEY, latest); } catch {}
+  updateBell();
+  const store = _store?.session ? _store : await getStore();
+  if (store?.session) {
+    store.seenAt = latest;
+    await store.sb.from("planning_seen").upsert({ user_id: store.session.user.id, seen_at: latest }, { onConflict: "user_id" });
+  }
 }
 
 // Nombre de jours calendaires entre deux clés YYYY-MM-DD (b - a).
@@ -947,13 +1041,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set() };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -979,17 +1073,20 @@ async function refreshTodos() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); return; }
-  const [c, o, t, s] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; return; }
+  const [c, o, t, s, p] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("training_skips").select("day"),
+    _store.sb.from("planning_seen").select("seen_at").maybeSingle(),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
   _store.teams = t.error ? [] : (t.data || []);
   _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
+  _store.seenAt = (p && !p.error && p.data) ? p.data.seen_at : null;
+  updateBell();
   subscribeRealtime();
 }
 
@@ -1022,6 +1119,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "event_overrides" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "calendar_events" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "training_skips" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "planning_seen" }, onPerso)
     .subscribe();
 }
 
@@ -1311,7 +1409,10 @@ function rerender() {
   else if (current === "week") renderWeek();
   else renderTasks();
   updateFab();
+  updateBell();
 }
+
+document.getElementById("notif-bell")?.addEventListener("click", openChangesSheet);
 
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -1364,10 +1465,10 @@ if (location.hostname === "localhost") {
 }
 
 // ---------- Démarrage ----------
-await Promise.all([loadPlanning(), loadAlternance(), loadTraining()]);
+await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges()]);
 rerender();
-// Rafraîchit l'état "en cours / prochain" quand on revient sur l'app
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { loadPlanning().then(rerender); } });
+// Rafraîchit l'état "en cours / prochain" et les changements quand on revient sur l'app
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { Promise.all([loadPlanning(), loadChanges()]).then(rerender); } });
 
 // Service worker (PWA installable + hors-ligne)
 if ("serviceWorker" in navigator) {
