@@ -1,9 +1,10 @@
-// Importe les 2 calendriers Outlook (réunions Teams) dans Supabase, en PRIVÉ.
+// Importe les calendriers privés (réunions Teams Outlook + agenda Google) dans Supabase, en PRIVÉ.
 // Rien n'est écrit dans planning.json : ces données ne sortent jamais du dépôt public.
 //
 // Variables d'env (secrets GitHub) :
 //   OUTLOOK_FREELANCE_ICS_URL  — flux ICS Outlook entreprise (freelance)
 //   OUTLOOK_EFREI_ICS_URL      — flux ICS Outlook école
+//   GOOGLE_ICS_URL             — adresse secrète iCal de l'agenda Google perso
 //   SUPABASE_URL               — URL du projet (ex. https://xxxx.supabase.co) [public]
 //   SUPABASE_SERVICE_KEY       — clé service_role (secret, jamais dans le code)
 //
@@ -14,7 +15,12 @@ import { parseEvents } from "./ics.mjs";
 const SOURCES = [
   { name: "freelance", url: process.env.OUTLOOK_FREELANCE_ICS_URL },
   { name: "efrei", url: process.env.OUTLOOK_EFREI_ICS_URL },
+  { name: "google", url: process.env.GOOGLE_ICS_URL },
 ];
+
+// Les cours myefrei (ex. "CX007-2.5-3-JAV-LAB-2") sont déjà dans planning.json.
+// On les écarte de l'agenda Google pour éviter les doublons.
+const isMyefreiCourse = (title) => /^[A-Z]{2}\d{3}-/.test((title || "").trim());
 
 const SUPA_URL = process.env.SUPABASE_URL || "https://dcauisdxvbmcnerjklxm.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -81,6 +87,7 @@ async function run() {
     const rows = parseEvents(raw, { expand: { from: FROM, to: TO } })
       .filter((e) => e.start && !e.allDay)
       .filter((e) => !isCanceled(e.title))
+      .filter((e) => src.name !== "google" || !isMyefreiCourse(e.title))
       .filter((e) => {
         const t = new Date(e.start).getTime();
         return t >= FROM && t <= TO;

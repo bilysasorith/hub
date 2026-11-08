@@ -29,11 +29,12 @@ jobs:
           MYEFREI_ICS_URL: ${{ secrets.MYEFREI_ICS_URL }}
         run: node scripts/fetch-planning.mjs
 
-      - name: Importer les réunions Teams (privé -> Supabase)
+      - name: Importer les calendriers privés (Teams + Google -> Supabase)
         if: ${{ env.SUPABASE_SERVICE_KEY != '' }}
         env:
           OUTLOOK_FREELANCE_ICS_URL: ${{ secrets.OUTLOOK_FREELANCE_ICS_URL }}
           OUTLOOK_EFREI_ICS_URL: ${{ secrets.OUTLOOK_EFREI_ICS_URL }}
+          GOOGLE_ICS_URL: ${{ secrets.GOOGLE_ICS_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: node scripts/import-outlook.mjs
 

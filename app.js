@@ -54,9 +54,10 @@ function parisToISO(dateStr, timeStr) {
 }
 
 // Sources d'événements : cours myefrei / perso ajouté / Teams pro / Teams école.
-const SRC_LABEL = { course: "Cours", perso: "Perso", fl: "Pro", ef: "École" };
+const SRC_LABEL = { course: "Cours", perso: "Perso", fl: "Pro", ef: "École", gc: "Agenda" };
 const normCustom = (c) => ({ source: "perso", cid: c.id, title: c.title, start: c.start_at, end: c.end_at, location: c.location, rooms: [], teacher: null });
-const normTeams = (t) => ({ source: t.source === "efrei" ? "ef" : "fl", tid: t.id, title: t.title, start: t.start_at, end: t.end_at, location: t.location, rooms: [], teacher: null });
+const CAL_SRC = { efrei: "ef", google: "gc" }; // source DB -> source d'affichage (défaut : fl)
+const normTeams = (t) => ({ source: CAL_SRC[t.source] || "fl", tid: t.id, title: t.title, start: t.start_at, end: t.end_at, location: t.location, rooms: [], teacher: null });
 
 const viewEl = document.getElementById("view");
 const titleEl = document.getElementById("top-title");
@@ -179,14 +180,14 @@ function hoursLabel(min) {
 // Emblème (icône) par matière : d'abord la source, puis des mots-clés du titre.
 function subjectIcon(ev) {
   if (ev.source === "fl" || ev.source === "ef") return "i-video";
-  if (ev.source === "perso") return "i-user";
+  if (ev.source === "perso" || ev.source === "gc") return "i-user";
   const t = (ev.title || "").toLowerCase();
   if (/archi|logiciel|génie|conception|uml/.test(t)) return "i-cube";
   if (/base de don|bdd|sql|donnée|data/.test(t)) return "i-db";
   if (/web|front|back|dévelop|develop|program|code|java|python|algo|\binfo/.test(t)) return "i-code";
   return "i-cap";
 }
-const SRC_HC = { course: "var(--ev-course)", perso: "var(--ev-perso)", fl: "var(--ev-fl)", ef: "var(--ev-ef)" };
+const SRC_HC = { course: "var(--ev-course)", perso: "var(--ev-perso)", fl: "var(--ev-fl)", ef: "var(--ev-ef)", gc: "var(--ev-gc)" };
 
 // Trous libres (≥ 45 min) entre les créneaux de la journée (sur l'union des créneaux).
 function freeGaps(items) {
@@ -599,6 +600,7 @@ function weekLegend(perDay, days) {
   if (present.has("perso")) items.push(["var(--ev-perso)", "Perso"]);
   if (present.has("fl")) items.push(["var(--ev-fl)", "Pro"]);
   if (present.has("ef")) items.push(["var(--ev-ef)", "École (Teams)"]);
+  if (present.has("gc")) items.push(["var(--ev-gc)", "Agenda Google"]);
   if (days.some((d) => dayMode(d.key) === "entreprise")) items.push(["var(--warn)", "Entreprise"]);
   if (!items.length) return "";
   return `<div class="wk-legend">${items.map(([c, l]) =>
@@ -681,7 +683,7 @@ function wirePills() {
   }));
 }
 
-const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief" };
+const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief", gc: "i-user" };
 
 // Grille horaire 7 jours (desktop) / 1 jour qui défile (mobile), câblée aux vraies sources.
 function weekGrid(days, perDay, sel) {
@@ -1066,8 +1068,11 @@ function openEventActions(ev) {
         closeSheet(); await refreshPersonal(); rerender();
       };
     }
-  } else { // Teams (lecture seule)
-    const ov = openSheet(`${head}<p class="sheet-note">Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.</p>
+  } else { // Calendrier importé (lecture seule)
+    const note = ev.source === "gc"
+      ? "Événement importé depuis ton agenda Google. Modifie-le dans Google Agenda."
+      : `Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.`;
+    const ov = openSheet(`${head}<p class="sheet-note">${note}</p>
       <div class="sheet-actions"><button class="btn" id="s-close">Fermer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
   }

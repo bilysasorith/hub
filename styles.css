@@ -19,6 +19,7 @@
   --ev-perso:  #3DBE7E;  /* événement perso ajouté */
   --ev-fl:     #B98BFF;  /* Teams freelance */
   --ev-ef:     #45D0DC;  /* Teams efrei */
+  --ev-gc:     #EF84A6;  /* agenda Google perso */
   --shadow: 0 8px 24px rgba(0,0,0,.42);
   --shadow-sm: 0 2px 8px rgba(0,0,0,.35);
   /* Remplissage des contrôles actifs : bleu assez sombre pour que le texte blanc passe l'AA */
@@ -164,6 +165,7 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .row.src-perso  { --c: var(--ev-perso); }
 .row.src-fl     { --c: var(--ev-fl); }
 .row.src-ef     { --c: var(--ev-ef); }
+.row.src-gc     { --c: var(--ev-gc); }
 .row[data-src] .row-time::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--ev-course)); margin-right: 6px; vertical-align: middle; transform: translateY(-1px); }
 .row.is-hidden { opacity: .5; }
 .row.is-hidden .row-title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
@@ -331,6 +333,7 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .ev.src-perso  { --c: var(--ev-perso); }
 .ev.src-fl     { --c: var(--ev-fl); }
 .ev.src-ef     { --c: var(--ev-ef); }
+.ev.src-gc     { --c: var(--ev-gc); }
 .ev.is-sm .ev-lo { display: none; }
 .ev.is-tiny { padding: 4px 9px; }
 .ev.is-tiny .ev-ti, .ev.is-tiny .ev-lo { display: none; }
@@ -384,6 +387,7 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .card-now.src-perso { --accent: var(--ev-perso); }
 .card-now.src-fl    { --accent: var(--ev-fl); }
 .card-now.src-ef    { --accent: var(--ev-ef); }
+.card-now.src-gc    { --accent: var(--ev-gc); }
 .card-now[data-ev]  { cursor: pointer; }
 
 /* Outils de semaine : voir/masquer les cours ignorés */
@@ -516,7 +520,7 @@ main { padding-top: 18px; display: grid; gap: 14px; }
   box-shadow: 0 2px 6px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.05);
   transition: transform .16s cubic-bezier(.2,.7,.3,1), box-shadow .16s, border-color .16s;
 }
-.tev.src-course { --c: var(--ev-course); } .tev.src-perso { --c: var(--ev-perso); } .tev.src-fl { --c: var(--ev-fl); } .tev.src-ef { --c: var(--ev-ef); }
+.tev.src-course { --c: var(--ev-course); } .tev.src-perso { --c: var(--ev-perso); } .tev.src-fl { --c: var(--ev-fl); } .tev.src-ef { --c: var(--ev-ef); } .tev.src-gc { --c: var(--ev-gc); }
 .tev[data-ev] { cursor: pointer; }
 .tev[data-ev]:hover { transform: translateY(-2px); z-index: 9; border-color: color-mix(in srgb, var(--c) 66%, transparent); box-shadow: 0 16px 30px -14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08); }
 .tev .hd { display: flex; align-items: center; gap: 7px; }
