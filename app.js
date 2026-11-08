@@ -41,6 +41,32 @@ function dueLabel(due) {
   return fmtWdDay.format(new Date(due + "T12:00:00Z"));
 }
 
+// Dimanche de la semaine courante (pour « à faire avant / cette semaine »).
+function endOfWeekKey() {
+  const todayK = dayKey(now());
+  const dow = (new Date(todayK + "T12:00:00Z").getUTCDay() + 6) % 7; // lundi = 0
+  return addDays(todayK, 6 - dow);
+}
+// Étiquettes de tâche. Couleurs alignées sur les sources d'événements.
+const TASK_TAGS = {
+  efrei:     { label: "EFREI",     cls: "tg-efrei" },
+  sg:        { label: "SG",        cls: "tg-sg" },
+  perso:     { label: "Perso",     cls: "tg-perso" },
+  freelance: { label: "Freelance", cls: "tg-fl" },
+};
+const tagChip = (tag) => TASK_TAGS[tag] ? `<span class="tg ${TASK_TAGS[tag].cls}">${TASK_TAGS[tag].label}</span>` : "";
+const tagPickHtml = (sel) => Object.entries(TASK_TAGS).map(([k, m]) =>
+  `<button type="button" class="tg-opt ${m.cls}${sel === k ? " on" : ""}" data-tag="${k}">${m.label}</button>`).join("");
+// Pastille d'échéance : en retard / aujourd'hui / avant [jour].
+function deadlinePill(t) {
+  if (t.done || !t.due_date) return "";
+  const todayK = dayKey(now());
+  if (t.due_date < todayK) return `<span class="pill late">${ico("i-alert")}En retard</span>`;
+  if (t.due_date === todayK) return `<span class="pill due0">Aujourd'hui</span>`;
+  if (t.due_date === addDays(todayK, 1)) return `<span class="pill">avant demain</span>`;
+  return `<span class="pill">avant ${esc(fmtWdDay.format(new Date(t.due_date + "T12:00:00Z")))}</span>`;
+}
+
 // Heure murale Paris (saisie date+heure du formulaire) -> instant ISO UTC (gère l'heure d'été).
 function parisToISO(dateStr, timeStr) {
   const [Y, M, D] = dateStr.split("-").map(Number);
@@ -701,10 +727,13 @@ async function renderDashTasks() {
   if (!store?.session) return;
   const todayK = dayKey(now());
   const todos = store.todos;
-  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK);
+  const weekEnd = endOfWeekKey();
+  const byDue = (a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999");
+  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK).sort(byDue);
   const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
-  const upcoming = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK).sort((a, b) => a.due_date.localeCompare(b.due_date));
-  const total = late.length + today.length + upcoming.length;
+  const soon = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK && t.due_date <= weekEnd).sort(byDue);
+  const later = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd).sort(byDue);
+  const total = late.length + today.length + soon.length + later.length;
 
   // Progression du jour : tâches datées d'aujourd'hui (faites / total).
   const dueToday = todos.filter((t) => t.due_date === todayK);
@@ -717,7 +746,8 @@ async function renderDashTasks() {
   const groups = [
     ["late", "En retard", "i-alert", late],
     ["", "Aujourd'hui", "i-today", today],
-    ["", "À venir", "i-clock", upcoming],
+    ["", "Cette semaine", "i-week", soon],
+    ["", "Plus tard", "i-clock", later],
   ].filter((g) => g[3].length);
   mount.innerHTML = `<div class="tasks">${groups.map(([cls, label, icn, list]) =>
     `<div class="tgroup ${cls}"><div class="tl-h">${ico(icn, "")}${label}<span class="n">${list.length}</span></div>${list.map(todoRow).join("")}</div>`).join("")}
@@ -1083,27 +1113,32 @@ async function renderTasks() {
 
   if (!store.session) { viewEl.innerHTML = signInView(); wireSignIn(store); return; }
 
-  const todayK = dayKey(new Date());
+  const todayK = dayKey(now());
   const todos = store.todos;
-  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK);
+  const weekEnd = endOfWeekKey();
+  const byDue = (a, b) => (a.due_date || "9999").localeCompare(b.due_date || "9999");
+  const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK).sort(byDue);
   const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
-  const upcoming = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+  const soon = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK && t.due_date <= weekEnd).sort(byDue);
+  const later = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd).sort(byDue);
   const done = todos.filter((t) => t.done).slice(-30).reverse();
 
   const section = (label, list, cls = "") => list.length
     ? `<p class="section-label${cls ? " " + cls : ""}">${label} · ${list.length}</p><div>${list.map(todoRow).join("")}</div>` : "";
 
-  const body = (late.length + today.length + upcoming.length)
-    ? section("En retard", late, "is-late") + section("Aujourd'hui", today) + section("À venir", upcoming)
+  const body = (late.length + today.length + soon.length + later.length)
+    ? section("En retard", late, "is-late") + section("Aujourd'hui", today) + section("Cette semaine", soon) + section("Plus tard", later)
     : `<div class="note"><h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
 
   viewEl.innerHTML = `
     ${goalsSection(store.goals || [])}
-    <form class="add" id="add-form">
-      <input id="add-input" placeholder="Ajouter une tâche…" autocomplete="off" maxlength="200" aria-label="Nouvelle tâche">
-      <input id="add-date" type="date" value="${todayK}" class="add-date" aria-label="Jour de la tâche">
-      <button class="btn btn-sq" type="submit" aria-label="Ajouter">${ico("i-plus", "")}</button>
+    <form class="add add-task" id="add-form">
+      <div class="add-main">
+        <input id="add-input" placeholder="Ajouter une tâche…" autocomplete="off" maxlength="200" aria-label="Nouvelle tâche">
+        <input id="add-date" type="date" value="${todayK}" class="add-date" aria-label="À faire avant">
+        <button class="btn btn-sq" type="submit" aria-label="Ajouter">${ico("i-plus", "")}</button>
+      </div>
+      <div class="tag-pick" id="add-tags">${tagPickHtml(null)}</div>
     </form>
     ${body}
     ${done.length ? section("Terminé", done) : ""}
@@ -1114,15 +1149,12 @@ async function renderTasks() {
 }
 
 function todoRow(t) {
-  const todayK = dayKey(now());
-  const late = t.due_date && t.due_date < todayK && !t.done;
   const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
   const doneN = subs.filter((s) => s.done).length;
   const hasSubs = !t.done && subs.length > 0;
-  const lbl = dueLabel(t.due_date);
-  const pill = lbl ? `<span class="pill${late ? " late" : ""}">${late ? ico("i-alert") : ""}${esc(cap(lbl))}</span>` : "";
+  const subInner = tagChip(t.tag) + deadlinePill(t);
   const prog = hasSubs ? `<span class="prog">${doneN}/${subs.length}</span>` : "";
-  const sub = pill ? `<div class="sub">${pill}</div>` : "";
+  const sub = subInner ? `<div class="sub">${subInner}</div>` : "";
   const pbar = hasSubs ? `<div class="pbar"><i style="width:${Math.round(doneN / subs.length * 100)}%"></i></div>` : "";
   const list = hasSubs
     ? `<ul class="subs">${subs.map((s) => `<li class="${s.done ? "done" : ""}" data-sid="${esc(s.id)}"><span class="sc${s.done ? " on" : ""}">${ico("i-check")}</span><span class="ss-t">${esc(s.title)}</span></li>`).join("")}</ul>`
@@ -1297,13 +1329,18 @@ function wireAdd(store) {
   const form = document.getElementById("add-form");
   const input = document.getElementById("add-input");
   const date = document.getElementById("add-date");
+  let tag = null;
+  form?.querySelectorAll("#add-tags .tg-opt").forEach((b) => b.addEventListener("click", () => {
+    tag = tag === b.dataset.tag ? null : b.dataset.tag;
+    form.querySelectorAll("#add-tags .tg-opt").forEach((x) => x.classList.toggle("on", x.dataset.tag === tag));
+  }));
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = input.value.trim();
     if (!title) return;
     input.value = "";
     const due_date = date && date.value ? date.value : null;
-    const { error } = await store.sb.from("todos").insert({ title, due_date });
+    const { error } = await store.sb.from("todos").insert({ title, due_date, tag });
     if (error) { alert("Ajout impossible : " + error.message); return; }
     await refreshTodos(); rerender();
   });
@@ -1486,6 +1523,14 @@ async function mutateSubs(id, fn) {
 
 const SUB_UID = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
 
+async function updateTodo(id, patch) {
+  if (!_store?.session) return;
+  const t = _store.todos.find((x) => String(x.id) === String(id)); if (t) Object.assign(t, patch);
+  const { error } = await _store.sb.from("todos").update(patch).eq("id", id);
+  if (error) alert("Modification impossible : " + error.message);
+  await refreshTodos();
+}
+
 // Feuille d'une tâche : liste des sous-tâches, ajout, et suppression de la tâche.
 function openTaskSheet(t0) {
   if (!_store?.session) return;
@@ -1493,6 +1538,11 @@ function openTaskSheet(t0) {
   const ov = openSheet(`
     <h3 class="sheet-h" id="ts-title"></h3>
     <p class="sheet-sub" id="ts-sub"></p>
+    <div class="ts-meta">
+      <label class="ts-field">À faire avant<input id="ts-date" type="date"></label>
+      <div class="ts-field"><span class="ts-lab">Étiquette</span><div class="tag-pick" id="ts-tags">${tagPickHtml(null)}</div></div>
+    </div>
+    <p class="section-label" style="margin-top:4px">Sous-tâches</p>
     <div id="ts-subs"></div>
     <form class="add" id="sub-form" style="margin-top:14px">
       <input id="sub-input" placeholder="Nouvelle sous-tâche…" autocomplete="off" maxlength="160" aria-label="Nouvelle sous-tâche">
@@ -1508,7 +1558,10 @@ function openTaskSheet(t0) {
     const t = cur();
     if (!t) { closeSheet(); return; }
     ov.querySelector("#ts-title").textContent = t.title;
-    ov.querySelector("#ts-sub").textContent = t.due_date ? "Échéance : " + cap(dueLabel(t.due_date)) : "Sans échéance";
+    ov.querySelector("#ts-sub").textContent = t.due_date ? "À faire avant " + dueLabel(t.due_date) : "Sans échéance";
+    const dateEl2 = ov.querySelector("#ts-date");
+    if (document.activeElement !== dateEl2) dateEl2.value = t.due_date || "";
+    ov.querySelectorAll("#ts-tags .tg-opt").forEach((b) => b.classList.toggle("on", b.dataset.tag === t.tag));
     const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
     const mount = ov.querySelector("#ts-subs");
     mount.innerHTML = subs.length
@@ -1537,7 +1590,12 @@ function openTaskSheet(t0) {
     await mutateSubs(id, (subs) => [...subs, { id: SUB_UID(), title: v, done: false }]);
     paint(); inp.focus();
   });
-  ov.querySelector("#ts-close").onclick = closeSheet;
+  ov.querySelector("#ts-date").addEventListener("change", async (e) => { await updateTodo(id, { due_date: e.target.value || null }); paint(); rerender(); });
+  ov.querySelectorAll("#ts-tags .tg-opt").forEach((b) => b.addEventListener("click", async () => {
+    const t = cur(); const next = t.tag === b.dataset.tag ? null : b.dataset.tag;
+    await updateTodo(id, { tag: next }); paint(); rerender();
+  }));
+  ov.querySelector("#ts-close").onclick = () => { closeSheet(); rerender(); };
   ov.querySelector("#ts-del").onclick = async () => {
     const { error } = await _store.sb.from("todos").delete().eq("id", id);
     if (error) { alert("Suppression impossible : " + error.message); return; }
@@ -1554,19 +1612,25 @@ function openTaskAdd(defaultDate) {
     <h3 class="sheet-h">Nouvelle tâche</h3>
     <form id="ta-form" class="sheet-form">
       <label>Tâche<input id="ta-title" required maxlength="200" autocomplete="off" placeholder="Ex. réviser, rendre le TP…"></label>
-      <label>Jour<input id="ta-date" type="date" value="${defaultDate || dayKey(now())}"></label>
+      <label>À faire avant<input id="ta-date" type="date" value="${defaultDate || dayKey(now())}"></label>
+      <div class="ts-field"><span class="ts-lab">Étiquette</span><div class="tag-pick" id="ta-tags">${tagPickHtml(null)}</div></div>
       <div class="sheet-actions">
         <button type="button" class="btn btn-ghost" id="ta-cancel">Annuler</button>
         <button type="submit" class="btn">Ajouter</button>
       </div>
     </form>`);
+  let taTag = null;
+  ov.querySelectorAll("#ta-tags .tg-opt").forEach((b) => b.addEventListener("click", () => {
+    taTag = taTag === b.dataset.tag ? null : b.dataset.tag;
+    ov.querySelectorAll("#ta-tags .tg-opt").forEach((x) => x.classList.toggle("on", x.dataset.tag === taTag));
+  }));
   ov.querySelector("#ta-cancel").onclick = closeSheet;
   ov.querySelector("#ta-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = ov.querySelector("#ta-title").value.trim();
     if (!title) return;
     const due_date = ov.querySelector("#ta-date").value || null;
-    const { error } = await _store.sb.from("todos").insert({ title, due_date });
+    const { error } = await _store.sb.from("todos").insert({ title, due_date, tag: taTag });
     if (error) { alert("Ajout impossible : " + error.message); return; }
     closeSheet(); await refreshTodos(); rerender();
   });
