@@ -971,8 +971,30 @@ function renderWeek() {
   });
   wirePills();
   wireEventTaps(viewEl);
+  wireCalAdd(days);
   updateFab();
   weekSlide = 0;
+}
+
+// Tap sur une zone vide d'une colonne jour -> ajout d'un événement à cette heure.
+function wireCalAdd(days) {
+  if (!_store?.session) return;
+  const cal = viewEl.querySelector(".cal");
+  if (!cal) return;
+  const top0 = +cal.dataset.top0 || 0;
+  const PX = +cal.dataset.px || 56;
+  const pad = (n) => String(n).padStart(2, "0");
+  const hhmm = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`;
+  viewEl.querySelectorAll(".cal-col").forEach((col, i) => {
+    col.addEventListener("click", (e) => {
+      if (e.target.closest(".ev")) return;                 // clic sur un créneau existant -> géré ailleurs
+      const rect = col.getBoundingClientRect();
+      let min = top0 + ((e.clientY - rect.top) / PX) * 60;  // minutes depuis minuit
+      min = Math.max(top0, Math.round(min / 15) * 15);       // arrondi au quart d'heure
+      const endMin = Math.min(24 * 60, min + 60);
+      openEventForm(days[i].key, hhmm(min), hhmm(endMin));
+    });
+  });
 }
 
 // Sélecteur de jour mobile : change le jour affiché (avec sens de glissement).
@@ -1047,7 +1069,7 @@ function weekGrid(days, perDay, sel) {
     return `<div class="cal-col${t ? " is-today" : ""}${we ? " we" : ""}${hide}">${sgBands(d.key)}${slots}${blocks}${now}</div>`;
   }).join("");
 
-  return `<div class="cal" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
+  return `<div class="cal" data-top0="${top0}" data-px="${PX}" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
 }
 
 // ---------- Vue À faire ----------
@@ -1365,17 +1387,19 @@ function evWhen(ev) {
   return `${cap(fmtWeekday.format(s))} · ${range}`;
 }
 
-function openEventForm(date) {
+function openEventForm(date, start, end) {
   if (!_store?.session) return;
   const d = date || dayKey(new Date());
+  const st = start || "09:00";
+  const en = end || "10:00";
   const ov = openSheet(`
     <h3 class="sheet-h">Nouvel événement</h3>
     <form id="ev-form" class="sheet-form">
       <label>Titre<input id="ev-title" required maxlength="120" autocomplete="off" placeholder="Ex. RDV, révisions, sport…"></label>
       <label>Jour<input id="ev-date" type="date" value="${d}" required></label>
       <div class="sheet-two">
-        <label>Début<input id="ev-start" type="time" value="09:00" required></label>
-        <label>Fin<input id="ev-end" type="time" value="10:00" required></label>
+        <label>Début<input id="ev-start" type="time" value="${st}" required></label>
+        <label>Fin<input id="ev-end" type="time" value="${en}" required></label>
       </div>
       <label>Lieu <span class="opt">(optionnel)</span><input id="ev-loc" maxlength="120" autocomplete="off"></label>
       <div class="sheet-actions">

@@ -395,8 +395,9 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .cal-axis { position: relative; border-right: 1px solid var(--line); }
 .cal-slot { height: var(--cal-px); position: relative; }
 .cal-axis .cal-slot b { position: absolute; top: -7px; right: 9px; font-family: var(--f-mono); font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--muted) 82%, var(--fg)); }
-.cal-col { position: relative; border-right: 1px solid var(--line); transition: background .2s; }
+.cal-col { position: relative; border-right: 1px solid var(--line); transition: background .2s; cursor: pointer; }
 .cal-col:last-child { border-right: 0; }
+.cal-col:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .cal-col.we { background: color-mix(in srgb, var(--fg) 1.5%, transparent); }
 .cal-col.is-today { background: color-mix(in srgb, var(--accent) 5%, transparent); }
 .cal-col .cal-slot { border-bottom: 1px solid var(--line); }
