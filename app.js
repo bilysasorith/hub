@@ -67,6 +67,7 @@ const liveTimeEl = document.getElementById("live-time");
 
 let PLANNING = null;        // { generatedAt, events: [...] }
 let ALT = null;             // alternance : { start, end, schoolSet, sgHours }
+let TRAINING = null;        // rotation muscu : { anchor:{date,index}, cycle:[...] }
 let current = "today";      // onglet actif
 let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
 let weekDay = -1;           // mobile : index du jour affiché (-1 = auto = aujourd'hui)
@@ -114,6 +115,63 @@ async function loadAlternance() {
     const j = await res.json();
     ALT = { start: j.start, end: j.end, sgHours: j.sgHours, schoolSet: new Set(j.school || []) };
   } catch { ALT = null; }
+}
+
+async function loadTraining() {
+  try {
+    const res = await fetch("training.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    if (j?.anchor?.date && Array.isArray(j.cycle) && j.cycle.length) TRAINING = j;
+  } catch { TRAINING = null; }
+}
+
+// Nombre de jours calendaires entre deux clés YYYY-MM-DD (b - a).
+const keyToUTC = (k) => { const [Y, M, D] = k.split("-").map(Number); return Date.UTC(Y, M - 1, D); };
+const daysBetweenKeys = (a, b) => Math.round((keyToUTC(b) - keyToUTC(a)) / 86400000);
+
+// Séance prévue un jour donné. La rotation avance d'un cran par jour (repos inclus) ;
+// chaque jour « sauté » décale toute la suite de +1. Renvoie null avant l'ancrage.
+// -> { type:"seance", n, title, short } | { type:"repos" } | { type:"skip" } | null
+function trainingForDay(key) {
+  if (!TRAINING) return null;
+  const { date: a0, index: i0 = 0 } = TRAINING.anchor;
+  if (key < a0) return null;
+  const skips = _store?.skips || new Set();
+  if (skips.has(key)) return { type: "skip" };
+  const L = TRAINING.cycle.length;
+  let before = 0;
+  for (const d of skips) if (d >= a0 && d < key) before++;
+  const pos = (((i0 + daysBetweenKeys(a0, key) - before) % L) + L) % L;
+  return { ...TRAINING.cycle[pos], pos };
+}
+
+const dumb = (cls = "tci") => `<svg class="${cls}" aria-hidden="true"><use href="#i-dumbbell"/></svg>`;
+
+// Pastille compacte pour l'en-tête d'un jour de la vue Semaine.
+function trainChip(tr) {
+  if (!tr) return "";
+  if (tr.type === "seance") return `<span class="tr-chip" title="Séance ${tr.n} · ${esc(tr.title)}">${dumb()}<span class="trc-t">${esc(tr.short)}</span></span>`;
+  if (tr.type === "repos") return `<span class="tr-chip is-rest">Repos</span>`;
+  if (tr.type === "skip") return `<span class="tr-chip is-skip">Sauté</span>`;
+  return "";
+}
+
+// Ligne « séance du jour » pour le tableau de bord Aujourd'hui (+ bouton sauter).
+function trainLine(tr, key, signed) {
+  if (!tr) return "";
+  const skipBtn = signed
+    ? (tr.type === "skip"
+        ? `<button class="train-act" data-skip="${key}">Annuler</button>`
+        : tr.type === "seance"
+          ? `<button class="train-act" data-skip="${key}">J'ai sauté</button>`
+          : "")
+    : "";
+  let chip;
+  if (tr.type === "seance") chip = `<span class="train-chip">${dumb("tli")}<b>Séance ${tr.n}</b> · ${esc(tr.title)}</span>`;
+  else if (tr.type === "repos") chip = `<span class="train-chip is-rest">${dumb("tli")}Repos — récupération</span>`;
+  else chip = `<span class="train-chip is-skip">${dumb("tli")}Séance sautée — décalée au prochain jour</span>`;
+  return `<div class="ctx-row train-row">${chip}${skipBtn}</div>`;
 }
 
 function updateLive() {
@@ -295,11 +353,13 @@ function ctxCard(evs, key, N, signed) {
   const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
   const nTasks = signed ? openTaskCount(key) : null;
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
+  const trainRow = trainLine(trainingForDay(key), key, signed);
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
   const stats = [stat("i-cap", nCours, "cours"), stat("i-clock", hoursLabel(totalMin), "aujourd'hui")];
   if (nTasks != null) stats.push(stat("i-tasks", nTasks, nTasks > 1 ? "tâches" : "tâche"));
   return `<div class="hero-ctx"><div class="ctx-card">
     ${topRow}
+    ${trainRow}
     <div class="ctx-row ctx-stats">${stats.join("")}</div>
   </div></div>`;
 }
@@ -421,6 +481,7 @@ function renderToday() {
 
   wireEventTaps(viewEl);
   wireCapture(viewEl);
+  viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
   if (SUPA_READY && !_store && !_storeTried) {
@@ -747,7 +808,7 @@ function weekGrid(days, perDay, sel) {
     const t = d.key === todayK, we = dow(d.key) === 0 || dow(d.key) === 6;
     const hide = mobile && i !== sel ? " is-hiddenM" : "";
     return `<div class="cal-colh${t ? " is-today" : ""}${we ? " we" : ""}${hide}">
-      <div class="cd">${wd(d.date)}</div><div class="cn num">${fmtDayNum.format(d.date)}</div>${modeBadge(d.key, { compact: true })}</div>`;
+      <div class="cd">${wd(d.date)}</div><div class="cn num">${fmtDayNum.format(d.date)}</div>${modeBadge(d.key, { compact: true })}${trainChip(trainingForDay(d.key))}</div>`;
   }).join("");
 
   const slots = Array.from({ length: rows }, () => `<div class="cal-slot"></div>`).join("");
@@ -886,13 +947,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [] };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set() };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -918,16 +979,35 @@ async function refreshTodos() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; return; }
-  const [c, o, t] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); return; }
+  const [c, o, t, s] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
+    _store.sb.from("training_skips").select("day"),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
   _store.teams = t.error ? [] : (t.data || []);
+  _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
   subscribeRealtime();
+}
+
+// Marquer / dé-marquer un jour comme sauté (décale la rotation). Optimiste + persistance Supabase.
+async function toggleTrainingSkip(key) {
+  const store = await getStore();
+  if (!store?.session) return;
+  if (store.skips.has(key)) {
+    store.skips.delete(key);
+    rerender();
+    const { error } = await store.sb.from("training_skips").delete().eq("day", key);
+    if (error) { store.skips.add(key); rerender(); }
+  } else {
+    store.skips.add(key);
+    rerender();
+    const { error } = await store.sb.from("training_skips").insert({ day: key });
+    if (error) { store.skips.delete(key); rerender(); }
+  }
 }
 
 let _sub = null;
@@ -941,6 +1021,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "custom_events" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "event_overrides" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "calendar_events" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "training_skips" }, onPerso)
     .subscribe();
 }
 
@@ -1283,7 +1364,7 @@ if (location.hostname === "localhost") {
 }
 
 // ---------- Démarrage ----------
-await Promise.all([loadPlanning(), loadAlternance()]);
+await Promise.all([loadPlanning(), loadAlternance(), loadTraining()]);
 rerender();
 // Rafraîchit l'état "en cours / prochain" quand on revient sur l'app
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { loadPlanning().then(rerender); } });

@@ -20,6 +20,7 @@
   --ev-fl:     #B98BFF;  /* Teams freelance */
   --ev-ef:     #45D0DC;  /* Teams efrei */
   --ev-gc:     #EF84A6;  /* agenda Google perso */
+  --ev-train:  #F2914A;  /* entraînement muscu */
   --shadow: 0 8px 24px rgba(0,0,0,.42);
   --shadow-sm: 0 2px 8px rgba(0,0,0,.35);
   /* Remplissage des contrôles actifs : bleu assez sombre pour que le texte blanc passe l'AA */
@@ -39,7 +40,7 @@
   :root:not([data-theme="dark"]) {
     --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
     --fg: #11161B; --muted: #5C6772; --accent: #1F5BD8; --on-accent: #FFFFFF;
-    --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B;
+    --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12;
     --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
     color-scheme: light;
   }
@@ -47,7 +48,7 @@
 :root[data-theme="light"] {
   --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
   --fg: #11161B; --muted: #5C6772; --accent: #1F5BD8; --on-accent: #FFFFFF;
-  --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B;
+  --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12;
   --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
   color-scheme: light;
 }
@@ -518,6 +519,23 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .ctx-stat svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
 .free-chip { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 99px; font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--ok) 55%, var(--fg)); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ok) 28%, var(--line)); }
 .free-chip svg { width: 13px; height: 13px; flex: none; }
+
+/* Entraînement — ligne « séance du jour » (Aujourd'hui) */
+.train-row { justify-content: space-between; gap: 10px; }
+.train-chip { display: inline-flex; align-items: center; gap: 8px; min-width: 0; flex: 1; font-size: 13px; font-weight: 600; color: color-mix(in srgb, var(--ev-train) 60%, var(--fg)); }
+.train-chip b { font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: .01em; color: var(--ev-train); }
+.train-chip .tli { width: 17px; height: 17px; flex: none; color: var(--ev-train); }
+.train-chip.is-rest, .train-chip.is-skip { color: var(--muted); font-weight: 500; }
+.train-chip.is-rest .tli, .train-chip.is-skip .tli { color: var(--muted); }
+.train-act { flex: none; height: 28px; padding: 0 12px; border-radius: 99px; font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--ev-train) 55%, var(--fg)); background: color-mix(in srgb, var(--ev-train) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-train) 30%, var(--line)); transition: background .15s, border-color .15s; }
+.train-act:hover { background: color-mix(in srgb, var(--ev-train) 20%, var(--surface)); }
+
+/* Entraînement — pastille dans l'en-tête des jours (Semaine) */
+.tr-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; margin-top: 5px; padding: 2px 7px; border-radius: 8px; font-size: 10.5px; font-weight: 600; line-height: 1.25; color: var(--ev-train); background: color-mix(in srgb, var(--ev-train) 13%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-train) 30%, transparent); }
+.tr-chip .tci { width: 11px; height: 11px; flex: none; }
+.tr-chip .trc-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-chip.is-rest, .tr-chip.is-skip { color: var(--muted); background: color-mix(in srgb, var(--muted) 10%, var(--surface)); border-color: var(--line); font-weight: 500; }
+.tr-chip.is-skip { text-decoration: line-through; opacity: .85; }
 
 /* Grille tableau de bord */
 .dash { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; align-items: start; }

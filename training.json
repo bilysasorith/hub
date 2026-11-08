@@ -1,0 +1,18 @@
+{
+  "_note": "Rotation d'entraînement du coach. Pour changer de programme : remplace 'cycle' et remets 'anchor' (date = 1er jour, index = position dans le cycle, 0 = premier élément). La rotation avance d'un cran par jour calendaire, repos inclus ; les jours sautés (table Supabase training_skips) décalent la suite.",
+  "anchor": { "date": "2026-11-09", "index": 0 },
+  "cycle": [
+    { "type": "seance", "n": 1, "title": "Pecs · Delts · Triceps · Abdos", "short": "Pecs · Épaules" },
+    { "type": "seance", "n": 2, "title": "Adducteurs · Quads · Mollets", "short": "Quads · Mollets" },
+    { "type": "repos" },
+    { "type": "seance", "n": 3, "title": "Dos · Trapèzes · Biceps", "short": "Dos · Biceps" },
+    { "type": "seance", "n": 4, "title": "Abducteurs · Fessiers · Ischios", "short": "Fessiers · Ischios" },
+    { "type": "repos" },
+    { "type": "seance", "n": 5, "title": "Pecs · Delts · Trapèzes · Triceps", "short": "Pecs · Épaules" },
+    { "type": "seance", "n": 6, "title": "Adducteurs · Quads · Rappel ischios", "short": "Quads · Ischios" },
+    { "type": "repos" },
+    { "type": "seance", "n": 7, "title": "Dos · Trapèzes", "short": "Dos · Trapèzes" },
+    { "type": "seance", "n": 8, "title": "Bras · Mollets", "short": "Bras · Mollets" },
+    { "type": "repos" }
+  ]
+}
