@@ -62,8 +62,25 @@ const events = parsed.map((e) => {
   };
 });
 
-// --- Filtre (on garde à partir d'hier) + tri chronologique ---
-const cutoff = Date.now() - 24 * 3600 * 1000;
+// --- Filtre (on garde depuis le lundi de la semaine en cours) + tri chronologique ---
+// Décalage Paris↔UTC au moment donné (+1h l'hiver, +2h l'été).
+const parisOffsetMs = (date) => {
+  const d = new Date(date);
+  const utc = new Date(d.toLocaleString("en-US", { timeZone: "UTC" }));
+  const paris = new Date(d.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+  return paris.getTime() - utc.getTime();
+};
+// Lundi 00h00 (heure de Paris) de la semaine courante, en instant UTC.
+const startOfParisWeek = () => {
+  const now = new Date();
+  const off = parisOffsetMs(now);
+  const wall = new Date(now.getTime() + off); // champs UTC = heure murale Paris
+  const dow = (wall.getUTCDay() + 6) % 7; // 0 = lundi
+  wall.setUTCHours(0, 0, 0, 0);
+  wall.setUTCDate(wall.getUTCDate() - dow);
+  return wall.getTime() - off;
+};
+const cutoff = startOfParisWeek();
 const kept = events
   .filter((e) => e.start && new Date(e.start).getTime() >= cutoff)
   .sort((a, b) => new Date(a.start) - new Date(b.start));
