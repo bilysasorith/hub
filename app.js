@@ -220,6 +220,112 @@ async function markChangesSeen() {
   }
 }
 
+// ---------- Objectifs (buts SMART) ----------
+// Échelle inspirée de « Goal + deadline + plan + action = success » :
+// sans échéance ce n'est qu'un rêve ; plus c'est cadré, plus le statut monte.
+const GOAL_LADDER = {
+  dream: { label: "Rêve",      cls: "g-dream", nudge: "Ajoute une échéance pour en faire un vrai objectif." },
+  obj:   { label: "Objectif",  cls: "g-obj",   nudge: "Pose un plan : comment tu comptes t'y prendre ?" },
+  strat: { label: "Stratégie", cls: "g-strat", nudge: "Découpe-le en actions concrètes à cocher." },
+  go:    { label: "En marche", cls: "g-go",    nudge: "Avance : coche une action." },
+  done:  { label: "Atteint",   cls: "g-done",  nudge: "" },
+};
+function goalStatus(g) {
+  if (g.done) return "done";
+  const hasD = !!g.deadline;
+  const hasP = !!(g.why && g.why.trim());
+  const hasA = Array.isArray(g.actions) && g.actions.length > 0;
+  if (hasD && hasP && hasA) return "go";
+  if (hasD && hasP) return "strat";
+  if (hasD) return "obj";
+  return "dream";
+}
+const goalActions = (g) => (Array.isArray(g.actions) ? g.actions : []);
+const fmtGoalDate = (d) => cap(fmtRange.format(new Date(d + "T12:00:00Z")));
+function goalDeadlineLabel(g) {
+  if (!g.deadline) return "";
+  const today = dayKey(now());
+  const left = daysBetweenKeys(today, g.deadline);
+  if (left < 0) return `en retard · ${fmtGoalDate(g.deadline)}`;
+  if (left === 0) return "aujourd'hui";
+  if (left === 1) return "demain";
+  if (left <= 30) return `dans ${left} j · ${fmtGoalDate(g.deadline)}`;
+  return `pour le ${fmtGoalDate(g.deadline)}`;
+}
+function goalStatusChip(g) {
+  const m = GOAL_LADDER[goalStatus(g)];
+  return `<span class="g-chip ${m.cls}">${m.label}</span>`;
+}
+
+// Carte d'un objectif dans l'onglet À faire.
+function goalRow(g) {
+  const acts = goalActions(g);
+  const doneN = acts.filter((a) => a.done).length;
+  const st = goalStatus(g);
+  const m = GOAL_LADDER[st];
+  const dl = goalDeadlineLabel(g);
+  const prog = acts.length ? `<div class="g-pbar"><i style="width:${Math.round(doneN / acts.length * 100)}%"></i></div>` : "";
+  const meta = [dl ? `<span class="g-meta-i">${ico("i-clock")}${esc(dl)}</span>` : "", acts.length ? `<span class="g-meta-i">${ico("i-tasks")}${doneN}/${acts.length}</span>` : ""].filter(Boolean).join("");
+  return `<button class="goal-card" data-gid="${esc(g.id)}">
+    <div class="g-top"><span class="g-ti">${esc(g.title)}</span>${goalStatusChip(g)}</div>
+    ${meta ? `<div class="g-meta">${meta}</div>` : ""}
+    ${prog}
+    ${m.nudge ? `<div class="g-nudge">${ico("i-bolt")}${m.nudge}</div>` : ""}
+  </button>`;
+}
+
+function goalsSection(goals) {
+  const active = goals.filter((g) => !g.done);
+  const done = goals.filter((g) => g.done);
+  const list = active.length
+    ? `<div class="goals-list">${active.map(goalRow).join("")}</div>`
+    : `<button class="goal-empty" id="goal-empty">${ico("i-target", "")}<span><b>Ajoute un objectif</b> — même vague, comme « apprendre le chinois ». Hub t'aidera à le rendre concret et SMART.</span></button>`;
+  const doneLine = done.length ? `<button class="goals-done-line" id="goals-done">${done.length} objectif${done.length > 1 ? "s" : ""} atteint${done.length > 1 ? "s" : ""} 🏁</button>` : "";
+  return `<div class="goals-sec">
+    <div class="gs-head">
+      <p class="section-label">${ico("i-target", "")} Objectifs${active.length ? " · " + active.length : ""}</p>
+      <div class="gs-actions">
+        <button class="gs-help" id="goal-help" aria-label="C'est quoi SMART ?">?</button>
+        <button class="gs-add" id="goal-add">${ico("i-plus", "")}Objectif</button>
+      </div>
+    </div>
+    ${list}${doneLine}
+  </div>`;
+}
+
+function wireGoals(root, store) {
+  root.querySelector("#goal-add")?.addEventListener("click", () => openGoalAdd());
+  root.querySelector("#goal-empty")?.addEventListener("click", () => openGoalAdd());
+  root.querySelector("#goal-help")?.addEventListener("click", openSmartInfo);
+  root.querySelector("#goals-done")?.addEventListener("click", openDoneGoals);
+  root.querySelectorAll(".goal-card[data-gid]").forEach((b) => b.addEventListener("click", () => {
+    const g = (store.goals || []).find((x) => String(x.id) === b.dataset.gid);
+    if (g) openGoalSheet(g.id);
+  }));
+}
+
+// Carte rappel d'un objectif sur le tableau de bord Aujourd'hui (rotation par jour).
+function renderDashGoal() {
+  const mount = document.getElementById("dash-goal");
+  if (!mount) return;
+  const active = (_store?.goals || []).filter((g) => !g.done);
+  if (!active.length) { mount.innerHTML = ""; return; }
+  const idx = ((daysBetweenKeys("2026-01-01", dayKey(now())) % active.length) + active.length) % active.length;
+  const g = active[idx];
+  const m = GOAL_LADDER[goalStatus(g)];
+  const dl = goalDeadlineLabel(g);
+  mount.innerHTML = `<button class="goal-dash" data-gid="${esc(g.id)}">
+    <span class="gd-ico">${ico("i-target")}</span>
+    <span class="gd-body">
+      <span class="gd-k">Ton objectif${dl ? " · " + esc(dl) : ""}</span>
+      <span class="gd-ti">${esc(g.title)}</span>
+      ${m.nudge ? `<span class="gd-nudge">${m.nudge}</span>` : ""}
+    </span>
+    ${goalStatusChip(g)}
+  </button>`;
+  mount.querySelector("[data-gid]")?.addEventListener("click", () => openGoalSheet(g.id));
+}
+
 // Nombre de jours calendaires entre deux clés YYYY-MM-DD (b - a).
 const keyToUTC = (k) => { const [Y, M, D] = k.split("-").map(Number); return Date.UTC(Y, M - 1, D); };
 const daysBetweenKeys = (a, b) => Math.round((keyToUTC(b) - keyToUTC(a)) / 86400000);
@@ -568,6 +674,7 @@ function renderToday() {
   viewEl.innerHTML = `
     ${captureHtml}
     <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
+    <div id="dash-goal"></div>
     <section class="dash">
       <div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>
       ${tasksPanel}
@@ -583,6 +690,7 @@ function renderToday() {
     getStore().then(() => { if (current === "today") rerender(); });
   } else if (signed) {
     renderDashTasks();
+    renderDashGoal();
   }
 }
 
@@ -969,6 +1077,7 @@ async function renderTasks() {
     : `<div class="note"><h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
 
   viewEl.innerHTML = `
+    ${goalsSection(store.goals || [])}
     <form class="add" id="add-form">
       <input id="add-input" placeholder="Ajouter une tâche…" autocomplete="off" maxlength="200" aria-label="Nouvelle tâche">
       <input id="add-date" type="date" value="${todayK}" class="add-date" aria-label="Jour de la tâche">
@@ -977,6 +1086,7 @@ async function renderTasks() {
     ${body}
     ${done.length ? section("Terminé", done) : ""}
   `;
+  wireGoals(viewEl, store);
   wireAdd(store);
   wireTodos(viewEl, store);
 }
@@ -1041,13 +1151,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [] };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -1073,21 +1183,57 @@ async function refreshTodos() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; return; }
-  const [c, o, t, s, p] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; return; }
+  const [c, o, t, s, p, g] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("training_skips").select("day"),
     _store.sb.from("planning_seen").select("seen_at").maybeSingle(),
+    _store.sb.from("goals").select("*").order("created_at", { ascending: true }),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
   _store.teams = t.error ? [] : (t.data || []);
   _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
   _store.seenAt = (p && !p.error && p.data) ? p.data.seen_at : null;
+  _store.goals = g.error ? [] : (g.data || []);
   updateBell();
   subscribeRealtime();
+}
+
+async function refreshGoals() {
+  if (!_store?.session) { _store.goals = []; return; }
+  const { data, error } = await _store.sb.from("goals").select("*").order("created_at", { ascending: true });
+  if (!error) _store.goals = data || [];
+}
+async function addGoal(fields) {
+  if (!_store?.session) return false;
+  const { error } = await _store.sb.from("goals").insert(fields);
+  if (error) { alert("Ajout impossible : " + error.message + "\n(As-tu lancé le SQL goals.sql ?)"); return false; }
+  await refreshGoals(); rerender(); return true;
+}
+async function updateGoal(id, patch) {
+  if (!_store?.session) return;
+  const g = _store.goals.find((x) => String(x.id) === String(id)); if (g) Object.assign(g, patch);
+  const { error } = await _store.sb.from("goals").update(patch).eq("id", id);
+  if (error) alert("Modification impossible : " + error.message);
+  await refreshGoals();
+}
+async function deleteGoal(id) {
+  if (!_store?.session) return;
+  const { error } = await _store.sb.from("goals").delete().eq("id", id);
+  if (error) { alert("Suppression impossible : " + error.message); return; }
+  await refreshGoals(); rerender();
+}
+async function mutateGoalActions(id, fn) {
+  if (!_store?.session) return;
+  const g = _store.goals.find((x) => String(x.id) === String(id)); if (!g) return;
+  const next = fn(Array.isArray(g.actions) ? g.actions : []);
+  g.actions = next;
+  const { error } = await _store.sb.from("goals").update({ actions: next }).eq("id", id);
+  if (error) alert("Actions indisponibles : " + error.message);
+  await refreshGoals();
 }
 
 // Marquer / dé-marquer un jour comme sauté (décale la rotation). Optimiste + persistance Supabase.
@@ -1120,6 +1266,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "calendar_events" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "training_skips" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "planning_seen" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "goals" }, onPerso)
     .subscribe();
 }
 
@@ -1400,6 +1547,137 @@ function openTaskAdd(defaultDate) {
     closeSheet(); await refreshTodos(); rerender();
   });
   setTimeout(() => ov.querySelector("#ta-title")?.focus(), 50);
+}
+
+// Feuille d'ajout d'un objectif.
+function openGoalAdd() {
+  if (!_store?.session) return;
+  const ov = openSheet(`
+    <h3 class="sheet-h">Nouvel objectif</h3>
+    <p class="sheet-sub">Même vague au début — tu le préciseras ensuite.</p>
+    <form id="g-form" class="sheet-form">
+      <label>Objectif<input id="g-title" required maxlength="160" autocomplete="off" placeholder="Ex. apprendre le chinois"></label>
+      <label>Pour quand ? <span class="lbl-opt">(recommandé)</span><input id="g-deadline" type="date"></label>
+      <label>Comment ? <span class="lbl-opt">(ton plan, facultatif)</span><textarea id="g-why" rows="2" maxlength="400" placeholder="Ex. 15 min/jour sur une appli + un cours le samedi"></textarea></label>
+      <p class="smart-hint">${ico("i-bolt")} Un objectif <b>sans échéance</b> reste un rêve. Ajoute une date pour le rendre réel.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="g-cancel">Annuler</button>
+        <button type="submit" class="btn">Créer</button>
+      </div>
+    </form>`);
+  ov.querySelector("#g-cancel").onclick = closeSheet;
+  ov.querySelector("#g-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = ov.querySelector("#g-title").value.trim();
+    if (!title) return;
+    const deadline = ov.querySelector("#g-deadline").value || null;
+    const why = ov.querySelector("#g-why").value.trim() || null;
+    const ok = await addGoal({ title, deadline, why });
+    if (ok) closeSheet();
+  });
+  setTimeout(() => ov.querySelector("#g-title")?.focus(), 50);
+}
+
+// Feuille d'un objectif : statut SMART, édition, actions à cocher.
+function openGoalSheet(id) {
+  if (!_store?.session) return;
+  const ov = openSheet(`
+    <div class="gs-sheet-top"><h3 class="sheet-h" id="g-ti"></h3><span id="g-status"></span></div>
+    <p class="g-nudge-sheet" id="g-nudge"></p>
+    <form class="sheet-form" id="g-edit">
+      <label>Objectif<input id="ge-title" maxlength="160" autocomplete="off"></label>
+      <div class="sheet-two">
+        <label>Échéance<input id="ge-deadline" type="date"></label>
+        <label>&nbsp;<button type="button" class="btn btn-ghost btn-sm" id="ge-done">Marquer atteint</button></label>
+      </div>
+      <label>Plan (comment)<textarea id="ge-why" rows="2" maxlength="400" placeholder="Comment tu comptes t'y prendre ?"></textarea></label>
+    </form>
+    <p class="section-label" style="margin-top:6px">Actions concrètes</p>
+    <div id="g-acts"></div>
+    <form class="add" id="ga-form" style="margin-top:10px">
+      <input id="ga-input" placeholder="Une action à faire…" autocomplete="off" maxlength="160" aria-label="Nouvelle action">
+      <button class="btn btn-sq" type="submit" aria-label="Ajouter">${ico("i-plus", "")}</button>
+    </form>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" id="g-close">Fermer</button>
+      <button class="btn btn-danger" id="g-del">Supprimer</button>
+    </div>`);
+  const cur = () => (_store.goals || []).find((x) => String(x.id) === String(id));
+
+  function paint() {
+    const g = cur();
+    if (!g) { closeSheet(); return; }
+    const m = GOAL_LADDER[goalStatus(g)];
+    ov.querySelector("#g-ti").textContent = g.done ? "🏁 " + g.title : g.title;
+    ov.querySelector("#g-status").innerHTML = goalStatusChip(g);
+    ov.querySelector("#g-nudge").innerHTML = m.nudge ? `${ico("i-bolt")} ${m.nudge}` : "";
+    ov.querySelector("#g-nudge").style.display = m.nudge ? "" : "none";
+    const ti = ov.querySelector("#ge-title"), dl = ov.querySelector("#ge-deadline"), wy = ov.querySelector("#ge-why");
+    if (document.activeElement !== ti) ti.value = g.title || "";
+    if (document.activeElement !== dl) dl.value = g.deadline || "";
+    if (document.activeElement !== wy) wy.value = g.why || "";
+    ov.querySelector("#ge-done").textContent = g.done ? "Réactiver" : "Marquer atteint";
+    const acts = goalActions(g);
+    const mount = ov.querySelector("#g-acts");
+    mount.innerHTML = acts.length
+      ? `<ul class="subs">${acts.map((a) => `<li class="${a.done ? "done" : ""}">
+          <span class="sc${a.done ? " on" : ""}" data-tog="${esc(a.id)}">${ico("i-check")}</span>
+          <span class="ss-t">${esc(a.title)}</span>
+          <button class="ss-del" data-del="${esc(a.id)}" aria-label="Supprimer l'action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </li>`).join("")}</ul>`
+      : `<p class="sheet-note">Découpe ton objectif en petites actions à cocher — c'est ce qui le fait avancer.</p>`;
+    mount.querySelectorAll("[data-tog]").forEach((b) => b.onclick = async () => { await mutateGoalActions(id, (a) => a.map((x) => (x.id === b.dataset.tog ? { ...x, done: !x.done } : x))); paint(); });
+    mount.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => { await mutateGoalActions(id, (a) => a.filter((x) => x.id !== b.dataset.del)); paint(); });
+  }
+
+  const saveField = async (patch) => { await updateGoal(id, patch); paint(); };
+  ov.querySelector("#ge-title").addEventListener("change", (e) => { const v = e.target.value.trim(); if (v) saveField({ title: v }); });
+  ov.querySelector("#ge-deadline").addEventListener("change", (e) => saveField({ deadline: e.target.value || null }));
+  ov.querySelector("#ge-why").addEventListener("change", (e) => saveField({ why: e.target.value.trim() || null }));
+  ov.querySelector("#ge-done").onclick = async () => { const g = cur(); await saveField({ done: !g.done }); };
+  ov.querySelector("#ga-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const inp = ov.querySelector("#ga-input"); const v = inp.value.trim(); if (!v) return;
+    inp.value = "";
+    await mutateGoalActions(id, (a) => [...a, { id: SUB_UID(), title: v, done: false }]);
+    paint(); inp.focus();
+  });
+  ov.querySelector("#g-close").onclick = () => { closeSheet(); rerender(); };
+  ov.querySelector("#g-del").onclick = async () => { if (!confirm("Supprimer cet objectif ?")) return; await deleteGoal(id); closeSheet(); };
+  paint();
+}
+
+function openSmartInfo() {
+  openSheet(`
+    <h3 class="sheet-h">Un objectif SMART</h3>
+    <p class="sheet-sub">Plus c'est cadré, plus ça se réalise.</p>
+    <ul class="smart-list">
+      <li><b>S</b>pécifique — précis, pas « être meilleur »</li>
+      <li><b>M</b>esurable — tu sauras quand c'est atteint</li>
+      <li><b>A</b>tteignable — réaliste pour toi</li>
+      <li><b>R</b>éaliste / pertinent — ça compte vraiment</li>
+      <li><b>T</b>emporel — une échéance</li>
+    </ul>
+    <p class="section-label" style="margin-top:14px">L'échelle de Hub</p>
+    <div class="ladder">
+      <div class="ladder-row"><span class="g-chip g-dream">Rêve</span> but seul, sans date</div>
+      <div class="ladder-row"><span class="g-chip g-obj">Objectif</span> + une échéance</div>
+      <div class="ladder-row"><span class="g-chip g-strat">Stratégie</span> + un plan</div>
+      <div class="ladder-row"><span class="g-chip g-go">En marche</span> + des actions à cocher</div>
+    </div>
+    <div class="sheet-actions"><button class="btn" id="si-close">Compris</button></div>`)
+    .querySelector("#si-close").onclick = closeSheet;
+}
+
+function openDoneGoals() {
+  const done = (_store?.goals || []).filter((g) => g.done);
+  const body = done.length
+    ? `<div class="goals-list">${done.map(goalRow).join("")}</div>`
+    : `<p class="sheet-note">Aucun objectif atteint pour l'instant.</p>`;
+  const ov = openSheet(`<h3 class="sheet-h">Objectifs atteints 🏁</h3>${body}
+    <div class="sheet-actions"><button class="btn" id="dg-close">Fermer</button></div>`);
+  ov.querySelector("#dg-close").onclick = closeSheet;
+  ov.querySelectorAll(".goal-card[data-gid]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openGoalSheet(b.dataset.gid); }));
 }
 
 // ---------- Navigation ----------

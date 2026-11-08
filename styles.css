@@ -147,6 +147,69 @@ h1 {
 .ch-de { font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
 .ch-ago { flex: none; font-size: 11px; color: var(--muted); white-space: nowrap; margin-top: 2px; }
 
+/* ---------- Objectifs ---------- */
+.goals-sec { margin-bottom: 18px; }
+.gs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.gs-head .section-label { margin: 0; display: inline-flex; align-items: center; gap: 7px; }
+.gs-head .section-label svg { width: 15px; height: 15px; color: var(--accent); }
+.gs-actions { display: inline-flex; align-items: center; gap: 8px; }
+.gs-help { width: 24px; height: 24px; border-radius: 99px; background: var(--surface-2); color: var(--muted); font-weight: 700; font-size: 13px; line-height: 1; }
+.gs-help:hover { color: var(--fg); background: var(--line); }
+.gs-add { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px; border-radius: 99px; font-size: 13px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); }
+.gs-add svg { width: 14px; height: 14px; }
+.gs-add:hover { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+
+.goals-list { display: flex; flex-direction: column; gap: 10px; }
+.goal-card { display: block; width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow-sm); padding: 12px 14px; transition: border-color .15s, transform .05s; }
+.goal-card:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.goal-card:active { transform: scale(.995); }
+.g-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.g-ti { font-weight: 600; font-size: 15px; line-height: 1.3; color: var(--fg); }
+.g-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; }
+.g-meta-i { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); }
+.g-meta-i svg { width: 13px; height: 13px; }
+.g-pbar { height: 5px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin-top: 9px; }
+.g-pbar i { display: block; height: 100%; background: var(--ok); border-radius: 99px; transition: width .3s; }
+.g-nudge { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 12.5px; color: color-mix(in srgb, var(--warn) 55%, var(--fg)); }
+.g-nudge svg { width: 13px; height: 13px; flex: none; color: var(--warn); }
+
+.g-chip { flex: none; padding: 2px 9px; border-radius: 8px; font-family: var(--f-display); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.g-chip.g-dream { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); }
+.g-chip.g-obj { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.g-chip.g-strat { color: var(--ev-fl); background: color-mix(in srgb, var(--ev-fl) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-fl) 32%, transparent); }
+.g-chip.g-go { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent); }
+.g-chip.g-done { color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); }
+
+.goal-empty { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--accent) 6%, var(--surface)); padding: 14px 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.goal-empty svg { width: 22px; height: 22px; flex: none; color: var(--accent); }
+.goal-empty b { color: var(--fg); font-weight: 600; }
+.goals-done-line { display: block; width: 100%; text-align: left; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.goals-done-line:hover { color: var(--fg); }
+
+/* Carte rappel objectif sur Aujourd'hui */
+.goal-dash { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; margin-bottom: 14px; padding: 14px 16px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); box-shadow: var(--shadow-sm); }
+.goal-dash:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.gd-ico { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); }
+.gd-ico svg { width: 20px; height: 20px; }
+.gd-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gd-k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-family: var(--f-display); font-weight: 600; }
+.gd-ti { font-weight: 600; font-size: 15.5px; color: var(--fg); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-nudge { font-size: 12.5px; color: color-mix(in srgb, var(--warn) 55%, var(--fg)); }
+
+/* Feuilles objectif */
+.gs-sheet-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.g-nudge-sheet { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: color-mix(in srgb, var(--warn) 55%, var(--fg)); }
+.g-nudge-sheet svg { width: 14px; height: 14px; color: var(--warn); }
+.lbl-opt { color: var(--muted); font-weight: 400; font-size: 12px; }
+.btn.btn-sm { height: 40px; padding: 0 12px; font-size: 13px; width: 100%; }
+.smart-hint { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 2px; }
+.smart-hint svg { width: 14px; height: 14px; flex: none; color: var(--warn); }
+.smart-hint b { color: var(--fg); }
+.smart-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.smart-list b { color: var(--accent); font-family: var(--f-display); font-weight: 700; margin-right: 4px; }
+.ladder { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ladder-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+
 main { padding-top: 18px; display: grid; gap: 14px; }
 
 /* Libellé de section (pas d'eyebrow décoratif : c'est un vrai repère de liste) */
