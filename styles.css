@@ -786,3 +786,26 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 @media (max-width: 560px) {
   .cap-chips .cap-chip[data-day="tomorrow"] { display: none; }
 }
+
+/* ---------- Rappel « Ne pas oublier » ---------- */
+/* Bouton bascule dans la feuille d'actions d'un événement */
+.rem-toggle svg { width: 16px; height: 16px; }
+.rem-toggle.on { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 42%, var(--line)); background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
+
+/* Carte « À ne pas oublier » sur Aujourd'hui */
+.rem-panel { margin-top: 14px; }
+.rem-list { display: flex; flex-direction: column; }
+.rem-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 11px 2px; border: none; border-top: 1px solid var(--line); background: none; color: var(--fg); cursor: pointer; }
+.rem-row:first-child { border-top: none; }
+.rem-row:hover { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.rem-dot { flex: none; width: 9px; height: 9px; border-radius: 99px; background: var(--muted); }
+.rem-dot.s-course { background: var(--ev-course); }
+.rem-dot.s-perso { background: var(--ev-perso); }
+.rem-dot.s-fl { background: var(--ev-fl); }
+.rem-dot.s-ef { background: var(--ev-ef); }
+.rem-dot.s-gc { background: var(--ev-gc); }
+.rem-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.rem-ti { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rem-when { font-size: 12.5px; color: var(--muted); }
+.rem-row.veille .rem-when { color: var(--warn); font-weight: 600; }
+.rem-tag { flex: none; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); padding: 3px 8px; border-radius: 99px; }

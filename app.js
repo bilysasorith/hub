@@ -352,6 +352,52 @@ function renderDashGoal() {
   mount.querySelector("[data-gid]")?.addEventListener("click", () => openGoalSheet(g.id));
 }
 
+// Événements marqués « ne pas oublier », à venir (dans les 21 prochains jours), triés par heure.
+function upcomingReminders() {
+  const rem = _store?.reminders;
+  if (!_store?.session || !rem || !rem.size) return [];
+  const N = now();
+  const horizon = new Date(N.getTime() + 21 * 86400000);
+  const out = [];
+  const consider = (ev) => {
+    if (!rem.has(eventKey(ev))) return;
+    const s = new Date(ev.start);
+    if (s > N && s <= horizon) out.push(ev);
+  };
+  for (const e of (PLANNING?.events || [])) {
+    if ((_store.hidden || new Set()).has(e.uid)) continue;
+    consider({ ...e, source: "course" });
+  }
+  for (const c of (_store.custom || [])) if (c.start_at) consider(normCustom(c));
+  for (const t of (_store.teams || [])) {
+    if (!t.start_at || isCanceledMeeting(t.title)) continue;
+    consider(normTeams(t));
+  }
+  return out.sort((a, b) => new Date(a.start) - new Date(b.start));
+}
+
+// Carte « À ne pas oublier » sur Aujourd'hui : prochains événements marqués, la veille mise en avant.
+function renderDashUpcoming() {
+  const mount = document.getElementById("dash-upcoming");
+  if (!mount) return;
+  const list = upcomingReminders();
+  if (!list.length) { mount.innerHTML = ""; return; }
+  const tomo = addDays(dayKey(now()), 1);
+  const rows = list.slice(0, 6).map((ev) => {
+    const s = new Date(ev.start);
+    const k = dayKey(s);
+    const veille = k === tomo;
+    const when = veille ? `Demain · ${fmtTime.format(s)}` : `${cap(fmtWeekday.format(s))} · ${fmtTime.format(s)}`;
+    return `<button class="rem-row${veille ? " veille" : ""}" ${evAttrs(ev)}>
+      <span class="rem-dot s-${ev.source}"></span>
+      <span class="rem-body"><span class="rem-ti">${esc(ev.title)}</span><span class="rem-when">${when}</span></span>
+      ${veille ? `<span class="rem-tag">la veille</span>` : ""}
+    </button>`;
+  }).join("");
+  mount.innerHTML = `<div class="panel rem-panel"><div class="panel-h"><h2>À ne pas oublier</h2><span class="count">${list.length}</span></div><div class="rem-list">${rows}</div></div>`;
+  wireEventTaps(mount);
+}
+
 // Nombre de jours calendaires entre deux clés YYYY-MM-DD (b - a).
 const keyToUTC = (k) => { const [Y, M, D] = k.split("-").map(Number); return Date.UTC(Y, M - 1, D); };
 const daysBetweenKeys = (a, b) => Math.round((keyToUTC(b) - keyToUTC(a)) / 86400000);
@@ -701,6 +747,7 @@ function renderToday() {
     ${captureHtml}
     <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
     <div id="dash-goal"></div>
+    <div id="dash-upcoming"></div>
     <section class="dash">
       <div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>
       ${tasksPanel}
@@ -717,6 +764,7 @@ function renderToday() {
   } else if (signed) {
     renderDashTasks();
     renderDashGoal();
+    renderDashUpcoming();
   }
 }
 
@@ -1205,13 +1253,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [] };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set() };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -1237,14 +1285,15 @@ async function refreshTodos() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; return; }
-  const [c, o, t, s, p, g] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); return; }
+  const [c, o, t, s, p, g, r] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("training_skips").select("day"),
     _store.sb.from("planning_seen").select("seen_at").maybeSingle(),
     _store.sb.from("goals").select("*").order("created_at", { ascending: true }),
+    _store.sb.from("event_reminders").select("event_key"),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -1252,6 +1301,7 @@ async function refreshPersonal() {
   _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
   _store.seenAt = (p && !p.error && p.data) ? p.data.seen_at : null;
   _store.goals = g.error ? [] : (g.data || []);
+  _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   updateBell();
   subscribeRealtime();
 }
@@ -1307,6 +1357,31 @@ async function toggleTrainingSkip(key) {
   }
 }
 
+// Clé stable d'un événement pour le marquage « ne pas oublier ».
+function eventKey(ev) {
+  if (ev.source === "course") return "c:" + ev.uid;
+  if (ev.source === "perso") return "p:" + ev.cid;
+  return "t:" + ev.tid;
+}
+
+// Basculer le rappel « ne pas oublier » d'un événement. Optimiste + persistance Supabase.
+async function toggleReminder(ev) {
+  const store = await getStore();
+  if (!store?.session) return;
+  const key = eventKey(ev);
+  if (store.reminders.has(key)) {
+    store.reminders.delete(key);
+    rerender();
+    const { error } = await store.sb.from("event_reminders").delete().eq("event_key", key);
+    if (error) { store.reminders.add(key); rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
+  } else {
+    store.reminders.add(key);
+    rerender();
+    const { error } = await store.sb.from("event_reminders").insert({ event_key: key });
+    if (error) { store.reminders.delete(key); rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
+  }
+}
+
 let _sub = null;
 function subscribeRealtime() {
   if (_sub || !_store?.session) return;
@@ -1321,6 +1396,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "training_skips" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "planning_seen" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "goals" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "event_reminders" }, onPerso)
     .subscribe();
 }
 
@@ -1464,9 +1540,11 @@ function openEventForm(date, start, end) {
 function openEventActions(ev) {
   if (!_store?.session) return;
   const head = `<h3 class="sheet-h">${esc(ev.title)}</h3><p class="sheet-sub">${evWhen(ev)}${(ev.location) ? " · " + esc(ev.location) : ""}</p>`;
+  const isRem = (_store.reminders || new Set()).has(eventKey(ev));
+  const remBtn = `<button class="btn btn-ghost rem-toggle${isRem ? " on" : ""}" id="s-rem">${ico("i-bell")}${isRem ? "Rappel activé" : "Ne pas oublier"}</button>`;
 
   if (ev.source === "perso") {
-    const ov = openSheet(`${head}<div class="sheet-actions">
+    const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}
       <button class="btn btn-ghost" id="s-close">Fermer</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
@@ -1478,7 +1556,7 @@ function openEventActions(ev) {
   } else if (ev.source === "course") {
     if (ev._hidden) {
       const ov = openSheet(`${head}<p class="sheet-note">Tu as marqué « je n'y vais pas » pour ce cours.</p>
-        <div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+        <div class="sheet-actions">${remBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn" id="s-show">Y retourner</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-show").onclick = async () => {
@@ -1487,7 +1565,7 @@ function openEventActions(ev) {
         closeSheet(); await refreshPersonal(); rerender();
       };
     } else {
-      const ov = openSheet(`${head}<div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+      const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn btn-danger" id="s-hide">Je n'y vais pas</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-hide").onclick = async () => {
@@ -1502,9 +1580,10 @@ function openEventActions(ev) {
       ? "Événement importé depuis ton agenda Google. Modifie-le dans Google Agenda."
       : `Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.`;
     const ov = openSheet(`${head}<p class="sheet-note">${note}</p>
-      <div class="sheet-actions"><button class="btn" id="s-close">Fermer</button></div>`);
+      <div class="sheet-actions">${remBtn}<button class="btn" id="s-close">Fermer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
   }
+  document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet(); rerender(); });
 }
 
 // ---------- Sous-tâches ----------
