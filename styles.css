@@ -21,6 +21,7 @@
   --ev-ef:     #45D0DC;  /* Teams efrei */
   --ev-gc:     #EF84A6;  /* agenda Google perso */
   --ev-train:  #F2914A;  /* entraînement muscu */
+  --ev-exam:   #FF4D54;  /* examen EFREI */
   --shadow: 0 8px 24px rgba(0,0,0,.42);
   --shadow-sm: 0 2px 8px rgba(0,0,0,.35);
   /* Remplissage des contrôles actifs : bleu assez sombre pour que le texte blanc passe l'AA */
@@ -40,7 +41,7 @@
   :root:not([data-theme="dark"]) {
     --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
     --fg: #11161B; --muted: #5C6772; --accent: #1F5BD8; --on-accent: #FFFFFF;
-    --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12;
+    --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12; --ev-exam: #D11A2A;
     --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
     color-scheme: light;
   }
@@ -48,7 +49,7 @@
 :root[data-theme="light"] {
   --bg: #F1F3F5; --surface: #FFFFFF; --surface-2: #E8ECF0; --sheet: #FFFFFF; --line: #D4DAE0;
   --fg: #11161B; --muted: #5C6772; --accent: #1F5BD8; --on-accent: #FFFFFF;
-  --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12;
+  --ok: #1C8C55; --on-ok: #FFFFFF; --warn: #A26A00; --danger: #C0392B; --ev-train: #C65A12; --ev-exam: #D11A2A;
   --shadow: 0 8px 24px rgba(20,30,40,.14); --shadow-sm: 0 2px 8px rgba(20,30,40,.10);
   color-scheme: light;
 }
@@ -809,3 +810,34 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 .rem-when { font-size: 12.5px; color: var(--muted); }
 .rem-row.veille .rem-when { color: var(--warn); font-weight: 600; }
 .rem-tag { flex: none; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 32%, transparent); padding: 3px 8px; border-radius: 99px; }
+
+/* ---------- Examens (mise en évidence) ---------- */
+/* Blocs calendrier : couleur examen + liseré fort + badge */
+.ev.is-exam { --c: var(--ev-exam); border-color: color-mix(in srgb, var(--ev-exam) 80%, transparent); box-shadow: 0 2px 8px rgba(0,0,0,.34), inset 0 0 0 1.5px color-mix(in srgb, var(--ev-exam) 60%, transparent); }
+.tev.is-exam { --c: var(--ev-exam); border-color: color-mix(in srgb, var(--ev-exam) 70%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ev-exam) 55%, transparent); }
+.ev-exam-tag, .exam-tag { font-family: var(--f-display); font-weight: 700; font-size: 9.5px; letter-spacing: .06em; color: var(--ev-exam); background: color-mix(in srgb, var(--ev-exam) 15%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-exam) 40%, transparent); padding: 1px 5px; border-radius: 5px; }
+.ev .ev-exam-tag { position: absolute; top: 5px; right: 6px; pointer-events: none; }
+.tev .exam-tag { margin-left: auto; }
+.ev.is-tiny .ev-exam-tag { top: 4px; right: 5px; }
+
+/* Carte compte à rebours sur Aujourd'hui */
+.exam-hero { display: flex; align-items: stretch; gap: 14px; width: 100%; text-align: left; margin-top: 14px; padding: 16px 18px; border-radius: var(--r, 16px); background: color-mix(in srgb, var(--ev-exam) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-exam) 34%, var(--line)); cursor: pointer; }
+.exam-hero:hover { background: color-mix(in srgb, var(--ev-exam) 16%, var(--surface)); }
+.exam-dday { flex: none; align-self: center; font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 7vw, 40px); line-height: 1; letter-spacing: -.01em; color: var(--ev-exam); min-width: 64px; }
+.exam-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+.exam-k { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-display); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--ev-exam); }
+.exam-k svg { width: 14px; height: 14px; }
+.exam-ti { font-weight: 600; font-size: 16px; line-height: 1.25; }
+.exam-meta { font-size: 13px; color: var(--muted); }
+.exam-more { margin-top: 8px; display: flex; flex-direction: column; }
+.exam-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 4px; border: none; border-top: 1px solid var(--line); background: none; color: var(--fg); cursor: pointer; }
+.exam-row:first-child { border-top: none; }
+.exam-row:hover { background: color-mix(in srgb, var(--fg) 4%, transparent); }
+.exam-row-d { flex: none; font-family: var(--f-display); font-weight: 700; font-size: 14px; color: var(--ev-exam); min-width: 46px; }
+.exam-row-b { min-width: 0; display: flex; flex-direction: column; }
+.exam-row-t { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exam-row-w { font-size: 12px; color: var(--muted); }
+
+/* Bascule « marquer comme examen » dans la feuille d'actions */
+.exam-toggle svg { width: 16px; height: 16px; }
+.exam-toggle.on { color: var(--ev-exam); border-color: color-mix(in srgb, var(--ev-exam) 42%, var(--line)); background: color-mix(in srgb, var(--ev-exam) 13%, var(--surface)); }

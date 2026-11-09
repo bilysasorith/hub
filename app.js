@@ -398,6 +398,32 @@ function renderDashUpcoming() {
   wireEventTaps(mount);
 }
 
+// Carte « Examen à venir » sur Aujourd'hui : compte à rebours sur le plus proche.
+function renderDashExam() {
+  const mount = document.getElementById("dash-exam");
+  if (!mount) return;
+  const list = upcomingExams();
+  if (!list.length) { mount.innerHTML = ""; return; }
+  const todayK = dayKey(now());
+  const ddayLabel = (ev) => {
+    const d = daysBetweenKeys(todayK, dayKey(new Date(ev.start)));
+    return d <= 0 ? "AUJOURD'HUI" : d === 1 ? "DEMAIN" : "J−" + d;
+  };
+  const whenLine = (ev) => { const s = new Date(ev.start); return `${cap(fmtWeekday.format(s))} · ${fmtTime.format(s)}`; };
+  const roomOf = (ev) => (ev.rooms && ev.rooms[0]) || ev.location || "";
+  const first = list[0];
+  const rest = list.slice(1, 4);
+  mount.innerHTML = `<section class="exam-hero" ${evAttrs(first)}>
+    <div class="exam-dday">${ddayLabel(first)}</div>
+    <div class="exam-body">
+      <div class="exam-k">${ico("i-alert")} Examen</div>
+      <div class="exam-ti">${esc(first.title)}</div>
+      <div class="exam-meta">${whenLine(first)}${roomOf(first) ? " · " + esc(roomOf(first)) : ""}</div>
+    </div>
+  </section>${rest.length ? `<div class="exam-more">${rest.map((ev) => `<button class="exam-row" ${evAttrs(ev)}><span class="exam-row-d">${ddayLabel(ev)}</span><span class="exam-row-b"><span class="exam-row-t">${esc(ev.title)}</span><span class="exam-row-w">${whenLine(ev)}</span></span></button>`).join("")}</div>` : ""}`;
+  wireEventTaps(mount);
+}
+
 // Nombre de jours calendaires entre deux clés YYYY-MM-DD (b - a).
 const keyToUTC = (k) => { const [Y, M, D] = k.split("-").map(Number); return Date.UTC(Y, M - 1, D); };
 const daysBetweenKeys = (a, b) => Math.round((keyToUTC(b) - keyToUTC(a)) / 86400000);
@@ -567,9 +593,10 @@ function dayTimeline(evs) {
     const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
     const conf = ev.conflict;
     const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
-    return `<div class="tev src-${ev.source}${size}${conf ? " is-conf" : ""}${ev._hidden ? " is-hidden" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}"
+    const exam = isExam(ev);
+    return `<div class="tev src-${ev.source}${size}${conf ? " is-conf" : ""}${ev._hidden ? " is-hidden" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}"
       style="top:${y(ev.s)}px;height:${h}px;left:calc(${left}% + ${left ? 3 : 0}px);width:calc(${w}% - ${ev.cols > 1 ? 6 : 0}px)">
-      <div class="hd"><span class="emb">${ico(subjectIcon(ev))}</span><span class="t">${hmMin(ev.s)} – ${hmMin(ev.e2)}</span>${conf ? ico("i-alert") : ""}</div>
+      <div class="hd"><span class="emb">${ico(exam ? "i-alert" : subjectIcon(ev))}</span><span class="t">${hmMin(ev.s)} – ${hmMin(ev.e2)}</span>${exam ? `<span class="exam-tag">EXAMEN</span>` : conf ? ico("i-alert") : ""}</div>
       <div class="ti">${esc(ev.title)}</div>
       ${loc ? `<div class="lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
     </div>`;
@@ -746,6 +773,7 @@ function renderToday() {
   viewEl.innerHTML = `
     ${captureHtml}
     <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
+    <div id="dash-exam"></div>
     <div id="dash-goal"></div>
     <div id="dash-upcoming"></div>
     <section class="dash">
@@ -762,6 +790,7 @@ function renderToday() {
     _storeTried = true;
     getStore().then(() => { if (current === "today") rerender(); });
   } else if (signed) {
+    renderDashExam();
     renderDashTasks();
     renderDashGoal();
     renderDashUpcoming();
@@ -1136,9 +1165,10 @@ function weekGrid(days, perDay, sel) {
       const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
       const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
       const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
-      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
-        ${ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : ""}
-        <div class="ev-hd">${ico(SRC_ICON[ev.source] || "i-cap")}<span class="ev-t mono">${range}</span></div>
+      const exam = isExam(ev);
+      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+        ${exam ? `<span class="ev-exam-tag">EXAMEN</span>` : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : ""}
+        <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span></div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
       </div>`;
@@ -1253,13 +1283,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set() };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map() };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -1285,8 +1315,8 @@ async function refreshTodos() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); return; }
-  const [c, o, t, s, p, g, r] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); return; }
+  const [c, o, t, s, p, g, r, x] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -1294,6 +1324,7 @@ async function refreshPersonal() {
     _store.sb.from("planning_seen").select("seen_at").maybeSingle(),
     _store.sb.from("goals").select("*").order("created_at", { ascending: true }),
     _store.sb.from("event_reminders").select("event_key"),
+    _store.sb.from("exam_flags").select("event_uid,is_exam"),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -1302,6 +1333,7 @@ async function refreshPersonal() {
   _store.seenAt = (p && !p.error && p.data) ? p.data.seen_at : null;
   _store.goals = g.error ? [] : (g.data || []);
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
+  _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
   updateBell();
   subscribeRealtime();
 }
@@ -1382,6 +1414,46 @@ async function toggleReminder(ev) {
   }
 }
 
+// ---------- Examens ----------
+// Codes d'activité myefrei considérés comme examens (confirmé par l'utilisateur : DE).
+const EXAM_CODES = new Set(["DE"]);
+// Un créneau est-il un examen ? Base = code d'activité ; correction manuelle (exam_flags) prioritaire.
+function isExam(ev) {
+  if (!ev || ev.source !== "course") return false;
+  const o = _store?.examFlags?.get(ev.uid);
+  if (o !== undefined) return o;
+  return EXAM_CODES.has(ev.activity);
+}
+// Basculer / corriger le statut examen d'un cours (optimiste + persistance Supabase).
+async function toggleExam(ev) {
+  const store = await getStore();
+  if (!store?.session || ev.source !== "course") return;
+  const next = !isExam(ev);
+  const prev = store.examFlags.get(ev.uid);
+  store.examFlags.set(ev.uid, next);
+  rerender();
+  const { error } = await store.sb.from("exam_flags")
+    .upsert({ user_id: store.session.user.id, event_uid: ev.uid, is_exam: next }, { onConflict: "user_id,event_uid" });
+  if (error) {
+    if (prev === undefined) store.examFlags.delete(ev.uid); else store.examFlags.set(ev.uid, prev);
+    rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé exam-flags.sql ?)");
+  }
+}
+// Examens à venir (prochains 60 jours), triés par date.
+function upcomingExams() {
+  if (!_store?.session) return [];
+  const N = now();
+  const horizon = new Date(N.getTime() + 60 * 86400000);
+  const out = [];
+  for (const e of (PLANNING?.events || [])) {
+    const ev = { ...e, source: "course" };
+    if (!isExam(ev)) continue;
+    const s = new Date(ev.start);
+    if (s > N && s <= horizon) out.push(ev);
+  }
+  return out.sort((a, b) => new Date(a.start) - new Date(b.start));
+}
+
 let _sub = null;
 function subscribeRealtime() {
   if (_sub || !_store?.session) return;
@@ -1397,6 +1469,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "planning_seen" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "goals" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "event_reminders" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "exam_flags" }, onPerso)
     .subscribe();
 }
 
@@ -1542,6 +1615,8 @@ function openEventActions(ev) {
   const head = `<h3 class="sheet-h">${esc(ev.title)}</h3><p class="sheet-sub">${evWhen(ev)}${(ev.location) ? " · " + esc(ev.location) : ""}</p>`;
   const isRem = (_store.reminders || new Set()).has(eventKey(ev));
   const remBtn = `<button class="btn btn-ghost rem-toggle${isRem ? " on" : ""}" id="s-rem">${ico("i-bell")}${isRem ? "Rappel activé" : "Ne pas oublier"}</button>`;
+  const exam = isExam(ev);
+  const examBtn = ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "";
 
   if (ev.source === "perso") {
     const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}
@@ -1556,7 +1631,7 @@ function openEventActions(ev) {
   } else if (ev.source === "course") {
     if (ev._hidden) {
       const ov = openSheet(`${head}<p class="sheet-note">Tu as marqué « je n'y vais pas » pour ce cours.</p>
-        <div class="sheet-actions">${remBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
+        <div class="sheet-actions">${remBtn}${examBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn" id="s-show">Y retourner</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-show").onclick = async () => {
@@ -1565,7 +1640,7 @@ function openEventActions(ev) {
         closeSheet(); await refreshPersonal(); rerender();
       };
     } else {
-      const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
+      const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}${examBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn btn-danger" id="s-hide">Je n'y vais pas</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-hide").onclick = async () => {
@@ -1584,6 +1659,7 @@ function openEventActions(ev) {
     ov.querySelector("#s-close").onclick = closeSheet;
   }
   document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet(); rerender(); });
+  document.getElementById("s-exam")?.addEventListener("click", async () => { await toggleExam(ev); closeSheet(); rerender(); });
 }
 
 // ---------- Sous-tâches ----------
