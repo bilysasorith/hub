@@ -286,6 +286,7 @@ main { padding-top: 18px; display: grid; gap: 14px; }
 
 /* Ajout de tâche */
 .add { display: flex; gap: 10px; }
+.note .add .btn, .add .btn { margin-top: 0; }
 .add input {
   flex: 1; height: 46px; padding: 0 14px; border-radius: var(--r-sm);
   background: var(--surface); border: 1px solid var(--line); caret-color: var(--accent);
