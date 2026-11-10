@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-10T16:49:11.332Z",
+  "generatedAt": "2026-11-10T22:53:06.568Z",
   "count": 97,
   "events": [
     {
-      "uid": "fd57b387-3e5a-4ace-a5cd-9f6ef3c750e0",
+      "uid": "cfeb924d-d429-4f35-a70d-a7fde5dc8e81",
       "start": "2026-11-09T08:10:00.000Z",
       "end": "2026-11-09T11:10:00.000Z",
       "title": "CSR-The social and ecological transition stakes",
@@ -20,7 +20,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "0f61eef4-8359-4a71-9fe2-8c9a1e81fee5",
+      "uid": "2df13421-f3ad-46d1-8faf-16a4f7945a02",
       "start": "2026-11-09T12:40:00.000Z",
       "end": "2026-11-09T16:40:00.000Z",
       "title": "Data Integration and Analytics",
@@ -33,7 +33,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "b5ee9d1e-5968-43fb-a023-72f4d0baceb7",
+      "uid": "6f961938-f25c-4edf-bc70-00f2bf938ffa",
       "start": "2026-11-10T07:00:00.000Z",
       "end": "2026-11-10T11:00:00.000Z",
       "title": "Data Integration and Analytics",
@@ -46,7 +46,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "b6e536ca-7279-4230-950a-bf97012fe9a7",
+      "uid": "d16d4b14-d301-40c5-b3ea-44df744f94d4",
       "start": "2026-11-10T12:40:00.000Z",
       "end": "2026-11-10T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -59,7 +59,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "3d337dc6-be9c-4473-99da-04cb9f9b0692",
+      "uid": "16b99e3f-0e9b-424d-a080-4dfac4afd21a",
       "start": "2026-11-12T07:00:00.000Z",
       "end": "2026-11-12T11:00:00.000Z",
       "title": "Forum 1er emploi",
@@ -85,7 +85,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "56451e4b-86b2-4749-94a1-41bf49efb2d4",
+      "uid": "7f3ea54e-541b-40ce-b7e0-f4d02aa4eaf6",
       "start": "2026-11-12T12:40:00.000Z",
       "end": "2026-11-12T16:10:00.000Z",
       "title": "Forum 1er emploi",
@@ -111,7 +111,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "67b2351d-9be1-4fac-9a09-83f1115f86f2",
+      "uid": "9776084c-5332-4653-9156-01919f8017b1",
       "start": "2026-11-13T08:10:00.000Z",
       "end": "2026-11-13T09:10:00.000Z",
       "title": "Engineering Project",
@@ -124,7 +124,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "f97ccf49-c280-4521-bcd6-b3d5802118b4",
+      "uid": "e1169b83-6e6e-4dc4-8462-48fcb59c66f3",
       "start": "2026-11-13T09:10:00.000Z",
       "end": "2026-11-13T11:40:00.000Z",
       "title": "Engineering Project",
@@ -137,7 +137,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "e415d5c0-b582-4d86-b8aa-44d941f48eaa",
+      "uid": "3af101df-4cb6-4c60-b2e8-0ce8208688b2",
       "start": "2026-11-13T12:40:00.000Z",
       "end": "2026-11-13T17:10:00.000Z",
       "title": "Engineering Project",
@@ -150,7 +150,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "11d44cda-b369-4516-8274-236d04757fa2",
+      "uid": "3f5f6213-2ea2-458f-8a27-bebb328d286b",
       "start": "2026-11-16T12:40:00.000Z",
       "end": "2026-11-16T16:40:00.000Z",
       "title": "Data Integration and Analytics",
@@ -163,7 +163,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "15fdf834-462d-4a6e-9dd2-2b707e6c1f1d",
+      "uid": "1417582a-615a-4224-a3c8-b766ce095ad0",
       "start": "2026-11-17T12:40:00.000Z",
       "end": "2026-11-17T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -176,7 +176,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "9296e6cd-1860-40cc-a553-98fbb9f3383b",
+      "uid": "3477461a-3224-4f4f-b429-fc5aa5813581",
       "start": "2026-11-18T08:10:00.000Z",
       "end": "2026-11-18T11:10:00.000Z",
       "title": "CSR-The social and ecological transition stakes",
@@ -193,7 +193,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "d8b87679-4ddf-4a79-a202-52c102eba92f",
+      "uid": "e47e942b-a714-4df2-be98-8455d29cce29",
       "start": "2026-11-19T08:10:00.000Z",
       "end": "2026-11-19T09:10:00.000Z",
       "title": "Engineering Project",
@@ -206,7 +206,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "9d8c0920-73a7-4aa9-9d94-bd1f72213f0a",
+      "uid": "d212ec3e-537f-41bf-8ed5-293e31ee2327",
       "start": "2026-11-19T09:10:00.000Z",
       "end": "2026-11-19T11:40:00.000Z",
       "title": "Engineering Project",
@@ -219,7 +219,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "2f5f4fea-e7aa-4f1c-8aa6-d0f43c3933e3",
+      "uid": "b27f6caf-34f6-4e72-9ba3-5b9e76e1c12a",
       "start": "2026-11-19T12:40:00.000Z",
       "end": "2026-11-19T16:10:00.000Z",
       "title": "Engineering Project",
@@ -232,7 +232,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "69a829bf-a5b3-408d-9951-c95195507754",
+      "uid": "1efa278a-c694-4603-9003-2b2787e2dbde",
       "start": "2026-11-20T08:10:00.000Z",
       "end": "2026-11-20T09:10:00.000Z",
       "title": "Engineering Project",
@@ -245,7 +245,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "fed2a2ac-41e1-49ef-99dd-612c800410cd",
+      "uid": "51433390-ddf3-45cc-bd77-6ffeee3f3f2a",
       "start": "2026-11-20T09:10:00.000Z",
       "end": "2026-11-20T11:40:00.000Z",
       "title": "Engineering Project",
@@ -258,7 +258,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "c96dbf0a-9356-409f-902b-288f17625267",
+      "uid": "e161ad71-32f5-4088-aa96-fe725eba23a9",
       "start": "2026-11-20T12:40:00.000Z",
       "end": "2026-11-20T16:10:00.000Z",
       "title": "Engineering Project",
@@ -271,7 +271,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "da53a56b-e0dc-422a-aa84-e8a82cae2cc3",
+      "uid": "2358c68c-d039-443b-b25f-620819ae042f",
       "start": "2026-11-23T12:40:00.000Z",
       "end": "2026-11-23T15:40:00.000Z",
       "title": "CSR-The social and ecological transition stakes",
@@ -288,7 +288,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "a8070d8a-9375-4f0d-b9d2-8c73d41a7398",
+      "uid": "5e0c458d-34f7-451b-90f4-9c2ff1ba4186",
       "start": "2026-11-24T12:40:00.000Z",
       "end": "2026-11-24T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -301,7 +301,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c428a3c9-aa2a-47c6-8485-4dc8ca7889f3",
+      "uid": "70d8e185-9771-423d-ba9b-6a94ddf87e0e",
       "start": "2026-11-25T07:00:00.000Z",
       "end": "2026-11-25T11:00:00.000Z",
       "title": "Data Integration and Analytics",
@@ -314,7 +314,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "3c0617e6-9bc6-443c-9d30-58674574ef59",
+      "uid": "73b55bc9-27e9-4d63-89f9-758175ca67e9",
       "start": "2026-11-26T07:00:00.000Z",
       "end": "2026-11-26T11:00:00.000Z",
       "title": "Data Integration and Analytics",
@@ -327,7 +327,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "0af4ff60-e76a-45ea-a132-f85bec034098",
+      "uid": "f5f98a85-a20b-4f84-936a-43c49c0cfb3f",
       "start": "2026-11-27T08:10:00.000Z",
       "end": "2026-11-27T09:10:00.000Z",
       "title": "Engineering Project",
@@ -340,7 +340,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "fb45e0d2-fd91-4b98-8309-5d324138ef0d",
+      "uid": "98890751-b768-4a3a-b731-af2117cec9bc",
       "start": "2026-11-27T09:10:00.000Z",
       "end": "2026-11-27T11:40:00.000Z",
       "title": "Engineering Project",
@@ -353,7 +353,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "b64741a2-eb0e-4019-8873-695d29945d57",
+      "uid": "2ebb8f4b-d7fb-4572-9cf8-c9c166675ced",
       "start": "2026-11-27T12:40:00.000Z",
       "end": "2026-11-27T16:10:00.000Z",
       "title": "Engineering Project",
@@ -366,7 +366,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "41b8c118-92ca-4819-b0fe-399a5f3bd5d9",
+      "uid": "799bedc1-4f4a-4bdd-b94e-5dd7a396e04b",
       "start": "2026-11-30T12:40:00.000Z",
       "end": "2026-11-30T15:40:00.000Z",
       "title": "CSR-The social and ecological transition stakes",
@@ -383,7 +383,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "4062d15f-7330-418c-b04a-83bde01d8c6f",
+      "uid": "526ee939-bda8-48c1-a06e-e70c4d6c6552",
       "start": "2026-12-01T07:00:00.000Z",
       "end": "2026-12-01T11:00:00.000Z",
       "title": "Data Integration and Analytics",
@@ -396,7 +396,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "53f814cd-216c-4cd9-97a6-2b12a8181a1e",
+      "uid": "7d1b5672-88cf-42cc-b281-05c7d5d704e6",
       "start": "2026-12-01T12:40:00.000Z",
       "end": "2026-12-01T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -409,7 +409,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c316e055-6ff5-4860-bf9d-c6a6ce7105a5",
+      "uid": "dbd08b2f-1659-4924-bdd0-e9f565f78784",
       "start": "2026-12-02T07:00:00.000Z",
       "end": "2026-12-02T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -422,7 +422,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "702933f1-4bed-4468-af2c-e9a376fe7e0e",
+      "uid": "1d285b23-56b3-4101-a817-5f89ee3599dc",
       "start": "2026-12-02T12:40:00.000Z",
       "end": "2026-12-02T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -435,7 +435,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "bafc671d-f92d-471d-ab87-40b85ead7b64",
+      "uid": "cbaeb055-0597-4aff-a480-de4e7424acfa",
       "start": "2026-12-03T09:00:00.000Z",
       "end": "2026-12-03T16:00:00.000Z",
       "title": "Efrei For Good Xperience",
@@ -483,7 +483,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c3be8cc3-195e-4fd5-ae53-46ce75ca0114",
+      "uid": "4d3fc58a-b90d-4665-aa8a-c16f62c3ce30",
       "start": "2026-12-04T08:10:00.000Z",
       "end": "2026-12-04T09:10:00.000Z",
       "title": "Engineering Project",
@@ -496,7 +496,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "f918214b-621b-40b3-9eaa-ba8fbadcd7ac",
+      "uid": "b2003316-1cac-4d8a-a753-941a450dc0e8",
       "start": "2026-12-04T09:10:00.000Z",
       "end": "2026-12-04T11:40:00.000Z",
       "title": "Engineering Project",
@@ -509,7 +509,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "32e248c9-3a7a-4164-9e52-3d1473e34aff",
+      "uid": "7714f57f-d1cd-44eb-8dd7-08441ebd0699",
       "start": "2026-12-04T12:40:00.000Z",
       "end": "2026-12-04T16:10:00.000Z",
       "title": "Engineering Project",
@@ -522,7 +522,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "894b0fc0-b57a-448d-a4d9-b86033a4d994",
+      "uid": "3b4c67fd-4938-4726-9070-5beb780ce437",
       "start": "2026-12-07T12:40:00.000Z",
       "end": "2026-12-07T15:40:00.000Z",
       "title": "CSR-The social and ecological transition stakes",
@@ -539,7 +539,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "2508c29e-6ab3-462f-8808-f830902041e2",
+      "uid": "01a1fe70-a5da-4c6f-801d-1483a1043dd3",
       "start": "2026-12-08T12:40:00.000Z",
       "end": "2026-12-08T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -552,7 +552,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "6b2d2771-d964-4020-be7a-11dfe5eb994e",
+      "uid": "8b7fd221-5ece-496c-81c4-56ca3eacfd71",
       "start": "2026-12-09T07:00:00.000Z",
       "end": "2026-12-09T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -565,7 +565,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "33caac7a-abb6-49f0-8e17-4aa85654731e",
+      "uid": "4de9910f-b0c8-43b2-ad08-c977dc371104",
       "start": "2026-12-09T12:40:00.000Z",
       "end": "2026-12-09T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -578,7 +578,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "35937e32-caf4-4c1a-8015-5c1a701b2b25",
+      "uid": "6273385b-7cf5-434a-a022-d1b63e7ba2c3",
       "start": "2026-12-10T07:00:00.000Z",
       "end": "2026-12-10T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -591,7 +591,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "0946c78e-9fc6-40e8-b564-18f6eaba105b",
+      "uid": "ba9a7d97-4dca-44e8-adf3-be796e0d5ec5",
       "start": "2026-12-10T12:40:00.000Z",
       "end": "2026-12-10T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -604,7 +604,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "1f88b375-c770-4d1f-a544-27710ed0cd4f",
+      "uid": "3510eae0-4e07-45d2-a4a4-b126c6af91c8",
       "start": "2026-12-11T08:10:00.000Z",
       "end": "2026-12-11T09:10:00.000Z",
       "title": "Engineering Project",
@@ -617,7 +617,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "56ecf456-e83d-40f1-8663-1feca87713b1",
+      "uid": "ce9006f3-02c9-4b42-a270-334808f385d5",
       "start": "2026-12-11T09:10:00.000Z",
       "end": "2026-12-11T11:40:00.000Z",
       "title": "Engineering Project",
@@ -630,7 +630,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "1d5b31d4-3cd3-4d1c-a77f-7dea5010ec6d",
+      "uid": "e9099da5-112e-4c93-be79-6d2d232dbde0",
       "start": "2026-12-11T12:40:00.000Z",
       "end": "2026-12-11T16:10:00.000Z",
       "title": "Engineering Project",
@@ -643,7 +643,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "d4636918-b3b4-455e-bb13-27c0fc9d6e8b",
+      "uid": "68d35639-b6ab-4fce-9568-e7140dc5426d",
       "start": "2027-01-05T07:00:00.000Z",
       "end": "2027-01-05T11:00:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -656,7 +656,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "9513e4c8-ae75-4615-82f1-6c8a6a1924d1",
+      "uid": "7cc0e116-a840-4869-b982-ef47466a37a9",
       "start": "2027-01-05T12:40:00.000Z",
       "end": "2027-01-05T16:40:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -669,7 +669,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "9729e7ac-ac17-410b-b5eb-e4e580eda51a",
+      "uid": "26959218-8894-4626-bad0-df2053aae9eb",
       "start": "2027-01-06T07:00:00.000Z",
       "end": "2027-01-06T11:00:00.000Z",
       "title": "Data Analyst Certification",
@@ -682,7 +682,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "08fff085-9903-4f1c-9adf-0605f691ac9d",
+      "uid": "97e0995a-c803-4dae-b061-9f788d299df1",
       "start": "2027-01-06T12:40:00.000Z",
       "end": "2027-01-06T16:40:00.000Z",
       "title": "3D Data Visualization",
@@ -695,7 +695,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "946556e9-1465-4698-a55e-4494ac5c4c4a",
+      "uid": "0023b28f-45ca-4dd4-81ab-4f79c5f2d229",
       "start": "2027-01-07T08:10:00.000Z",
       "end": "2027-01-07T09:10:00.000Z",
       "title": "Engineering Project",
@@ -708,7 +708,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "0833fe0d-bcfd-4fac-9a42-0b68f922af49",
+      "uid": "7a169827-0c17-49d2-88a1-3b5055ef9b61",
       "start": "2027-01-07T09:10:00.000Z",
       "end": "2027-01-07T11:40:00.000Z",
       "title": "Engineering Project",
@@ -721,7 +721,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "8524d7a4-e88e-48dc-a34f-5ee9514183b3",
+      "uid": "0c8e31c8-5cd8-43c7-a6f6-141f7c3ecbb2",
       "start": "2027-01-07T12:40:00.000Z",
       "end": "2027-01-07T16:10:00.000Z",
       "title": "Engineering Project",
@@ -734,7 +734,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "57e0af63-b640-4d32-8542-0f8cb45fe5d1",
+      "uid": "b5fbb1e3-322c-466f-9570-13d6c6d17143",
       "start": "2027-01-08T08:10:00.000Z",
       "end": "2027-01-08T09:10:00.000Z",
       "title": "Engineering Project",
@@ -747,7 +747,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "52060a6c-9904-47e4-ac7f-44ee8343f578",
+      "uid": "5463ff58-064d-4bf3-977f-701e48f8e6ce",
       "start": "2027-01-08T09:10:00.000Z",
       "end": "2027-01-08T11:40:00.000Z",
       "title": "Engineering Project",
@@ -760,7 +760,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "9a1c0b3b-6211-4593-9f9e-ffb05a6b5520",
+      "uid": "9c07ed25-e87a-44ce-8ee3-5df212e636ec",
       "start": "2027-01-08T12:40:00.000Z",
       "end": "2027-01-08T16:10:00.000Z",
       "title": "Engineering Project",
@@ -773,7 +773,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "956b2665-df6f-4fe1-a125-52aa95ac4ac3",
+      "uid": "7d01d5b0-3d4b-4692-b308-67b1d5cbe65d",
       "start": "2027-01-12T07:00:00.000Z",
       "end": "2027-01-12T11:00:00.000Z",
       "title": "Data Analyst Certification",
@@ -786,7 +786,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "cc091c5e-e528-4ffe-abca-b5bc37c82a56",
+      "uid": "56435ca9-67af-440d-b9ca-48d17a61bd8c",
       "start": "2027-01-12T12:40:00.000Z",
       "end": "2027-01-12T16:40:00.000Z",
       "title": "3D Data Visualization",
@@ -799,7 +799,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "2ec71972-4b6c-4551-843d-e5ae22a11a3f",
+      "uid": "9ac5266b-b5ae-4f6c-ad5b-a9020f3f2434",
       "start": "2027-01-13T07:00:00.000Z",
       "end": "2027-01-13T11:00:00.000Z",
       "title": "Data Analyst Certification",
@@ -812,7 +812,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "a7969cfe-db2e-40ea-a6f2-c2391c6e92b6",
+      "uid": "c0015960-a541-4d69-8565-5ebf07aff3b3",
       "start": "2027-01-13T12:40:00.000Z",
       "end": "2027-01-13T16:40:00.000Z",
       "title": "3D Data Visualization",
@@ -825,7 +825,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "dcf5526f-952d-4656-bdf6-e83fae205ce6",
+      "uid": "87cf30ff-0560-4f45-87c6-4ede055e05bd",
       "start": "2027-01-14T08:10:00.000Z",
       "end": "2027-01-14T09:10:00.000Z",
       "title": "Engineering Project",
@@ -838,7 +838,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "31fc77c3-0939-4627-948d-364326ccbc3d",
+      "uid": "d24c514a-044d-4a9c-84b3-12a4393afcf3",
       "start": "2027-01-14T09:10:00.000Z",
       "end": "2027-01-14T11:40:00.000Z",
       "title": "Engineering Project",
@@ -851,7 +851,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "f879fb59-b53a-4678-8dae-5f7b8c3c881a",
+      "uid": "d789a9c9-5c79-41b7-a8b2-9e60b70ebbae",
       "start": "2027-01-14T12:40:00.000Z",
       "end": "2027-01-14T16:10:00.000Z",
       "title": "Engineering Project",
@@ -864,7 +864,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "6857b94d-7231-44c9-9a1e-ef3ebfb77822",
+      "uid": "372b41da-084b-45a7-a12f-fc7ae6d48628",
       "start": "2027-01-15T08:10:00.000Z",
       "end": "2027-01-15T09:10:00.000Z",
       "title": "Engineering Project",
@@ -877,7 +877,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "4a922f84-e875-49c3-99f8-36017f58f85d",
+      "uid": "44f58303-52f1-48b6-aa27-73822bf5c21e",
       "start": "2027-01-15T09:10:00.000Z",
       "end": "2027-01-15T11:40:00.000Z",
       "title": "Engineering Project",
@@ -890,7 +890,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "b726b399-4606-4e6e-b09a-22b439d9359d",
+      "uid": "b95eb730-74aa-486d-aa74-abe999d17940",
       "start": "2027-01-15T12:40:00.000Z",
       "end": "2027-01-15T16:10:00.000Z",
       "title": "Engineering Project",
@@ -903,7 +903,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "44b73867-cf0e-4b5e-8b0e-cc13cdc296f4",
+      "uid": "44c4ca71-c98f-432d-87b8-e3da143f4954",
       "start": "2027-01-19T07:00:00.000Z",
       "end": "2027-01-19T11:00:00.000Z",
       "title": "3D Data Visualization",
@@ -916,7 +916,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "a28d2ed0-51c5-4ca3-9196-b6c447e4a48d",
+      "uid": "a1e36fb9-411d-444e-a1e8-6c5edd18b21e",
       "start": "2027-01-19T12:40:00.000Z",
       "end": "2027-01-19T16:40:00.000Z",
       "title": "3D Data Visualization",
@@ -929,7 +929,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "7abfd49c-f6f2-436f-b78f-6f2dc5cb59de",
+      "uid": "d13f075d-1df0-40bc-a491-e7e67b49358e",
       "start": "2027-01-20T07:00:00.000Z",
       "end": "2027-01-20T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -942,7 +942,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "dcd29059-a189-4531-8768-b5b16b14bcd7",
+      "uid": "a5f64a3c-e087-46a0-8fac-950bda6061ec",
       "start": "2027-01-20T12:40:00.000Z",
       "end": "2027-01-20T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -955,7 +955,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "a3b2da82-cb73-441e-9d34-f08a6fb62e38",
+      "uid": "e479ca85-bfe7-4082-8895-38e7665d8318",
       "start": "2027-01-21T08:10:00.000Z",
       "end": "2027-01-21T09:10:00.000Z",
       "title": "Engineering Project",
@@ -968,7 +968,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "99de7890-b0a8-4f31-8c5d-a99f3a787c91",
+      "uid": "70e6c2ad-1bfb-453f-9788-50e204aa6431",
       "start": "2027-01-21T09:10:00.000Z",
       "end": "2027-01-21T11:40:00.000Z",
       "title": "Engineering Project",
@@ -981,7 +981,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "8b396857-2578-4f25-9161-514e1f042753",
+      "uid": "5bcfde96-48ad-4e96-afdf-3eda893680f1",
       "start": "2027-01-21T12:40:00.000Z",
       "end": "2027-01-21T16:10:00.000Z",
       "title": "Engineering Project",
@@ -994,7 +994,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "bd9edb02-e134-444f-9500-12bfbca95043",
+      "uid": "15e3fc08-a3fe-4825-bfa2-dc5572a91ef6",
       "start": "2027-01-22T08:10:00.000Z",
       "end": "2027-01-22T09:10:00.000Z",
       "title": "Engineering Project",
@@ -1007,7 +1007,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "e6ada736-05a4-449c-8ed1-93490528b818",
+      "uid": "c6e9dc25-dba7-4eae-8a9c-0c181a3ff6e3",
       "start": "2027-01-22T09:10:00.000Z",
       "end": "2027-01-22T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1020,7 +1020,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "32a34175-5949-46a6-96f5-11774069713e",
+      "uid": "a469244e-2d73-41f7-b22d-44a06764f362",
       "start": "2027-01-22T12:40:00.000Z",
       "end": "2027-01-22T16:10:00.000Z",
       "title": "Engineering Project",
@@ -1033,7 +1033,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "9b2cc760-f1c0-47cb-8fa4-cf945e8bbe00",
+      "uid": "bc52a627-8ff0-4ae1-b8d7-ea86dd450dd6",
       "start": "2027-01-26T07:00:00.000Z",
       "end": "2027-01-26T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -1046,7 +1046,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "acebaa1b-1c92-4b2d-940a-dfdfe64e33ef",
+      "uid": "5442b6ac-9f97-4904-abed-10fb86f5b64d",
       "start": "2027-01-26T12:40:00.000Z",
       "end": "2027-01-26T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -1059,7 +1059,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "652795e8-c053-4bdf-93c6-55e7f4194315",
+      "uid": "8542473e-a478-4e99-9c62-4c56172a41bf",
       "start": "2027-01-27T07:00:00.000Z",
       "end": "2027-01-27T11:00:00.000Z",
       "title": "3D Data Visualization",
@@ -1072,7 +1072,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "4035b2f0-c6fa-49ec-a85b-13f0d4f620b7",
+      "uid": "1361e222-1716-406e-87cd-86c722bc19e7",
       "start": "2027-01-27T12:40:00.000Z",
       "end": "2027-01-27T16:40:00.000Z",
       "title": "3D Data Visualization",
@@ -1085,7 +1085,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "f293379b-2515-456a-aad0-5f6f7972d870",
+      "uid": "15cb4366-e793-4b88-82ac-77d583f86a1a",
       "start": "2027-01-28T08:10:00.000Z",
       "end": "2027-01-28T09:10:00.000Z",
       "title": "Engineering Project",
@@ -1098,7 +1098,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "f8d03833-a32d-4bf9-9c31-297b05555471",
+      "uid": "9cdf28ba-6158-49cc-9949-3c88d21712a8",
       "start": "2027-01-28T09:10:00.000Z",
       "end": "2027-01-28T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1111,7 +1111,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "212b4ae2-f873-4d6f-84dc-1a989fb13316",
+      "uid": "c1b28ede-0313-49b7-ac21-ae21d0dc2320",
       "start": "2027-01-28T12:40:00.000Z",
       "end": "2027-01-28T16:10:00.000Z",
       "title": "Engineering Project",
@@ -1124,7 +1124,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "7db49222-6fa9-485e-a842-dd42b00a2b39",
+      "uid": "4f4947b7-c941-4f29-9c7b-e2603c96366a",
       "start": "2027-01-29T08:10:00.000Z",
       "end": "2027-01-29T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1137,7 +1137,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "835d3653-dabb-4278-aae6-98db6e0dd54d",
+      "uid": "f3b983ae-8664-4c45-be41-482477ec3c91",
       "start": "2027-01-29T12:40:00.000Z",
       "end": "2027-01-29T16:10:00.000Z",
       "title": "Engineering Project",
@@ -1150,7 +1150,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "8bcbe9d7-cb0e-49f0-9652-c6d6d9996045",
+      "uid": "69e029c3-f20f-4bd4-87b3-c7e4ea5269b9",
       "start": "2027-02-02T08:10:00.000Z",
       "end": "2027-02-02T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1163,7 +1163,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "af8441d4-1af7-485b-94df-5440ac54d50e",
+      "uid": "2da6f50f-62f5-48c0-b6cd-cf5330ffe808",
       "start": "2027-02-02T12:40:00.000Z",
       "end": "2027-02-02T16:10:00.000Z",
       "title": "Engineering Project",
@@ -1176,7 +1176,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "a6b932d9-dd15-4a44-af12-4d5641a46781",
+      "uid": "b453b91d-f947-4268-ac77-5b61fe043fab",
       "start": "2027-02-03T08:10:00.000Z",
       "end": "2027-02-03T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1189,7 +1189,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "2cc6a7ef-819c-46cf-98ab-9a5e6a97a7e1",
+      "uid": "6ccdb750-7707-49d5-88f6-2530201131b0",
       "start": "2027-02-03T12:40:00.000Z",
       "end": "2027-02-03T16:10:00.000Z",
       "title": "Engineering Project",
@@ -1202,7 +1202,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "e0f1f981-2864-450a-a954-051aa10cbde9",
+      "uid": "f1377d1b-a26b-4dfe-a57e-c3d0db7b6550",
       "start": "2027-02-04T08:10:00.000Z",
       "end": "2027-02-04T11:40:00.000Z",
       "title": "Business Game",
@@ -1215,7 +1215,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "6e57791a-5a06-47cc-9bd8-3ae651bc27ed",
+      "uid": "a65aa406-e48f-4597-aa05-e96d1ce6090e",
       "start": "2027-02-04T12:40:00.000Z",
       "end": "2027-02-04T16:10:00.000Z",
       "title": "Business Game",
@@ -1228,7 +1228,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c7e106d7-cab1-4a9e-81f0-6c8b1ae8502e",
+      "uid": "03c89ce9-d2f5-4c44-808c-b1d6015088eb",
       "start": "2027-02-05T08:10:00.000Z",
       "end": "2027-02-05T11:40:00.000Z",
       "title": "Business Game",
@@ -1241,7 +1241,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "be6ccc80-e523-4214-8762-213ea0cb2db3",
+      "uid": "37aa9c33-0c69-42bd-b859-3242aa8ccbd2",
       "start": "2027-02-05T12:40:00.000Z",
       "end": "2027-02-05T17:10:00.000Z",
       "title": "Business Game",
@@ -1254,7 +1254,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "046206d4-fe88-4ee1-a916-468b95ac4ad2",
+      "uid": "a5d3f1de-515c-4ed3-b482-ddc4f6b6b891",
       "start": "2027-02-24T15:00:00.000Z",
       "end": "2027-02-24T16:50:00.000Z",
       "title": "Machine Learning for Data Analysts",
@@ -1267,7 +1267,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "78035512-1649-44f9-9235-6021cb3338f1",
+      "uid": "8117e800-ea43-46d7-b996-03a73eaa2f17",
       "start": "2027-03-02T07:00:00.000Z",
       "end": "2027-03-02T11:00:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -1280,7 +1280,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "6ebddbe6-f37d-4879-8b45-7b057e15c4c9",
+      "uid": "dd896226-f9a0-4f0b-a772-49d548046e15",
       "start": "2027-03-02T12:40:00.000Z",
       "end": "2027-03-02T16:40:00.000Z",
       "title": "Chatbots & Generative AI",
@@ -1293,7 +1293,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "9c1c740b-4a2e-4907-95b5-37e3dffc270f",
+      "uid": "fc9f2912-bbca-4e65-ac49-692214a4e4eb",
       "start": "2027-03-04T08:10:00.000Z",
       "end": "2027-03-04T11:40:00.000Z",
       "title": "Engineering Project",
@@ -1306,7 +1306,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "b959fa07-8d69-4a50-8e7d-ba6172342fa0",
+      "uid": "d1fdfb3e-051a-402b-aac1-e878333f6ea0",
       "start": "2027-03-04T12:40:00.000Z",
       "end": "2027-03-04T17:10:00.000Z",
       "title": "Engineering Project",
@@ -1319,7 +1319,7 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "7713c775-bbe2-4137-99c3-019b98d7a104",
+      "uid": "1ab138c7-da92-418d-98ef-4fc641250200",
       "start": "2027-03-05T07:00:00.000Z",
       "end": "2027-03-05T11:00:00.000Z",
       "title": "Big Data Processing",
@@ -1332,7 +1332,7 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "99a1a345-15fa-407a-bae9-f36d04706a6c",
+      "uid": "88cddd7d-9ec3-424d-a490-342299668584",
       "start": "2027-03-05T12:40:00.000Z",
       "end": "2027-03-05T16:40:00.000Z",
       "title": "Big Data Processing",
