@@ -25,6 +25,103 @@ const dayKey = (d) => fmtDayKey.format(d);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const ico = (id, cls = "mi") => `<svg class="${cls}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// ---------- Sons d'interface ----------
+// Synthétisés à la volée (Web Audio) : aucun fichier à charger, donc rien à mettre en cache.
+// Volontairement courts et bas ; coupables depuis l'en-tête (préférence mémorisée par appareil).
+const SOUND_KEY = "hub-sound";
+let soundOn = (() => { try { return localStorage.getItem(SOUND_KEY) !== "off"; } catch { return true; } })();
+let _ac = null, _master = null;
+function audio() {
+  if (!soundOn) return null;
+  try {
+    if (!_ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      _ac = new AC();
+      _master = _ac.createGain();
+      _master.gain.value = 0.55;
+      _master.connect(_ac.destination);
+    }
+    if (_ac.state !== "running") _ac.resume().catch(() => {});
+    return _ac;
+  } catch { return null; }
+}
+// Une note : fréquence (glissando optionnel vers `to`), attaque sèche, extinction exponentielle.
+function tone(ac, { f, to, at = 0, dur = 0.12, gain = 0.2, type = "sine" }) {
+  const t0 = ac.currentTime + at;
+  const osc = ac.createOscillator(), env = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f, t0);
+  if (to) osc.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+  env.gain.setValueAtTime(0.0001, t0);
+  env.gain.exponentialRampToValueAtTime(gain, t0 + 0.008);
+  env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(env).connect(_master);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+const SFX = {
+  check:   [{ f: 660, dur: 0.09, gain: 0.22, type: "triangle" }, { f: 990, at: 0.07, dur: 0.17, gain: 0.2, type: "triangle" }],
+  uncheck: [{ f: 520, to: 370, dur: 0.12, gain: 0.13, type: "triangle" }],
+  // Journée pliée : arpège do-mi-sol-do + un harmonique qui s'éteint.
+  done:    [523.25, 659.25, 783.99, 1046.5].map((f, i) => ({ f, at: i * 0.09, dur: i === 3 ? 0.5 : 0.2, gain: 0.2, type: "triangle" }))
+             .concat({ f: 1568, at: 0.27, dur: 0.6, gain: 0.05 }),
+  add:     [{ f: 440, to: 660, dur: 0.1, gain: 0.15 }],
+  del:     [{ f: 300, to: 150, dur: 0.16, gain: 0.16 }],
+  tab:     [{ f: 880, dur: 0.035, gain: 0.06 }],
+  open:    [{ f: 420, to: 560, dur: 0.07, gain: 0.07 }],
+  close:   [{ f: 520, to: 400, dur: 0.07, gain: 0.06 }],
+  toggle:  [{ f: 740, dur: 0.05, gain: 0.1, type: "triangle" }],
+  tick:    [{ f: 1040, dur: 0.04, gain: 0.1, type: "triangle" }],
+  error:   [{ f: 220, dur: 0.13, gain: 0.2, type: "triangle" }, { f: 174.61, at: 0.13, dur: 0.2, gain: 0.2, type: "triangle" }],
+};
+function sfx(name) {
+  const ac = audio();
+  if (!ac) return;
+  try { for (const n of SFX[name] || []) tone(ac, n); } catch {}
+}
+// Les navigateurs n'autorisent le son qu'après un geste : on réveille le contexte au premier.
+for (const evt of ["pointerdown", "keydown"]) window.addEventListener(evt, () => audio(), { passive: true });
+// Erreur : petit son grave, puis le message (laissé le temps au son de partir).
+function oops(msg) { sfx("error"); setTimeout(() => alert(msg), 140); }
+
+// ---------- Mouvement ----------
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+// Attente « de mise en scène » : nulle si l'utilisateur a demandé moins d'animations.
+const stage = (ms) => new Promise((r) => setTimeout(r, reduceMotion.matches ? 0 : ms));
+let _quietUntil = 0;         // pendant une animation locale, on retarde le re-rendu temps réel
+const quiet = (ms) => { _quietUntil = Math.max(_quietUntil, Date.now() + ms); };
+let _cheerAt = 0;            // instant où la dernière tâche du jour a été cochée
+let _newIds = new Set();     // tâches tout juste ajoutées (animation d'entrée)
+
+// Confettis sobres partant d'un élément (la case cochée). Réservés à « journée pliée ».
+function celebrate(origin) {
+  if (reduceMotion.matches || !origin) return;
+  const r = origin.getBoundingClientRect();
+  const box = document.createElement("div");
+  box.className = "confetti";
+  box.setAttribute("aria-hidden", "true");
+  box.style.left = `${r.left + r.width / 2}px`;
+  box.style.top = `${r.top + r.height / 2}px`;
+  const colors = ["var(--accent)", "var(--ok)", "var(--warn)"];
+  const count = 16;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("i");
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 44 + Math.random() * 56;
+    p.style.setProperty("--dx", `${(Math.cos(angle) * dist).toFixed(1)}px`);
+    p.style.setProperty("--dy", `${(Math.sin(angle) * dist - 22).toFixed(1)}px`);
+    p.style.setProperty("--rot", `${Math.round(Math.random() * 540 - 270)}deg`);
+    p.style.background = colors[i % colors.length];
+    p.style.animationDelay = `${Math.round(Math.random() * 70)}ms`;
+    if (i % 3 === 0) p.className = "dot";
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 1200);
+}
+
 // Décale une clé YYYY-MM-DD de n jours
 const addDays = (key, n) => {
   const [Y, M, D] = key.split("-").map(Number);
@@ -681,13 +778,15 @@ function ringHtml(done, total) {
 
 // Met à jour l'anneau (en-tête panneau) et le petit mot d'avancement.
 function setDayProgress(total, done) {
+  const left = total - done;
+  // La dernière tâche du jour vient d'être cochée : l'anneau et le mot d'avancement le marquent.
+  const cheer = total > 0 && left <= 0 && Date.now() - _cheerAt < 1200;
   const ring = document.getElementById("dash-ring");
-  if (ring) ring.innerHTML = total ? ringHtml(done, total) : "";
+  if (ring) { ring.innerHTML = total ? ringHtml(done, total) : ""; ring.classList.toggle("cheer", cheer); }
   const nudge = document.getElementById("day-nudge");
   if (!nudge) return;
-  const left = total - done;
   if (!total) { nudge.hidden = true; nudge.innerHTML = ""; }
-  else if (left <= 0) { nudge.hidden = false; nudge.className = "nudge is-done"; nudge.innerHTML = `${ico("i-check")}<b>Journée pliée</b> — tout est coché.`; }
+  else if (left <= 0) { nudge.hidden = false; nudge.className = "nudge is-done" + (cheer ? " cheer" : ""); nudge.innerHTML = `${ico("i-check")}<b>Journée pliée</b> — tout est coché.`; }
   else { nudge.hidden = false; nudge.className = "nudge"; nudge.innerHTML = `${ico("i-bolt")}Plus que <b>${left} tâche${left > 1 ? "s" : ""}</b> pour plier ta journée.`; }
 }
 
@@ -720,8 +819,8 @@ function wireCapture(root) {
     if (!title || !_store?.session) return;
     input.value = "";
     const { error } = await _store.sb.from("todos").insert({ title, due_date: selDue });
-    if (error) { alert("Ajout impossible : " + error.message); return; }
-    await refreshTodos();
+    if (error) { oops("Ajout impossible : " + error.message); return; }
+    await refreshAfterAdd();
     rerender();
     document.getElementById("cap-input")?.focus(); // garder le flux pour enchaîner
   });
@@ -735,7 +834,7 @@ function renderToday() {
   const signed = !!_store?.session;
 
   if (!PLANNING) {
-    viewEl.innerHTML = `<div class="note"><h3>Planning indisponible</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
+    viewEl.innerHTML = `<div class="note">${illus("art-offline")}<h3>Planning indisponible</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
     updateFab(); return;
   }
 
@@ -750,7 +849,7 @@ function renderToday() {
 
   // État d'authentification : connu dès que le store est initialisé (ou qu'une tentative a échoué).
   const authKnown = !!_store || _storeTried;
-  const signedOutPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div class="empty-ill">${illus("art-done")}<div class="ei-t">Tes tâches ici</div><div class="ei-d">Connecte-toi dans l'onglet « À faire » pour les retrouver sur tous tes appareils.</div></div></div>`;
+  const signedOutPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div class="empty-ill">${illus("art-signin")}<div class="ei-t">Tes tâches ici</div><div class="ei-d">Connecte-toi pour les retrouver sur tous tes appareils.</div><button class="btn btn-ghost ei-btn" type="button" id="go-signin">Se connecter</button></div></div>`;
   let tasksPanel;
   if (SUPA_READY && signed) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2><div class="ph-prog" id="dash-ring"></div></div><div id="dash-tasks"></div></div>`;
   else if (SUPA_READY && !authKnown) tasksPanel = `<div class="panel"><div class="panel-h"><h2>À faire</h2></div><div id="dash-tasks"></div></div>`; // auth en cours de résolution
@@ -760,7 +859,7 @@ function renderToday() {
   const captureHtml = signed ? `
     <form class="capture" id="capture">
       <svg class="cap-ico" aria-hidden="true"><use href="#i-pen"/></svg>
-      <input class="cap-input" id="cap-input" placeholder="Qu'est-ce que tu dois faire ?" autocomplete="off" maxlength="200" aria-label="Noter une tâche">
+      <input class="cap-input" id="cap-input" placeholder="${matchMedia("(max-width: 430px)").matches ? "Nouvelle tâche" : "Qu'est-ce que tu dois faire ?"}" autocomplete="off" maxlength="200" aria-label="Noter une tâche">
       <div class="cap-chips">
         <button type="button" class="cap-chip on" data-day="today">Aujourd'hui</button>
         <button type="button" class="cap-chip" data-day="tomorrow">Demain</button>
@@ -784,6 +883,7 @@ function renderToday() {
   wireEventTaps(viewEl);
   wireCapture(viewEl);
   viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
+  viewEl.querySelector("#go-signin")?.addEventListener("click", () => document.querySelector('.tab[data-view="tasks"]')?.click());
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
   if (SUPA_READY && !_store && !_storeTried) {
@@ -1042,7 +1142,7 @@ function renderWeek() {
   dateEl.textContent = `${fmtRange.format(days[0].date)} – ${fmtRange.format(days[6].date)}`;
   if (!PLANNING) {
     viewEl.innerHTML = `<div class="wk"><div class="wk-bar">${weekNav(days)}</div>
-      <div class="note"><h3>Rien à afficher</h3><p>Planning indisponible.</p></div></div>`;
+      <div class="note">${illus("art-offline")}<h3>Rien à afficher</h3><p>Planning indisponible.</p></div></div>`;
     wireWeekNav(); return;
   }
 
@@ -1187,7 +1287,7 @@ async function renderTasks() {
   if (!SUPA_READY) { viewEl.innerHTML = setupNote(); return; }
 
   const store = await getStore();
-  if (!store) { viewEl.innerHTML = `<div class="note"><h3>Connexion impossible</h3><p>Impossible de joindre Supabase. Réessaie quand tu as du réseau.</p></div>`; return; }
+  if (!store) { viewEl.innerHTML = `<div class="note">${illus("art-offline")}<h3>Connexion impossible</h3><p>Impossible de joindre Supabase. Réessaie quand tu as du réseau.</p></div>`; return; }
 
   if (!store.session) { viewEl.innerHTML = signInView(); wireSignIn(store); return; }
 
@@ -1206,7 +1306,7 @@ async function renderTasks() {
 
   const body = (late.length + today.length + soon.length + later.length)
     ? section("En retard", late, "is-late") + section("Aujourd'hui", today) + section("Cette semaine", soon) + section("Plus tard", later)
-    : `<div class="note"><h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
+    : `<div class="note">${illus("art-empty")}<h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
 
   viewEl.innerHTML = `
     ${goalsSection(store.goals || [])}
@@ -1237,7 +1337,7 @@ function todoRow(t) {
   const list = hasSubs
     ? `<ul class="subs">${subs.map((s) => `<li class="${s.done ? "done" : ""}" data-sid="${esc(s.id)}"><span class="sc${s.done ? " on" : ""}">${ico("i-check")}</span><span class="ss-t">${esc(s.title)}</span></li>`).join("")}</ul>`
     : "";
-  return `<div class="todo${t.done ? " is-done" : ""}" data-id="${esc(t.id)}">
+  return `<div class="todo${t.done ? " is-done" : ""}${_newIds.has(String(t.id)) ? " is-new" : ""}" data-id="${esc(t.id)}">
     <button class="check" role="checkbox" aria-checked="${t.done}" aria-label="${t.done ? "Décocher" : "Cocher"}">${ico("i-check")}</button>
     <div class="tx">
       <div class="tt-row"><span class="tt todo-title">${esc(t.title)}</span>${prog}</div>
@@ -1263,14 +1363,15 @@ function setupNote() {
 }
 
 function signInView() {
-  return `<div class="note" style="text-align:left">
+  return `<div class="note signin">
+    ${illus("art-signin")}
     <h3>Connexion</h3>
     <p>Reçois un lien magique par e-mail pour retrouver tes tâches sur tous tes appareils.</p>
-    <form class="add" id="signin-form" style="margin-top:14px">
+    <form class="add" id="signin-form">
       <input id="signin-email" type="email" required placeholder="ton e-mail" autocomplete="email" aria-label="E-mail">
       <button class="btn" type="submit">Recevoir</button>
     </form>
-    <p id="signin-msg" style="margin-top:10px"></p>
+    <p id="signin-msg" role="status"></p>
   </div>`;
 }
 
@@ -1312,6 +1413,16 @@ async function refreshTodos() {
   }
 }
 
+// Après un ajout : recharge, repère la nouvelle tâche (animation d'entrée) et joue le son.
+async function refreshAfterAdd() {
+  const before = new Set((_store?.todos || []).map((t) => String(t.id)));
+  await refreshTodos();
+  _newIds = new Set((_store?.todos || []).map((t) => String(t.id)).filter((id) => !before.has(id)));
+  sfx("add");
+  quiet(800);
+  setTimeout(() => { _newIds = new Set(); }, 700);
+}
+
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
@@ -1346,29 +1457,32 @@ async function refreshGoals() {
 async function addGoal(fields) {
   if (!_store?.session) return false;
   const { error } = await _store.sb.from("goals").insert(fields);
-  if (error) { alert("Ajout impossible : " + error.message + "\n(As-tu lancé le SQL goals.sql ?)"); return false; }
+  if (error) { oops("Ajout impossible : " + error.message + "\n(As-tu lancé le SQL goals.sql ?)"); return false; }
+  sfx("add");
   await refreshGoals(); rerender(); return true;
 }
 async function updateGoal(id, patch) {
   if (!_store?.session) return;
   const g = _store.goals.find((x) => String(x.id) === String(id)); if (g) Object.assign(g, patch);
   const { error } = await _store.sb.from("goals").update(patch).eq("id", id);
-  if (error) alert("Modification impossible : " + error.message);
+  if (error) oops("Modification impossible : " + error.message);
   await refreshGoals();
 }
 async function deleteGoal(id) {
   if (!_store?.session) return;
   const { error } = await _store.sb.from("goals").delete().eq("id", id);
-  if (error) { alert("Suppression impossible : " + error.message); return; }
+  if (error) { oops("Suppression impossible : " + error.message); return; }
+  sfx("del");
   await refreshGoals(); rerender();
 }
-async function mutateGoalActions(id, fn) {
+async function mutateGoalActions(id, fn, sound = "tick") {
   if (!_store?.session) return;
   const g = _store.goals.find((x) => String(x.id) === String(id)); if (!g) return;
   const next = fn(Array.isArray(g.actions) ? g.actions : []);
   g.actions = next;
+  sfx(sound);
   const { error } = await _store.sb.from("goals").update({ actions: next }).eq("id", id);
-  if (error) alert("Actions indisponibles : " + error.message);
+  if (error) oops("Actions indisponibles : " + error.message);
   await refreshGoals();
 }
 
@@ -1376,6 +1490,7 @@ async function mutateGoalActions(id, fn) {
 async function toggleTrainingSkip(key) {
   const store = await getStore();
   if (!store?.session) return;
+  sfx("toggle");
   if (store.skips.has(key)) {
     store.skips.delete(key);
     rerender();
@@ -1401,16 +1516,17 @@ async function toggleReminder(ev) {
   const store = await getStore();
   if (!store?.session) return;
   const key = eventKey(ev);
+  sfx("toggle");
   if (store.reminders.has(key)) {
     store.reminders.delete(key);
     rerender();
     const { error } = await store.sb.from("event_reminders").delete().eq("event_key", key);
-    if (error) { store.reminders.add(key); rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
+    if (error) { store.reminders.add(key); rerender(); oops("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
   } else {
     store.reminders.add(key);
     rerender();
     const { error } = await store.sb.from("event_reminders").insert({ event_key: key });
-    if (error) { store.reminders.delete(key); rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
+    if (error) { store.reminders.delete(key); rerender(); oops("Impossible : " + error.message + "\n(As-tu lancé event-reminders.sql ?)"); }
   }
 }
 
@@ -1431,12 +1547,13 @@ async function toggleExam(ev) {
   const next = !isExam(ev);
   const prev = store.examFlags.get(ev.uid);
   store.examFlags.set(ev.uid, next);
+  sfx("toggle");
   rerender();
   const { error } = await store.sb.from("exam_flags")
     .upsert({ user_id: store.session.user.id, event_uid: ev.uid, is_exam: next }, { onConflict: "user_id,event_uid" });
   if (error) {
     if (prev === undefined) store.examFlags.delete(ev.uid); else store.examFlags.set(ev.uid, prev);
-    rerender(); alert("Impossible : " + error.message + "\n(As-tu lancé exam-flags.sql ?)");
+    rerender(); oops("Impossible : " + error.message + "\n(As-tu lancé exam-flags.sql ?)");
   }
 }
 // Examens à venir (prochains 60 jours), triés par date.
@@ -1458,7 +1575,17 @@ let _sub = null;
 function subscribeRealtime() {
   if (_sub || !_store?.session) return;
   const pg = "postgres_changes";
-  const onTodos = async () => { await refreshTodos(); rerender(); };
+  // L'écho temps réel de nos propres écritures attend la fin de l'animation en cours.
+  let rtTimer = null;
+  const onTodos = () => {
+    clearTimeout(rtTimer);
+    const run = async () => {
+      const wait = _quietUntil - Date.now();
+      if (wait > 0) { rtTimer = setTimeout(run, wait); return; }
+      await refreshTodos(); rerender();
+    };
+    run();
+  };
   const onPerso = async () => { await refreshPersonal(); rerender(); };
   _sub = _store.sb.channel("hub-sync")
     .on(pg, { event: "*", schema: "public", table: "todos" }, onTodos)
@@ -1489,26 +1616,58 @@ function wireAdd(store) {
     if (!title) return;
     input.value = "";
     const due_date = date && date.value ? date.value : null;
+    quiet(1500);
     const { error } = await store.sb.from("todos").insert({ title, due_date, tag });
-    if (error) { alert("Ajout impossible : " + error.message); return; }
-    await refreshTodos(); rerender();
+    if (error) { oops("Ajout impossible : " + error.message); return; }
+    await refreshAfterAdd(); rerender();
   });
 }
 
 function wireTodos(root, store) {
   root.querySelectorAll(".todo").forEach((el) => {
     const id = el.dataset.id;
-    el.querySelector(".check")?.addEventListener("click", async () => {
+    const checkEl = el.querySelector(".check");
+    checkEl?.addEventListener("click", async () => {
       const t = store.todos.find((x) => String(x.id) === String(id));
-      if (!t) return;
-      el.classList.toggle("is-done"); // retour visuel immédiat
-      const { error } = await store.sb.from("todos").update({ done: !t.done }).eq("id", id);
-      if (error) { el.classList.toggle("is-done"); return; }
+      if (!t || el.dataset.busy) return;
+      el.dataset.busy = "1";
+      const checking = !t.done;
+      // Retour immédiat : la case se remplit, la coche se dessine, le titre se barre.
+      el.classList.toggle("is-done", checking);
+      el.classList.toggle("just", checking);
+      checkEl.setAttribute("aria-checked", String(checking));
+      const finishing = checking && closesTheDay(store.todos, t);
+      if (finishing) { _cheerAt = Date.now(); sfx("done"); celebrate(checkEl); quiet(1500); }
+      else { sfx(checking ? "check" : "uncheck"); quiet(800); }
+      if (checking) { try { navigator.vibrate?.(8); } catch {} }
+      // On laisse l'animation se jouer pendant l'écriture (la tâche cochée quitte ensuite la liste).
+      const [{ error }] = await Promise.all([
+        store.sb.from("todos").update({ done: checking }).eq("id", id),
+        stage(checking ? 420 : 160),
+      ]);
+      if (error) {
+        el.classList.toggle("is-done", !checking);
+        el.classList.remove("just");
+        checkEl.setAttribute("aria-checked", String(!checking));
+        delete el.dataset.busy;
+        oops("Modification impossible : " + error.message);
+        return;
+      }
+      if (finishing) _cheerAt = Date.now();
       await refreshTodos(); rerender();
     });
     el.querySelector(".todo-del")?.addEventListener("click", async () => {
-      const { error } = await store.sb.from("todos").delete().eq("id", id);
-      if (error) { alert("Suppression impossible : " + error.message); return; }
+      if (el.dataset.busy) return;
+      el.dataset.busy = "1";
+      sfx("del"); quiet(800);
+      el.classList.add("is-leaving");
+      const [{ error }] = await Promise.all([store.sb.from("todos").delete().eq("id", id), stage(200)]);
+      if (error) {
+        el.classList.remove("is-leaving");
+        delete el.dataset.busy;
+        oops("Suppression impossible : " + error.message);
+        return;
+      }
       await refreshTodos(); rerender();
     });
     // Ouvre la tâche (sous-tâches) au tap sur le titre.
@@ -1523,6 +1682,15 @@ function wireTodos(root, store) {
     }));
   });
 }
+// Cocher `t` boucle-t-il la journée ? Soit toutes les tâches datées d'aujourd'hui sont faites
+// (l'anneau se ferme), soit il ne reste plus rien à faire pour aujourd'hui ni en retard.
+function closesTheDay(todos, t) {
+  const todayK = dayKey(now());
+  const others = todos.filter((x) => x !== t && !x.done);
+  if (t.due_date === todayK && !others.some((x) => x.due_date === todayK)) return true;
+  const inDay = (x) => !x.due_date || x.due_date <= todayK;
+  return inDay(t) && !others.some(inDay);
+}
 
 function wireSignIn(store) {
   const form = document.getElementById("signin-form");
@@ -1534,6 +1702,7 @@ function wireSignIn(store) {
     msg.textContent = "Envoi…";
     const { error } = await store.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href } });
     msg.textContent = error ? "Erreur : " + error.message : "Lien envoyé — vérifie ta boîte mail.";
+    sfx(error ? "error" : "check");
   });
 }
 
@@ -1555,7 +1724,8 @@ function updateFab() {
 }
 
 function openSheet(inner) {
-  closeSheet();
+  dropSheet();
+  sfx("open");
   const ov = document.createElement("div");
   ov.className = "sheet-overlay"; ov.id = "sheet-ov";
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${inner}</div>`;
@@ -1564,7 +1734,19 @@ function openSheet(inner) {
   requestAnimationFrame(() => ov.classList.add("is-open"));
   return ov;
 }
-function closeSheet() { document.getElementById("sheet-ov")?.remove(); }
+// Retire toute feuille sans animation (avant d'en ouvrir une autre).
+function dropSheet() { document.querySelectorAll(".sheet-overlay").forEach((o) => o.remove()); }
+// Ferme la feuille en la laissant redescendre. `how === "silent"` : pas de son de fermeture
+// (l'action qui vient d'aboutir a déjà le sien). Sert aussi de gestionnaire de clic direct.
+function closeSheet(how) {
+  const ov = document.getElementById("sheet-ov");
+  if (!ov) return;
+  ov.removeAttribute("id");
+  ov.classList.remove("is-open");
+  ov.classList.add("is-closing");
+  if (how !== "silent") sfx("close");
+  setTimeout(() => ov.remove(), reduceMotion.matches ? 0 : 200);
+}
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
 
 function evWhen(ev) {
@@ -1604,8 +1786,9 @@ function openEventForm(date, start, end) {
     if (new Date(end_at) <= new Date(start_at)) end_at = null;
     const location = ov.querySelector("#ev-loc").value.trim() || null;
     const { error } = await _store.sb.from("custom_events").insert({ title, start_at, end_at, location });
-    if (error) { alert("Ajout impossible : " + error.message); return; }
-    closeSheet(); await refreshPersonal(); rerender();
+    if (error) { oops("Ajout impossible : " + error.message); return; }
+    sfx("add");
+    closeSheet("silent"); await refreshPersonal(); rerender();
   });
   setTimeout(() => ov.querySelector("#ev-title")?.focus(), 50);
 }
@@ -1625,8 +1808,9 @@ function openEventActions(ev) {
     ov.querySelector("#s-close").onclick = closeSheet;
     ov.querySelector("#s-del").onclick = async () => {
       const { error } = await _store.sb.from("custom_events").delete().eq("id", ev.cid);
-      if (error) { alert("Suppression impossible : " + error.message); return; }
-      closeSheet(); await refreshPersonal(); rerender();
+      if (error) { oops("Suppression impossible : " + error.message); return; }
+      sfx("del");
+      closeSheet("silent"); await refreshPersonal(); rerender();
     };
   } else if (ev.source === "course") {
     if (ev._hidden) {
@@ -1636,8 +1820,9 @@ function openEventActions(ev) {
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-show").onclick = async () => {
         const { error } = await _store.sb.from("event_overrides").delete().eq("event_uid", ev.uid);
-        if (error) { alert("Erreur : " + error.message); return; }
-        closeSheet(); await refreshPersonal(); rerender();
+        if (error) { oops("Erreur : " + error.message); return; }
+        sfx("toggle");
+        closeSheet("silent"); await refreshPersonal(); rerender();
       };
     } else {
       const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}${examBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
@@ -1646,8 +1831,9 @@ function openEventActions(ev) {
       ov.querySelector("#s-hide").onclick = async () => {
         const { error } = await _store.sb.from("event_overrides")
           .upsert({ user_id: _store.session.user.id, event_uid: ev.uid, hidden: true }, { onConflict: "user_id,event_uid" });
-        if (error) { alert("Erreur : " + error.message); return; }
-        closeSheet(); await refreshPersonal(); rerender();
+        if (error) { oops("Erreur : " + error.message); return; }
+        sfx("del");
+        closeSheet("silent"); await refreshPersonal(); rerender();
       };
     }
   } else { // Calendrier importé (lecture seule)
@@ -1658,21 +1844,22 @@ function openEventActions(ev) {
       <div class="sheet-actions">${remBtn}<button class="btn" id="s-close">Fermer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
   }
-  document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet(); rerender(); });
-  document.getElementById("s-exam")?.addEventListener("click", async () => { await toggleExam(ev); closeSheet(); rerender(); });
+  document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet("silent"); rerender(); });
+  document.getElementById("s-exam")?.addEventListener("click", async () => { await toggleExam(ev); closeSheet("silent"); rerender(); });
 }
 
 // ---------- Sous-tâches ----------
 // Les sous-tâches vivent dans une colonne jsonb `subtasks` de la table `todos`
 // (tableau d'objets { id, title, done }). On relit-modifie-réécrit le tableau entier.
-async function mutateSubs(id, fn) {
+async function mutateSubs(id, fn, sound = "tick") {
   if (!_store?.session) return;
   const t = _store.todos.find((x) => String(x.id) === String(id));
   if (!t) return;
   const next = fn(Array.isArray(t.subtasks) ? t.subtasks : []);
   t.subtasks = next; // optimiste
+  sfx(sound);
   const { error } = await _store.sb.from("todos").update({ subtasks: next }).eq("id", id);
-  if (error) { alert("Sous-tâches indisponibles : " + error.message + "\n(As-tu lancé le SQL d'activation ?)"); }
+  if (error) { oops("Sous-tâches indisponibles : " + error.message + "\n(As-tu lancé le SQL d'activation ?)"); }
   await refreshTodos(); rerender();
 }
 
@@ -1682,7 +1869,7 @@ async function updateTodo(id, patch) {
   if (!_store?.session) return;
   const t = _store.todos.find((x) => String(x.id) === String(id)); if (t) Object.assign(t, patch);
   const { error } = await _store.sb.from("todos").update(patch).eq("id", id);
-  if (error) alert("Modification impossible : " + error.message);
+  if (error) oops("Modification impossible : " + error.message);
   await refreshTodos();
 }
 
@@ -1731,7 +1918,7 @@ function openTaskSheet(t0) {
       paint();
     });
     mount.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => {
-      await mutateSubs(id, (subs) => subs.filter((s) => s.id !== b.dataset.del));
+      await mutateSubs(id, (subs) => subs.filter((s) => s.id !== b.dataset.del), "del");
       paint();
     });
   }
@@ -1742,7 +1929,7 @@ function openTaskSheet(t0) {
     const v = inp.value.trim();
     if (!v) return;
     inp.value = "";
-    await mutateSubs(id, (subs) => [...subs, { id: SUB_UID(), title: v, done: false }]);
+    await mutateSubs(id, (subs) => [...subs, { id: SUB_UID(), title: v, done: false }], "add");
     paint(); inp.focus();
   });
   ov.querySelector("#ts-date").addEventListener("change", async (e) => { await updateTodo(id, { due_date: e.target.value || null }); paint(); rerender(); });
@@ -1753,8 +1940,9 @@ function openTaskSheet(t0) {
   ov.querySelector("#ts-close").onclick = () => { closeSheet(); rerender(); };
   ov.querySelector("#ts-del").onclick = async () => {
     const { error } = await _store.sb.from("todos").delete().eq("id", id);
-    if (error) { alert("Suppression impossible : " + error.message); return; }
-    closeSheet(); await refreshTodos(); rerender();
+    if (error) { oops("Suppression impossible : " + error.message); return; }
+    sfx("del");
+    closeSheet("silent"); await refreshTodos(); rerender();
   };
   paint();
   setTimeout(() => ov.querySelector("#sub-input")?.focus(), 50);
@@ -1785,9 +1973,10 @@ function openTaskAdd(defaultDate) {
     const title = ov.querySelector("#ta-title").value.trim();
     if (!title) return;
     const due_date = ov.querySelector("#ta-date").value || null;
+    quiet(1500);
     const { error } = await _store.sb.from("todos").insert({ title, due_date, tag: taTag });
-    if (error) { alert("Ajout impossible : " + error.message); return; }
-    closeSheet(); await refreshTodos(); rerender();
+    if (error) { oops("Ajout impossible : " + error.message); return; }
+    closeSheet("silent"); await refreshAfterAdd(); rerender();
   });
   setTimeout(() => ov.querySelector("#ta-title")?.focus(), 50);
 }
@@ -1816,7 +2005,7 @@ function openGoalAdd() {
     const deadline = ov.querySelector("#g-deadline").value || null;
     const why = ov.querySelector("#g-why").value.trim() || null;
     const ok = await addGoal({ title, deadline, why });
-    if (ok) closeSheet();
+    if (ok) closeSheet("silent");
   });
   setTimeout(() => ov.querySelector("#g-title")?.focus(), 50);
 }
@@ -1870,23 +2059,23 @@ function openGoalSheet(id) {
         </li>`).join("")}</ul>`
       : `<p class="sheet-note">Découpe ton objectif en petites actions à cocher — c'est ce qui le fait avancer.</p>`;
     mount.querySelectorAll("[data-tog]").forEach((b) => b.onclick = async () => { await mutateGoalActions(id, (a) => a.map((x) => (x.id === b.dataset.tog ? { ...x, done: !x.done } : x))); paint(); });
-    mount.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => { await mutateGoalActions(id, (a) => a.filter((x) => x.id !== b.dataset.del)); paint(); });
+    mount.querySelectorAll("[data-del]").forEach((b) => b.onclick = async () => { await mutateGoalActions(id, (a) => a.filter((x) => x.id !== b.dataset.del), "del"); paint(); });
   }
 
   const saveField = async (patch) => { await updateGoal(id, patch); paint(); };
   ov.querySelector("#ge-title").addEventListener("change", (e) => { const v = e.target.value.trim(); if (v) saveField({ title: v }); });
   ov.querySelector("#ge-deadline").addEventListener("change", (e) => saveField({ deadline: e.target.value || null }));
   ov.querySelector("#ge-why").addEventListener("change", (e) => saveField({ why: e.target.value.trim() || null }));
-  ov.querySelector("#ge-done").onclick = async () => { const g = cur(); await saveField({ done: !g.done }); };
+  ov.querySelector("#ge-done").onclick = async () => { const g = cur(); sfx(g.done ? "uncheck" : "done"); await saveField({ done: !g.done }); };
   ov.querySelector("#ga-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const inp = ov.querySelector("#ga-input"); const v = inp.value.trim(); if (!v) return;
     inp.value = "";
-    await mutateGoalActions(id, (a) => [...a, { id: SUB_UID(), title: v, done: false }]);
+    await mutateGoalActions(id, (a) => [...a, { id: SUB_UID(), title: v, done: false }], "add");
     paint(); inp.focus();
   });
   ov.querySelector("#g-close").onclick = () => { closeSheet(); rerender(); };
-  ov.querySelector("#g-del").onclick = async () => { if (!confirm("Supprimer cet objectif ?")) return; await deleteGoal(id); closeSheet(); };
+  ov.querySelector("#g-del").onclick = async () => { if (!confirm("Supprimer cet objectif ?")) return; await deleteGoal(id); closeSheet("silent"); };
   paint();
 }
 
@@ -1920,7 +2109,7 @@ function openDoneGoals() {
   const ov = openSheet(`<h3 class="sheet-h">Objectifs atteints 🏁</h3>${body}
     <div class="sheet-actions"><button class="btn" id="dg-close">Fermer</button></div>`);
   ov.querySelector("#dg-close").onclick = closeSheet;
-  ov.querySelectorAll(".goal-card[data-gid]").forEach((b) => b.addEventListener("click", () => { closeSheet(); openGoalSheet(b.dataset.gid); }));
+  ov.querySelectorAll(".goal-card[data-gid]").forEach((b) => b.addEventListener("click", () => openGoalSheet(b.dataset.gid)));
 }
 
 // ---------- Navigation ----------
@@ -1935,8 +2124,12 @@ function rerender() {
 
 document.getElementById("notif-bell")?.addEventListener("click", openChangesSheet);
 
+const TAB_ORDER = ["today", "week", "tasks"];
+const tabsEl = document.querySelector(".tabs");
+viewEl.addEventListener("animationend", (e) => { if (e.target === viewEl) viewEl.classList.remove("view-enter"); });
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
+    const from = TAB_ORDER.indexOf(current), to = TAB_ORDER.indexOf(btn.dataset.view);
     current = btn.dataset.view;
     document.querySelectorAll(".tab").forEach((b) => {
       const active = b === btn;
@@ -1944,6 +2137,15 @@ document.querySelectorAll(".tab").forEach((btn) => {
       b.setAttribute("aria-selected", String(active));
     });
     window.scrollTo({ top: 0 });
+    if (to !== from) {
+      // La pastille glisse sous l'onglet ; la vue entre du côté où l'on va.
+      tabsEl?.style.setProperty("--tab-i", to);
+      viewEl.style.setProperty("--view-dir", to > from ? 1 : -1);
+      viewEl.classList.remove("view-enter");
+      void viewEl.offsetWidth;
+      viewEl.classList.add("view-enter");
+      sfx("tab");
+    }
     rerender();
   });
 });
@@ -1975,7 +2177,25 @@ themeBtn?.addEventListener("click", () => {
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem(THEME_KEY, next); } catch {}
   syncThemeUI();
+  sfx("toggle");
 });
+
+// ---------- Sons : bouton couper / remettre ----------
+const soundBtn = document.getElementById("sound-toggle");
+const soundIcon = document.getElementById("sound-icon");
+function syncSoundUI() {
+  soundIcon?.setAttribute("href", soundOn ? "#i-sound" : "#i-mute");
+  soundBtn?.setAttribute("aria-pressed", String(soundOn));
+  soundBtn?.setAttribute("title", soundOn ? "Sons activés" : "Sons coupés");
+  soundBtn?.classList.toggle("is-off", !soundOn);
+}
+soundBtn?.addEventListener("click", () => {
+  soundOn = !soundOn;
+  try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off"); } catch {}
+  syncSoundUI();
+  if (soundOn) sfx("check"); // on entend tout de suite ce qu'on vient de rallumer
+});
+syncSoundUI();
 // Si aucun choix forcé, on reflète les changements de thème du système.
 systemDark.addEventListener("change", () => { if (!storedTheme()) syncThemeUI(); });
 syncThemeUI();

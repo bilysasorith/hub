@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Logo Hub : « H » condensé + pastille « à jour ». Mêmes cotes que scripts/make-icons.mjs. -->
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C232B"/><stop offset="1" stop-color="#0D1013"/></linearGradient>
+    <linearGradient id="h" gradientUnits="userSpaceOnUse" x1="0" y1="132" x2="0" y2="380"><stop offset="0" stop-color="#7AA5FF"/><stop offset="1" stop-color="#3E76F0"/></linearGradient>
+    <mask id="m"><rect width="512" height="512" fill="#fff"/><circle cx="380" cy="128" r="44" fill="#000"/></mask>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#t)"/>
+  <rect x="1.5" y="1.5" width="509" height="509" rx="114.5" fill="none" stroke="#2B333C" stroke-width="3"/>
+  <g fill="url(#h)" mask="url(#m)">
+    <rect x="148" y="132" width="58" height="248" rx="13"/>
+    <rect x="306" y="132" width="58" height="248" rx="13"/>
+    <rect x="190" y="228" width="132" height="56"/>
+  </g>
+  <circle cx="380" cy="128" r="30" fill="#3DBE7E"/>
+</svg>
