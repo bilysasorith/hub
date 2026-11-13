@@ -3,6 +3,7 @@
 //
 // Variables d'env (secrets GitHub) :
 //   OUTLOOK_FREELANCE_ICS_URL  — flux ICS Outlook entreprise (freelance)
+//   OUTLOOK_INFOGREFFE_ICS_URL — flux ICS du calendrier Outlook « Infogreffe » (pro)
 //   OUTLOOK_EFREI_ICS_URL      — flux ICS Outlook école
 //   GOOGLE_ICS_URL             — adresse secrète iCal de l'agenda Google perso
 //   SUPABASE_URL               — URL du projet (ex. https://xxxx.supabase.co) [public]
@@ -15,6 +16,7 @@ import { parseEvents } from "./ics.mjs";
 
 const SOURCES = [
   { name: "freelance", url: process.env.OUTLOOK_FREELANCE_ICS_URL },
+  { name: "infogreffe", url: process.env.OUTLOOK_INFOGREFFE_ICS_URL }, // affiché comme « pro »
   { name: "efrei", url: process.env.OUTLOOK_EFREI_ICS_URL },
   { name: "google", url: process.env.GOOGLE_ICS_URL },
 ];
