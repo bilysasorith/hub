@@ -3,6 +3,7 @@
 // L'URL vient de la variable d'env MYEFREI_ICS_URL (secret GitHub), jamais en clair dans le dépôt.
 
 import { writeFile, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { parseEvents } from "./ics.mjs";
@@ -44,12 +45,24 @@ function parseDescription(desc) {
   return out;
 }
 
+// --- Identifiant stable ---
+// myefrei régénère les UID de ses cours de temps en temps, sans autre changement : tout ce qui
+// est rattaché à l'UID (cours masqués, examens, rappels) se perdait et le cours « revenait ».
+// On dérive donc l'identifiant du titre + de l'heure de début (suffixe si doublon exact).
+const usedIds = new Map();
+function stableId(e) {
+  const base = "c-" + createHash("sha1").update(`${(e.title || "").trim()}|${e.start}`).digest("hex").slice(0, 16);
+  const n = usedIds.get(base) || 0;
+  usedIds.set(base, n + 1);
+  return n ? `${base}-${n}` : base;
+}
+
 // --- Parse + enrichissement ---
-const parsed = parseEvents(raw);
+const parsed = parseEvents(raw).sort((a, b) => (a.start || "").localeCompare(b.start || "") || (a.uid || "").localeCompare(b.uid || ""));
 const events = parsed.map((e) => {
   const desc = parseDescription(e.description);
   return {
-    uid: e.uid,
+    uid: stableId(e),
     start: e.start,
     end: e.end,
     title: e.title,
@@ -104,14 +117,16 @@ const upcoming = (e) => e.start && new Date(e.start).getTime() >= nowMs;
 const old = await readJson(OUT, null);
 const fresh = [];
 if (old && Array.isArray(old.events)) {
-  const oldMap = new Map(old.events.map((e) => [e.uid, e]));
-  const newMap = new Map(kept.map((e) => [e.uid, e]));
-  for (const e of kept) if (upcoming(e) && !oldMap.has(e.uid))
+  // Rapprochement par titre + début (et non par UID, que myefrei régénère sans prévenir).
+  const keyOf = (e) => `${(e.title || "").trim()}|${e.start}`;
+  const oldMap = new Map(old.events.map((e) => [keyOf(e), e]));
+  const newMap = new Map(kept.map((e) => [keyOf(e), e]));
+  for (const e of kept) if (upcoming(e) && !oldMap.has(keyOf(e)))
     fresh.push({ ts: nowISO, type: "added", uid: e.uid, title: e.title, start: e.start, room: roomOf(e) });
-  for (const e of old.events) if (upcoming(e) && !newMap.has(e.uid))
+  for (const e of old.events) if (upcoming(e) && !newMap.has(keyOf(e)))
     fresh.push({ ts: nowISO, type: "removed", uid: e.uid, title: e.title, start: e.start, room: roomOf(e) });
   for (const e of kept) {
-    const o = oldMap.get(e.uid);
+    const o = oldMap.get(keyOf(e));
     if (!o || !(upcoming(e) || upcoming(o))) continue;
     const ch = {};
     if (o.start !== e.start || o.end !== e.end) ch.time = { from: o.start, to: e.start };
