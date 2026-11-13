@@ -1266,7 +1266,8 @@ function weekGrid(days, perDay, sel) {
       const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
       const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
       const exam = isExam(ev);
-      return `<div class="ev src-${ev.source}${size}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;height:${height}px;left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+      const growL = (i === days.length - 1 || ev.cols > 1) && ev.lane === ev.cols - 1 ? " grow-l" : "";
+      return `<div class="ev src-${ev.source}${size}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
         ${exam ? `<span class="ev-exam-tag">EXAMEN</span>` : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : ""}
         <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span></div>
         <div class="ev-ti">${esc(ev.title)}</div>

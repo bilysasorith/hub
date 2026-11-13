@@ -927,3 +927,18 @@ body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la
 .signin .add { margin-top: 16px; }
 .signin #signin-msg { margin-top: 10px; min-height: 1.5em; }
 .empty-ill .ei-btn { height: 40px; margin-top: 10px; }
+
+/* Survol : un bloc tronqué (conflit, événement court) se déploie pour tout afficher. */
+@media (hover: hover) {
+  .ev[data-ev]:hover, .ev[data-ev]:focus-visible {
+    height: auto !important; min-height: var(--h); min-width: min(220px, 90vw); z-index: 12;
+  }
+  .ev[data-ev]:is(:hover, :focus-visible) .ev-ti,
+  .ev[data-ev]:is(:hover, :focus-visible) .ev-lo { display: flex; }
+  .ev[data-ev]:is(:hover, :focus-visible) .ev-ti { display: block; }
+  .ev.is-tiny[data-ev]:is(:hover, :focus-visible) { padding: 7px 9px; }
+}
+@media (hover: hover) {
+  /* Dernière voie / dernier jour : on se déploie vers la gauche pour ne pas sortir de la grille. */
+  .ev.grow-l[data-ev]:is(:hover, :focus-visible) { left: auto !important; right: 4px; }
+}
