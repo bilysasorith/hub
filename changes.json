@@ -1,965 +1,965 @@
 {
-  "generatedAt": "2026-11-13T05:17:42.774Z",
+  "generatedAt": "2026-11-13T13:59:20.828Z",
   "items": [
     {
-      "ts": "2026-11-13T05:17:42.774Z",
+      "ts": "2026-11-13T13:59:20.828Z",
       "type": "added",
-      "uid": "68bb9936-395a-47e0-b217-d57d2261fc2b",
+      "uid": "dfbb5ead-696d-47e2-afdb-b6ec1d06621f",
+      "title": "Une histoire de la philosophie",
+      "start": "2026-11-16T10:05:00.000Z",
+      "room": "Efrei Bat. K K102"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "10bf6a17-ff18-44be-a6e9-fc89b6253b3b",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-16T12:40:00.000Z",
+      "room": "Efrei Bat. N N005"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d46efb91-6617-4b43-881e-a4dface74fa6",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2026-11-17T12:40:00.000Z",
+      "room": "Efrei Bat. E E101"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "eebc494a-c48f-4adc-b985-b035dd9377cf",
+      "title": "CSR-The social and ecological transition stakes",
+      "start": "2026-11-18T08:10:00.000Z",
+      "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "814581a6-e229-40f4-927d-7ad39e673727",
       "title": "Engineering Project",
-      "start": "2026-11-13T08:10:00.000Z",
+      "start": "2026-11-19T08:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
+      "ts": "2026-11-13T13:59:20.828Z",
       "type": "added",
-      "uid": "e9190088-3c8b-4e1b-8552-33bfa7bc5b85",
+      "uid": "1f4c6a29-e4fd-4457-b686-d93af04786de",
       "title": "Engineering Project",
-      "start": "2026-11-13T09:10:00.000Z",
+      "start": "2026-11-19T09:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
+      "ts": "2026-11-13T13:59:20.828Z",
       "type": "added",
-      "uid": "0534fd39-ceeb-46f1-9836-7519eef2a311",
+      "uid": "fff3ddc1-3312-4374-b548-2486b9b31ede",
       "title": "Engineering Project",
-      "start": "2026-11-13T12:40:00.000Z",
+      "start": "2026-11-19T12:40:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
+      "ts": "2026-11-13T13:59:20.828Z",
       "type": "added",
+      "uid": "aee83d09-6a2c-402b-bed8-610a92051e4e",
+      "title": "Engineering Project",
+      "start": "2026-11-20T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ef2bb140-9490-4eb9-9870-f6c8e38ce630",
+      "title": "Engineering Project",
+      "start": "2026-11-20T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "daf3496b-8d94-4607-95e2-3b1a2464f4b7",
+      "title": "Engineering Project",
+      "start": "2026-11-20T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "c9c858b0-e275-41f5-ae8a-a9c04d9ee8d5",
+      "title": "Une histoire de la philosophie",
+      "start": "2026-11-23T10:05:00.000Z",
+      "room": "Efrei Bat. H H216"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "5fed35bc-bb23-4cdd-b0ba-9bde2111750f",
+      "title": "CSR-The social and ecological transition stakes",
+      "start": "2026-11-23T12:40:00.000Z",
+      "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "0620f3d4-642b-46d9-8d97-479075efe3f4",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2026-11-24T12:40:00.000Z",
+      "room": "Efrei Bat. B B107"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "6467e20f-8444-4324-990f-3c16676b2934",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-25T07:00:00.000Z",
+      "room": "Efrei Bat. A A303"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "4719499a-90e5-44f0-b9a5-0d47765c6ef7",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-26T07:00:00.000Z",
+      "room": "Efrei Bat. H H404"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "3af35f93-b3e1-4813-98c1-174e11803fdf",
+      "title": "Engineering Project",
+      "start": "2026-11-27T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "803b74a6-4294-48cf-8e5c-b4205f59267f",
+      "title": "Engineering Project",
+      "start": "2026-11-27T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "3c55f056-fa64-4a31-a6c2-65412da06764",
+      "title": "Engineering Project",
+      "start": "2026-11-27T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "9a44c615-2df5-4a09-b853-9d1c91fd29c8",
+      "title": "Une histoire de la philosophie",
+      "start": "2026-11-30T10:05:00.000Z",
+      "room": "Efrei Bat. H H217"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d3714c17-0927-4402-9d59-a75bbd879e52",
+      "title": "CSR-The social and ecological transition stakes",
+      "start": "2026-11-30T12:40:00.000Z",
+      "room": "Efrei Bat. H H419, Efrei Bat. H H421, Efrei Bat. H H420"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "602f9fd4-e725-44f5-a797-8cb3b0c974cb",
+      "title": "Data Integration and Analytics",
+      "start": "2026-12-01T07:00:00.000Z",
+      "room": "Efrei Bat. H H216"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d327159f-84dc-4ec3-b13b-a5525dff4a02",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2026-12-01T12:40:00.000Z",
+      "room": "Efrei Bat. H H413"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "9b160ebb-1c7f-4c6b-a40e-e9ee394955c3",
+      "title": "Big Data Processing",
+      "start": "2026-12-02T07:00:00.000Z",
+      "room": "Efrei Bat. H H113"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "b89c1d45-66fe-4cf9-9824-f3d243ffa778",
+      "title": "Chatbots & Generative AI",
+      "start": "2026-12-02T12:40:00.000Z",
+      "room": "Efrei Bat. H H203"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "71a7ebcb-1ffe-45c3-a577-8fa1a825c755",
+      "title": "Efrei For Good Xperience",
+      "start": "2026-12-03T09:00:00.000Z",
+      "room": "Efrei Bat. E E001, Efrei Bat. A A302, Efrei Bat. A A206, Efrei Bat. E E102, Efrei Bat. A A306, Efrei Bat. A A203, Efrei Bat. E E101, Efrei Bat. B B002, Efrei Bat. E E003, Efrei Bat. B B108, Efrei Bat. B B001, Efrei Bat. E E103, Efrei Bat. B B007, Efrei Bat. A A205, Efrei Bat. B B009, Efrei Bat. A A107, Efrei Bat. E E002, Efrei Bat. A A001, Efrei Bat. A A202, Efrei Bat. B B010, Efrei Bat. B B107, Efrei Bat. B B106, Efrei Bat. I I-LAB, Efrei Bat. B B004, Efrei Bat. C C001, Efrei Bat. B B003, Efrei Bat. A A207, Efrei Bat. A A305, Efrei Bat. A A303, Efrei Bat. A A301, Efrei Bat. B B008, Efrei Bat. E E108, Efrei Bat. E E107, Efrei Bat. A A201"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "6bc5a4ff-6944-4723-805d-63c371aa38c6",
+      "title": "Engineering Project",
+      "start": "2026-12-04T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "81a428a8-eb15-4e1c-8601-90ef8c6dc52c",
+      "title": "Engineering Project",
+      "start": "2026-12-04T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "0d7f3ee3-eea8-498a-99e8-b44fa91812d0",
+      "title": "Engineering Project",
+      "start": "2026-12-04T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "af665249-2504-44d8-997b-9d18bdb408f5",
+      "title": "Une histoire de la philosophie",
+      "start": "2026-12-07T10:05:00.000Z",
+      "room": "Efrei Bat. H H206"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "38659cc9-fa73-41fd-8364-e5a99641b0b3",
+      "title": "CSR-The social and ecological transition stakes",
+      "start": "2026-12-07T12:40:00.000Z",
+      "room": "Efrei Bat. H H421, Efrei Bat. H H420, Efrei Bat. H H419"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "cf576025-31a5-4971-adcd-d392ebfd5e0c",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2026-12-08T12:40:00.000Z",
+      "room": "Efrei Bat. H H219"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "dbccd085-5e05-421b-ae00-d1687a58fe0f",
+      "title": "Big Data Processing",
+      "start": "2026-12-09T07:00:00.000Z",
+      "room": "Efrei Bat. H H114"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d2592072-7506-4879-9606-47f3211cdd28",
+      "title": "Chatbots & Generative AI",
+      "start": "2026-12-09T12:40:00.000Z",
+      "room": "Efrei Bat. H H208"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "8c5309ff-4a22-466f-b85e-e7a65698e053",
+      "title": "Big Data Processing",
+      "start": "2026-12-10T07:00:00.000Z",
+      "room": "Efrei Bat. H H419"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "bf64c4af-cb2c-4069-ac4f-85acfda57219",
+      "title": "Chatbots & Generative AI",
+      "start": "2026-12-10T12:40:00.000Z",
+      "room": "Efrei Bat. H H319"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "5f67d66d-cba7-4908-a518-4bc30f994796",
+      "title": "Forum 1er emploi",
+      "start": "2026-12-11T08:10:00.000Z",
+      "room": "Distanciel"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "f9464bc3-531a-4426-841f-5070e13b648a",
+      "title": "Engineering Project",
+      "start": "2026-12-11T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "f6ff3923-8c94-4daa-adfd-e4800dc9b66c",
+      "title": "Engineering Project",
+      "start": "2026-12-11T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "52a876d7-4968-4544-ac83-39c9a78d3623",
+      "title": "Forum 1er emploi",
+      "start": "2026-12-11T12:40:00.000Z",
+      "room": "Distanciel"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ced7d21d-19a9-4af0-a1ca-494b336993f4",
+      "title": "Engineering Project",
+      "start": "2026-12-11T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "3a58dca1-39fc-4439-8149-9053e4363d80",
+      "title": "Une histoire de la philosophie",
+      "start": "2027-01-04T10:05:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "26d22eb7-6cc2-4780-859b-356c153eefd4",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2027-01-05T07:00:00.000Z",
+      "room": "Efrei Bat. B B004"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "f2851572-cd06-4bfb-aa4b-b4d05d4393fb",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2027-01-05T12:40:00.000Z",
+      "room": "Efrei Bat. H H208"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "53ac3a93-922f-47f6-94cc-d7d7f733f48e",
+      "title": "Data Analyst Certification",
+      "start": "2027-01-06T07:00:00.000Z",
+      "room": "Efrei Bat. B B001"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "b2f8ec8c-5ea2-4805-9eea-e74f23332bde",
+      "title": "3D Data Visualization",
+      "start": "2027-01-06T12:40:00.000Z",
+      "room": "Efrei Bat. B B004"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "5fa305e0-ab57-4e5d-a72f-763a6d31341e",
+      "title": "Engineering Project",
+      "start": "2027-01-07T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ae55a45f-e55e-41b0-a5d3-6ea0c69e2cc4",
+      "title": "Engineering Project",
+      "start": "2027-01-07T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "15c8c292-22e7-4d73-9c7f-25476b169732",
+      "title": "Engineering Project",
+      "start": "2027-01-07T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "c2487b04-3fef-443a-9c21-31111051c03b",
+      "title": "Engineering Project",
+      "start": "2027-01-08T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "6707acfa-f6c9-442c-b129-001cc1443ad8",
+      "title": "Engineering Project",
+      "start": "2027-01-08T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "100381d3-3727-4f10-8719-18f162b45f70",
+      "title": "Engineering Project",
+      "start": "2027-01-08T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "68930786-ac45-430e-b511-1471b4093f65",
+      "title": "Une histoire de la philosophie",
+      "start": "2027-01-11T10:05:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "042104c8-4098-426c-9fa4-363e2b8a41ec",
+      "title": "Data Analyst Certification",
+      "start": "2027-01-12T07:00:00.000Z",
+      "room": "Efrei Bat. H H205"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "7aa9583f-5f4d-42f5-9f02-f2c941ea8e1f",
+      "title": "3D Data Visualization",
+      "start": "2027-01-12T12:40:00.000Z",
+      "room": "Efrei Bat. H H209"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "25815d1b-5f2f-4647-a61a-7877c05c0fb3",
+      "title": "Data Analyst Certification",
+      "start": "2027-01-13T07:00:00.000Z",
+      "room": "Efrei Bat. H H309"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "0976a943-aac0-4ff8-b3ff-cf62ab8e1609",
+      "title": "3D Data Visualization",
+      "start": "2027-01-13T12:40:00.000Z",
+      "room": "Efrei Bat. A A306"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "20bb7baa-d2f3-45e1-9ad4-540084098eae",
+      "title": "Engineering Project",
+      "start": "2027-01-14T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "be7d6f8b-cf0a-4a8d-a4a5-784d47c9dc5e",
+      "title": "Engineering Project",
+      "start": "2027-01-14T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "e613066c-fbe2-482b-be52-5f6eac2a2a42",
+      "title": "Engineering Project",
+      "start": "2027-01-14T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "b36f1d66-e7df-40a2-a77f-cf912ef2e505",
+      "title": "Engineering Project",
+      "start": "2027-01-15T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "70bec741-9654-4cd4-8e9c-059cff5ebe75",
+      "title": "Engineering Project",
+      "start": "2027-01-15T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "e1911ca5-1779-40df-9d78-a8eb7b9b565f",
+      "title": "Engineering Project",
+      "start": "2027-01-15T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "015f4c08-d0a4-4702-87dc-faa6d6026345",
+      "title": "Une histoire de la philosophie",
+      "start": "2027-01-18T10:05:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "c4a17cae-c9b5-479e-b9c9-8d6334361310",
+      "title": "3D Data Visualization",
+      "start": "2027-01-19T07:00:00.000Z",
+      "room": "Efrei Bat. H H205"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "799d1e6f-645e-4d5b-8fd4-87ffa69e07be",
+      "title": "3D Data Visualization",
+      "start": "2027-01-19T12:40:00.000Z",
+      "room": "Efrei Bat. H H319"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "0471c71b-e6a2-44e0-a236-428234411177",
+      "title": "Big Data Processing",
+      "start": "2027-01-20T07:00:00.000Z",
+      "room": "Efrei Bat. H H305"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "a49ce6b9-77bc-472d-aba2-afdca26d93d1",
+      "title": "Chatbots & Generative AI",
+      "start": "2027-01-20T12:40:00.000Z",
+      "room": "Efrei Bat. H H405"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "74de5039-65ca-4082-a905-76720d6b8e8e",
+      "title": "Engineering Project",
+      "start": "2027-01-21T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "c1cd67ae-d1e2-4235-bd46-989943337114",
+      "title": "Engineering Project",
+      "start": "2027-01-21T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "31f48c20-4852-4998-91fb-a1d9469f0c80",
+      "title": "Engineering Project",
+      "start": "2027-01-21T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "db7a52f2-ae80-4faf-879a-cd0c58efc730",
+      "title": "Engineering Project",
+      "start": "2027-01-22T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "8b21e534-1180-44cd-a0c8-bde3feece4b8",
+      "title": "Engineering Project",
+      "start": "2027-01-22T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "b8fa99c3-577c-4fe5-a7c4-88c07c9a8211",
+      "title": "Engineering Project",
+      "start": "2027-01-22T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "94fbec8e-0bbd-4cc3-9781-a1744cd6254b",
+      "title": "Une histoire de la philosophie",
+      "start": "2027-01-25T10:05:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "db812bed-087e-484f-819e-8558e7f97416",
+      "title": "Big Data Processing",
+      "start": "2027-01-26T07:00:00.000Z",
+      "room": "Efrei Bat. BDX 217"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "9228f128-ef27-4276-b7e6-3e231388aee9",
+      "title": "Chatbots & Generative AI",
+      "start": "2027-01-26T12:40:00.000Z",
+      "room": "Efrei Bat. H H209"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ad60ff69-cb9f-403f-8be1-fe460614eda4",
+      "title": "3D Data Visualization",
+      "start": "2027-01-27T07:00:00.000Z",
+      "room": "Efrei Bat. H H412"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "1da05ce4-d3fa-4eb7-8257-92bec65a5a0f",
+      "title": "3D Data Visualization",
+      "start": "2027-01-27T12:40:00.000Z",
+      "room": "Efrei Bat. H H413"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d096b61c-0d74-4f18-adb0-0e78b86ff0e2",
+      "title": "Engineering Project",
+      "start": "2027-01-28T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "0da2c8ba-12ba-480f-bd8f-5bb183ba67bc",
+      "title": "Engineering Project",
+      "start": "2027-01-28T09:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "511092b4-5dcb-4cbd-8637-ca35766df426",
+      "title": "Engineering Project",
+      "start": "2027-01-28T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "08643739-32d8-42cc-9eda-d894cb28f67f",
+      "title": "Engineering Project",
+      "start": "2027-01-29T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "e6ea17ab-e963-4d2b-b801-74a2fbf29e8c",
+      "title": "Engineering Project",
+      "start": "2027-01-29T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "f45f789f-63b8-41b6-a80c-20c74505cb54",
+      "title": "Engineering Project",
+      "start": "2027-02-02T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "d46d98a6-5432-4eed-9b36-29f93723127a",
+      "title": "Engineering Project",
+      "start": "2027-02-02T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "303802f6-8503-409a-9674-607ca199c1bc",
+      "title": "Engineering Project",
+      "start": "2027-02-03T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "cb9630e7-5153-4813-afdc-7c34125b846b",
+      "title": "Engineering Project",
+      "start": "2027-02-03T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ae5e95f1-b02f-4ea1-8b65-c4e1e7841706",
+      "title": "Business Game",
+      "start": "2027-02-04T08:10:00.000Z",
+      "room": ""
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "ba13583d-3bcc-4a93-99dd-a67208e33c2a",
+      "title": "Business Game",
+      "start": "2027-02-04T12:40:00.000Z",
+      "room": ""
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "30999ba8-5f57-44ca-9fb1-995ebaf83130",
+      "title": "Business Game",
+      "start": "2027-02-05T08:10:00.000Z",
+      "room": ""
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "4d581784-da70-445f-be18-4144a3a67f16",
+      "title": "Business Game",
+      "start": "2027-02-05T12:40:00.000Z",
+      "room": ""
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "9f400f6f-9f91-4485-92ea-483876eac9ce",
+      "title": "Une histoire de la philosophie",
+      "start": "2027-02-24T07:45:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "362d1c93-066f-4835-83a2-40459369a99b",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2027-02-24T15:00:00.000Z",
+      "room": ""
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "e0bd96fc-2156-4486-9be9-f7478b658de0",
+      "title": "Chatbots & Generative AI",
+      "start": "2027-03-02T07:00:00.000Z",
+      "room": "Efrei Bat. N N004"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "dfb64dd8-7a0c-4bab-8e13-cac27d0d095c",
+      "title": "Chatbots & Generative AI",
+      "start": "2027-03-02T12:40:00.000Z",
+      "room": "Efrei Bat. N N004"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "a01f8f4c-1c3c-41cf-b16e-d9e1ec940116",
+      "title": "Engineering Project",
+      "start": "2027-03-04T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "f972a6b0-5d03-49cd-ad0b-1e659353f94f",
+      "title": "Engineering Project",
+      "start": "2027-03-04T12:40:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "cef9f014-9eac-489d-932d-6405d859cadf",
+      "title": "Big Data Processing",
+      "start": "2027-03-05T07:00:00.000Z",
+      "room": "Efrei Bat. H H420"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "added",
+      "uid": "97e10d22-bf83-4dde-9ee8-44c67ff59fc0",
+      "title": "Big Data Processing",
+      "start": "2027-03-05T12:40:00.000Z",
+      "room": "Efrei Bat. H H422"
+    },
+    {
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "47b355ef-0634-4d0d-adf6-4bd592ee5b8e",
       "title": "Data Integration and Analytics",
       "start": "2026-11-16T12:40:00.000Z",
       "room": "Efrei Bat. N N005"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "cde220b2-8889-423f-93c9-337429c94c54",
       "title": "Machine Learning for Data Analysts",
       "start": "2026-11-17T12:40:00.000Z",
       "room": "Efrei Bat. E E101"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "c9257919-7ec2-4faa-94ea-26d1689b35ce",
       "title": "CSR-The social and ecological transition stakes",
       "start": "2026-11-18T08:10:00.000Z",
       "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "30501e42-00d6-485f-a9f3-0290ced6fd3e",
       "title": "Engineering Project",
       "start": "2026-11-19T08:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "01de510c-d696-4fd8-831a-225f3fa1d804",
       "title": "Engineering Project",
       "start": "2026-11-19T09:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "c5be0047-79cc-42c7-b034-ac4f3256ff1e",
       "title": "Engineering Project",
       "start": "2026-11-19T12:40:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "19af17e5-deee-4409-84e3-d65a1fd30232",
       "title": "Engineering Project",
       "start": "2026-11-20T08:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "25fd3b0f-b7b1-4a0d-b525-29def86a4c23",
       "title": "Engineering Project",
       "start": "2026-11-20T09:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "fa857ae5-dd09-45f5-ab8c-54d66030e338",
       "title": "Engineering Project",
       "start": "2026-11-20T12:40:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "83211e76-b80e-4d43-85d7-03e2a77fa1ce",
       "title": "CSR-The social and ecological transition stakes",
       "start": "2026-11-23T12:40:00.000Z",
       "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "94c259d7-da7e-4c1e-a203-f38734fca631",
       "title": "Machine Learning for Data Analysts",
       "start": "2026-11-24T12:40:00.000Z",
       "room": "Efrei Bat. B B107"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "f836fa39-e1d6-4f79-9dbe-9db94e627656",
       "title": "Data Integration and Analytics",
       "start": "2026-11-25T07:00:00.000Z",
       "room": "Efrei Bat. A A303"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "84cea397-c111-4ce5-a8d5-ded69b4ae462",
       "title": "Data Integration and Analytics",
       "start": "2026-11-26T07:00:00.000Z",
       "room": "Efrei Bat. H H404"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "842d6bee-6fb7-46a8-940d-c5a7f2297e84",
       "title": "Engineering Project",
       "start": "2026-11-27T08:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "cf9750d5-1159-4631-aba8-1985d142167a",
       "title": "Engineering Project",
       "start": "2026-11-27T09:10:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "da5f0c53-b8b4-45d2-8c8e-8c4c139e4a9c",
       "title": "Engineering Project",
       "start": "2026-11-27T12:40:00.000Z",
       "room": "Comodal"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "ffd6028c-4c78-461a-b54c-b188281b1c9f",
       "title": "CSR-The social and ecological transition stakes",
       "start": "2026-11-30T12:40:00.000Z",
       "room": "Efrei Bat. H H419, Efrei Bat. H H421, Efrei Bat. H H420"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "8d4f5e4d-bcbd-4995-888d-bfb59c291377",
       "title": "Data Integration and Analytics",
       "start": "2026-12-01T07:00:00.000Z",
       "room": "Efrei Bat. H H216"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "469bf972-5929-45a0-8b38-fd2a5c9f096f",
       "title": "Machine Learning for Data Analysts",
       "start": "2026-12-01T12:40:00.000Z",
       "room": "Efrei Bat. H H413"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "f7c0aae9-8974-41c7-b7b1-d0e94d072307",
       "title": "Big Data Processing",
       "start": "2026-12-02T07:00:00.000Z",
       "room": "Efrei Bat. H H113"
     },
     {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
+      "ts": "2026-11-13T13:59:20.828Z",
+      "type": "removed",
       "uid": "c5378359-f7d0-49b1-9141-52544f508c9c",
       "title": "Chatbots & Generative AI",
       "start": "2026-12-02T12:40:00.000Z",
       "room": "Efrei Bat. H H203"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "f68e803f-6cf1-4c1c-bf65-eb616452f304",
-      "title": "Efrei For Good Xperience",
-      "start": "2026-12-03T09:00:00.000Z",
-      "room": "Efrei Bat. E E001, Efrei Bat. A A302, Efrei Bat. A A206, Efrei Bat. E E102, Efrei Bat. A A306, Efrei Bat. A A203, Efrei Bat. E E101, Efrei Bat. B B002, Efrei Bat. E E003, Efrei Bat. B B108, Efrei Bat. B B001, Efrei Bat. E E103, Efrei Bat. B B007, Efrei Bat. A A205, Efrei Bat. B B009, Efrei Bat. A A107, Efrei Bat. E E002, Efrei Bat. A A001, Efrei Bat. A A202, Efrei Bat. B B010, Efrei Bat. B B107, Efrei Bat. B B106, Efrei Bat. I I-LAB, Efrei Bat. B B004, Efrei Bat. C C001, Efrei Bat. B B003, Efrei Bat. A A207, Efrei Bat. A A305, Efrei Bat. A A303, Efrei Bat. A A301, Efrei Bat. B B008, Efrei Bat. E E108, Efrei Bat. E E107, Efrei Bat. A A201"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "9bcbd5ca-6296-4dd8-911a-b26861bafc86",
-      "title": "Engineering Project",
-      "start": "2026-12-04T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b51dd1fd-313b-4a49-9ad4-eab4ce50d33b",
-      "title": "Engineering Project",
-      "start": "2026-12-04T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "2e5d8da0-55d0-48f2-9a79-1b7d206021f8",
-      "title": "Engineering Project",
-      "start": "2026-12-04T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "63070a5c-af3e-4e12-a84a-0db2768487da",
-      "title": "CSR-The social and ecological transition stakes",
-      "start": "2026-12-07T12:40:00.000Z",
-      "room": "Efrei Bat. H H421, Efrei Bat. H H420, Efrei Bat. H H419"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "9faa0151-e44c-4a94-a53c-d4acce3a63bf",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2026-12-08T12:40:00.000Z",
-      "room": "Efrei Bat. H H219"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "76fa0689-107d-4c74-8c8d-dbf6e5f1a84e",
-      "title": "Big Data Processing",
-      "start": "2026-12-09T07:00:00.000Z",
-      "room": "Efrei Bat. H H114"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "26cd0851-54ed-4a1e-97df-f74c91da7fe3",
-      "title": "Chatbots & Generative AI",
-      "start": "2026-12-09T12:40:00.000Z",
-      "room": "Efrei Bat. H H208"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "77b74c49-0221-4b69-83dd-2c05231606ab",
-      "title": "Big Data Processing",
-      "start": "2026-12-10T07:00:00.000Z",
-      "room": "Efrei Bat. H H419"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "2a59d7f3-901b-4ed7-b136-5633abc92fc7",
-      "title": "Chatbots & Generative AI",
-      "start": "2026-12-10T12:40:00.000Z",
-      "room": "Efrei Bat. H H319"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "fab6081e-3828-457d-bd92-e683b29053ac",
-      "title": "Forum 1er emploi",
-      "start": "2026-12-11T08:10:00.000Z",
-      "room": "Distanciel"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "bc95fdd5-bdb9-4ed2-bbfd-6985356cb510",
-      "title": "Engineering Project",
-      "start": "2026-12-11T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "4fa5ff6b-d188-4ef7-9961-6868f423ab5a",
-      "title": "Engineering Project",
-      "start": "2026-12-11T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "08077030-1d2f-4cad-a580-296b68fa72de",
-      "title": "Forum 1er emploi",
-      "start": "2026-12-11T12:40:00.000Z",
-      "room": "Distanciel"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "6b90c7f7-0623-4bff-baaf-1be82e7d7d83",
-      "title": "Engineering Project",
-      "start": "2026-12-11T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "eee31a75-5db4-4b93-a1d2-11d46fb98cad",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2027-01-05T07:00:00.000Z",
-      "room": "Efrei Bat. B B004"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "7dbde606-fcb1-4b45-b9d5-ca1c9b26e649",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2027-01-05T12:40:00.000Z",
-      "room": "Efrei Bat. H H208"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "69161220-cacf-4e2d-b61a-14663319a732",
-      "title": "Data Analyst Certification",
-      "start": "2027-01-06T07:00:00.000Z",
-      "room": "Efrei Bat. B B001"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "5dcedc6b-b0a1-4e47-8175-4d72e888adec",
-      "title": "3D Data Visualization",
-      "start": "2027-01-06T12:40:00.000Z",
-      "room": "Efrei Bat. B B004"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "825d6723-93c0-4733-897d-64c8cce32299",
-      "title": "Engineering Project",
-      "start": "2027-01-07T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "3a3bfe58-f9dd-4d81-ac9b-0609e3a9d761",
-      "title": "Engineering Project",
-      "start": "2027-01-07T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "0c3ed8de-2311-401a-ae6d-8e2cfc66ff65",
-      "title": "Engineering Project",
-      "start": "2027-01-07T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "6c1bf0e8-25a2-4b37-8ff6-2d715c938447",
-      "title": "Engineering Project",
-      "start": "2027-01-08T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "88d35c42-a8db-46f9-bd7a-997503a67494",
-      "title": "Engineering Project",
-      "start": "2027-01-08T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "ca9bc90f-22eb-4257-a62c-b3068756af1d",
-      "title": "Engineering Project",
-      "start": "2027-01-08T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "fde57935-a9b1-4273-b7f7-de0766faf817",
-      "title": "Data Analyst Certification",
-      "start": "2027-01-12T07:00:00.000Z",
-      "room": "Efrei Bat. H H205"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "0c619153-227b-4bb2-8193-5c3e539cc1e1",
-      "title": "3D Data Visualization",
-      "start": "2027-01-12T12:40:00.000Z",
-      "room": "Efrei Bat. H H209"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "eeca10b7-8494-4830-82ea-f40861d40a57",
-      "title": "Data Analyst Certification",
-      "start": "2027-01-13T07:00:00.000Z",
-      "room": "Efrei Bat. H H309"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "8641b007-787c-4bde-9542-98a701e6f0e6",
-      "title": "3D Data Visualization",
-      "start": "2027-01-13T12:40:00.000Z",
-      "room": "Efrei Bat. A A306"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "5032f9f2-b277-4d65-bb79-c04ad120d57b",
-      "title": "Engineering Project",
-      "start": "2027-01-14T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "e8dbce7a-9469-4315-8679-53eb45516f44",
-      "title": "Engineering Project",
-      "start": "2027-01-14T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "ebd0435c-8236-4217-a6c6-2fade82d11fc",
-      "title": "Engineering Project",
-      "start": "2027-01-14T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "acf55563-4f8e-42c6-951d-d86f27cdfee0",
-      "title": "Engineering Project",
-      "start": "2027-01-15T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "3519a1c0-6ade-482b-8d85-1a2efde56fec",
-      "title": "Engineering Project",
-      "start": "2027-01-15T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "2a5f103d-cfbf-41a6-90d1-f1ae70b10aa1",
-      "title": "Engineering Project",
-      "start": "2027-01-15T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "56cbcd67-cc8d-4c2b-9c10-10ae6febf915",
-      "title": "3D Data Visualization",
-      "start": "2027-01-19T07:00:00.000Z",
-      "room": "Efrei Bat. H H205"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "d69449c5-9f4f-4728-ae9b-f4e39a91abb7",
-      "title": "3D Data Visualization",
-      "start": "2027-01-19T12:40:00.000Z",
-      "room": "Efrei Bat. H H319"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "97ffaf85-34b8-4221-b22b-a0bf2bd30acf",
-      "title": "Big Data Processing",
-      "start": "2027-01-20T07:00:00.000Z",
-      "room": "Efrei Bat. H H305"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b422cc80-d971-4ef6-8bbb-f1682bdbf479",
-      "title": "Chatbots & Generative AI",
-      "start": "2027-01-20T12:40:00.000Z",
-      "room": "Efrei Bat. H H405"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "5706da34-631e-453d-a809-6671d9360d58",
-      "title": "Engineering Project",
-      "start": "2027-01-21T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "d8e7bd32-ecbd-4fc4-931f-4114f02e0ba9",
-      "title": "Engineering Project",
-      "start": "2027-01-21T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "d29ac05c-a782-4376-9eb7-b3e1300e81c1",
-      "title": "Engineering Project",
-      "start": "2027-01-21T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b6c43a91-da80-4d18-8e1d-29256374be49",
-      "title": "Engineering Project",
-      "start": "2027-01-22T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "5c4065d9-1c10-4c41-b1e0-59405542dd1e",
-      "title": "Engineering Project",
-      "start": "2027-01-22T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b15f0c2a-bc5f-4f0c-844a-6474cbe3bf11",
-      "title": "Engineering Project",
-      "start": "2027-01-22T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "caefc080-1395-491b-a838-0f636867f99d",
-      "title": "Big Data Processing",
-      "start": "2027-01-26T07:00:00.000Z",
-      "room": "Efrei Bat. BDX 217"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "f8976be6-d1cd-4710-9b6a-ab7741c87fec",
-      "title": "Chatbots & Generative AI",
-      "start": "2027-01-26T12:40:00.000Z",
-      "room": "Efrei Bat. H H209"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b0bfe3f6-05bd-40d7-afce-77ca44616284",
-      "title": "3D Data Visualization",
-      "start": "2027-01-27T07:00:00.000Z",
-      "room": "Efrei Bat. H H412"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "3b4149bf-de0e-4de0-a947-94b4df9aebaa",
-      "title": "3D Data Visualization",
-      "start": "2027-01-27T12:40:00.000Z",
-      "room": "Efrei Bat. H H413"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "85f9d550-6444-402f-a3c7-d6d507fe51e4",
-      "title": "Engineering Project",
-      "start": "2027-01-28T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "0675de4d-72f1-48c6-99fd-d0c2826ec2c5",
-      "title": "Engineering Project",
-      "start": "2027-01-28T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "904fbcf5-b2ec-486f-b5b7-b8ed201d441e",
-      "title": "Engineering Project",
-      "start": "2027-01-28T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b8b211a0-bffc-46d6-8af6-fe9268cc896a",
-      "title": "Engineering Project",
-      "start": "2027-01-29T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "6bab7e2f-41ad-4c1d-a2a3-637741c67a8b",
-      "title": "Engineering Project",
-      "start": "2027-01-29T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "7ea7b315-b695-4678-8773-5dd53c2d7dc8",
-      "title": "Engineering Project",
-      "start": "2027-02-02T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "02dda545-8c76-4001-aabc-9537703017e4",
-      "title": "Engineering Project",
-      "start": "2027-02-02T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "066471f0-0888-48c7-aa74-8265f0eb6c76",
-      "title": "Engineering Project",
-      "start": "2027-02-03T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "8d50931b-3184-4a26-b00b-00bb2c3bdaeb",
-      "title": "Engineering Project",
-      "start": "2027-02-03T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "e1bd90b0-e2cf-408d-818f-904764dbf30d",
-      "title": "Business Game",
-      "start": "2027-02-04T08:10:00.000Z",
-      "room": ""
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "b19907d9-65db-4230-800b-cedeec244523",
-      "title": "Business Game",
-      "start": "2027-02-04T12:40:00.000Z",
-      "room": ""
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "8bed1b82-f026-4af3-840e-10298fb90aa0",
-      "title": "Business Game",
-      "start": "2027-02-05T08:10:00.000Z",
-      "room": ""
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "094c472b-c968-472d-9639-4651c93bfd7e",
-      "title": "Business Game",
-      "start": "2027-02-05T12:40:00.000Z",
-      "room": ""
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "29476f66-4e8b-4da0-b68b-e1be09262b49",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2027-02-24T15:00:00.000Z",
-      "room": ""
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "fa21c2d4-bd06-4a74-b71b-776fc7db0f92",
-      "title": "Chatbots & Generative AI",
-      "start": "2027-03-02T07:00:00.000Z",
-      "room": "Efrei Bat. N N004"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "d411f079-21b8-4765-b6b3-092ccd4865f4",
-      "title": "Chatbots & Generative AI",
-      "start": "2027-03-02T12:40:00.000Z",
-      "room": "Efrei Bat. N N004"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "31bf954b-7744-490a-a5d9-c6a93b39465b",
-      "title": "Engineering Project",
-      "start": "2027-03-04T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "19eb8eb9-ea0a-4e74-bc5f-3e7079a6c43b",
-      "title": "Engineering Project",
-      "start": "2027-03-04T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "788ace62-067e-459a-af4e-585639f9a36e",
-      "title": "Big Data Processing",
-      "start": "2027-03-05T07:00:00.000Z",
-      "room": "Efrei Bat. H H420"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "added",
-      "uid": "3c65e90d-b7e0-4265-a0cc-b26aad1c5729",
-      "title": "Big Data Processing",
-      "start": "2027-03-05T12:40:00.000Z",
-      "room": "Efrei Bat. H H422"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "9cbc9cea-bc55-45b7-92a8-367cb22f7a4d",
-      "title": "Engineering Project",
-      "start": "2026-11-13T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "4e759ef4-72bb-49f2-bbfc-57e8d16807ba",
-      "title": "Engineering Project",
-      "start": "2026-11-13T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "8edf4bbe-5bc6-48d0-9b58-fa9649b486bf",
-      "title": "Engineering Project",
-      "start": "2026-11-13T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "a802d413-4f5d-4c7d-b465-f0f636a195fd",
-      "title": "Data Integration and Analytics",
-      "start": "2026-11-16T12:40:00.000Z",
-      "room": "Efrei Bat. N N005"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "d4c1dcb5-c1d4-4eb4-b7d1-30568613384f",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2026-11-17T12:40:00.000Z",
-      "room": "Efrei Bat. E E101"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "16e0375e-b292-4eaa-ba72-79490d3837f0",
-      "title": "CSR-The social and ecological transition stakes",
-      "start": "2026-11-18T08:10:00.000Z",
-      "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "c3e06b0a-eff8-4887-ac6f-90b0b104e3de",
-      "title": "Engineering Project",
-      "start": "2026-11-19T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "3d5c7c06-527b-4117-a9aa-f49046039ef9",
-      "title": "Engineering Project",
-      "start": "2026-11-19T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "3887e4fa-dad6-4d12-ba3e-45d3ff6ef7de",
-      "title": "Engineering Project",
-      "start": "2026-11-19T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "fcc5053d-07c0-4513-b788-0e222bb971e9",
-      "title": "Engineering Project",
-      "start": "2026-11-20T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "a7e3aba1-1907-4385-8c56-6cbe0c0bce58",
-      "title": "Engineering Project",
-      "start": "2026-11-20T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "ac31fd43-0794-4016-9f3b-5a24617365ad",
-      "title": "Engineering Project",
-      "start": "2026-11-20T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "57e64b40-f6b3-4e1d-a885-a0515f673ecf",
-      "title": "CSR-The social and ecological transition stakes",
-      "start": "2026-11-23T12:40:00.000Z",
-      "room": "Efrei Bat. H H420, Efrei Bat. H H421, Efrei Bat. H H419"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "86c84bc2-aeee-4c78-9c1e-a8e70ab0836a",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2026-11-24T12:40:00.000Z",
-      "room": "Efrei Bat. B B107"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "679ea662-999b-41b5-a452-4bed8dc5c7f8",
-      "title": "Data Integration and Analytics",
-      "start": "2026-11-25T07:00:00.000Z",
-      "room": "Efrei Bat. A A303"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "2e0c9652-9016-447a-b8a5-358ee87e3bc4",
-      "title": "Data Integration and Analytics",
-      "start": "2026-11-26T07:00:00.000Z",
-      "room": "Efrei Bat. H H404"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "24ab1b0e-6317-4798-abce-44651e6c29b7",
-      "title": "Engineering Project",
-      "start": "2026-11-27T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "c90f9e1b-e64b-4225-abcd-38a0b7a38eba",
-      "title": "Engineering Project",
-      "start": "2026-11-27T09:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "c5d02f0a-2e5a-4825-bf73-4a6fc5a2de94",
-      "title": "Engineering Project",
-      "start": "2026-11-27T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "9ad8e249-64c2-41b6-aa00-d304ec26e130",
-      "title": "CSR-The social and ecological transition stakes",
-      "start": "2026-11-30T12:40:00.000Z",
-      "room": "Efrei Bat. H H419, Efrei Bat. H H421, Efrei Bat. H H420"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "d9feee91-b45e-48d8-b1d5-c91d5435e36d",
-      "title": "Data Integration and Analytics",
-      "start": "2026-12-01T07:00:00.000Z",
-      "room": "Efrei Bat. H H216"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "587f310c-f80c-414d-9771-a50f8a17a115",
-      "title": "Machine Learning for Data Analysts",
-      "start": "2026-12-01T12:40:00.000Z",
-      "room": "Efrei Bat. H H413"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "5d0b90cf-c985-464c-9ac8-18188009c0d1",
-      "title": "Big Data Processing",
-      "start": "2026-12-02T07:00:00.000Z",
-      "room": "Efrei Bat. H H113"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "6376c734-9986-4335-ac92-9dde12c1c429",
-      "title": "Chatbots & Generative AI",
-      "start": "2026-12-02T12:40:00.000Z",
-      "room": "Efrei Bat. H H203"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "1fe92581-4ae3-4d08-a992-5933c2184cbb",
-      "title": "Efrei For Good Xperience",
-      "start": "2026-12-03T09:00:00.000Z",
-      "room": "Efrei Bat. E E001, Efrei Bat. A A302, Efrei Bat. A A206, Efrei Bat. E E102, Efrei Bat. A A306, Efrei Bat. A A203, Efrei Bat. E E101, Efrei Bat. B B002, Efrei Bat. E E003, Efrei Bat. B B108, Efrei Bat. B B001, Efrei Bat. E E103, Efrei Bat. B B007, Efrei Bat. A A205, Efrei Bat. B B009, Efrei Bat. A A107, Efrei Bat. E E002, Efrei Bat. A A001, Efrei Bat. A A202, Efrei Bat. B B010, Efrei Bat. B B107, Efrei Bat. B B106, Efrei Bat. I I-LAB, Efrei Bat. B B004, Efrei Bat. C C001, Efrei Bat. B B003, Efrei Bat. A A207, Efrei Bat. A A305, Efrei Bat. A A303, Efrei Bat. A A301, Efrei Bat. B B008, Efrei Bat. E E108, Efrei Bat. E E107, Efrei Bat. A A201"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "d843d7a5-3fe4-408c-800e-02cf7817836a",
-      "title": "Engineering Project",
-      "start": "2026-12-04T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T05:17:42.774Z",
-      "type": "removed",
-      "uid": "bc6b4b2c-41f2-403f-9a7c-9745b784009e",
-      "title": "Engineering Project",
-      "start": "2026-12-04T09:10:00.000Z",
-      "room": "Comodal"
     }
   ]
 }
