@@ -1277,7 +1277,12 @@ function weekGrid(days, perDay, sel) {
     return `<div class="cal-col${t ? " is-today" : ""}${we ? " we" : ""}${hide}">${sgBands(d.key)}${slots}${blocks}${now}</div>`;
   }).join("");
 
-  return `<div class="cal" data-top0="${top0}" data-px="${PX}" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
+  // Largeur adaptative : un jour avec des événements en parallèle (conflits) s'élargit
+  // proportionnellement au nombre de voies (plafonné à 3×) pour que les blocs restent lisibles.
+  const dayW = perDay.map((evs) => Math.min(3, Math.max(1, ...evs.map((e) => e.cols || 1))));
+  const calDays = dayW.map((w) => `minmax(0, ${w}fr)`).join(" ");
+
+  return `<div class="cal" data-top0="${top0}" data-px="${PX}" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px;--cal-days:${calDays}"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
 }
 
 // ---------- Vue À faire ----------

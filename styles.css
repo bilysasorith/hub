@@ -401,7 +401,7 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 /* overflow: clip (pas hidden) : clippe les coins arrondis SANS créer de conteneur de défilement,
    sinon l'en-tête sticky se cale 62px sous le haut de .cal au lieu de suivre le défilement de la page. */
 .cal { position: relative; border: 1px solid var(--line); border-radius: 18px; overflow: clip; background: var(--surface); box-shadow: var(--shadow); }
-.cal-head { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 6; display: grid; grid-template-columns: var(--axisW) repeat(7, 1fr); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.cal-head { position: sticky; top: calc(62px + env(safe-area-inset-top, 0px)); z-index: 6; display: grid; grid-template-columns: var(--axisW) var(--cal-days, repeat(7, minmax(0, 1fr))); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .cal-corner { border-right: 1px solid var(--line); }
 .cal-colh { position: relative; padding: 10px 6px; text-align: center; border-right: 1px solid var(--line); transition: background .2s; }
 .cal-colh:last-child { border-right: 0; }
@@ -413,7 +413,7 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .cal-colh.is-today::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); }
 .cal-colh .badge { margin-top: 5px; }
 
-.cal-body { position: relative; display: grid; grid-template-columns: var(--axisW) repeat(7, 1fr); padding-top: 10px; }
+.cal-body { position: relative; display: grid; grid-template-columns: var(--axisW) var(--cal-days, repeat(7, minmax(0, 1fr))); padding-top: 10px; }
 .cal-axis { position: relative; border-right: 1px solid var(--line); }
 .cal-slot { height: var(--cal-px); position: relative; }
 .cal-axis .cal-slot b { position: absolute; top: -7px; right: 9px; font-family: var(--f-mono); font-size: 11px; font-weight: 600; color: color-mix(in srgb, var(--muted) 82%, var(--fg)); }
