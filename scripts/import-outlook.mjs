@@ -7,6 +7,7 @@
 //   GOOGLE_ICS_URL             — adresse secrète iCal de l'agenda Google perso
 //   SUPABASE_URL               — URL du projet (ex. https://xxxx.supabase.co) [public]
 //   SUPABASE_SERVICE_KEY       — clé service_role (secret, jamais dans le code)
+//   HUB_USER_ID                — UUID du compte propriétaire du Hub (obligatoire hors dry-run)
 //
 // Sans SUPABASE_SERVICE_KEY (ou avec DRY_RUN=1) : parse et affiche un résumé, n'écrit rien.
 
@@ -60,11 +61,14 @@ async function supa(path, opts = {}) {
   return t ? JSON.parse(t) : null;
 }
 
+// Compte propriétaire : fixé explicitement. Ne jamais « deviner » (ex. premier utilisateur),
+// sinon tout autre compte inscrit récupère les réunions privées.
 async function getUserId() {
-  const data = await supa("/auth/v1/admin/users?per_page=1", { method: "GET" });
-  const user = (data.users || data)[0];
-  if (!user?.id) throw new Error("Aucun utilisateur trouvé dans Supabase Auth.");
-  return user.id;
+  const id = (process.env.HUB_USER_ID || "").trim();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("HUB_USER_ID absent ou invalide — import annulé.");
+  const user = await supa(`/auth/v1/admin/users/${id}`, { method: "GET" });
+  if (user?.id !== id) throw new Error(`Utilisateur ${id} introuvable dans Supabase Auth.`);
+  return id;
 }
 
 async function run() {

@@ -36,6 +36,7 @@ jobs:
           OUTLOOK_EFREI_ICS_URL: ${{ secrets.OUTLOOK_EFREI_ICS_URL }}
           GOOGLE_ICS_URL: ${{ secrets.GOOGLE_ICS_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          HUB_USER_ID: ${{ secrets.HUB_USER_ID }}
         run: node scripts/import-outlook.mjs
 
       - name: Commit si le planning a changé
