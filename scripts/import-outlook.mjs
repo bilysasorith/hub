@@ -76,6 +76,7 @@ async function getUserId() {
 async function run() {
   let userId = null;
   if (!DRY_RUN) userId = await getUserId();
+  const seen = new Set(); // réunions déjà vues, toutes sources confondues
 
   for (const src of SOURCES) {
     if (!src.url) {
@@ -97,6 +98,13 @@ async function run() {
       .filter((e) => {
         const t = new Date(e.start).getTime();
         return t >= FROM && t <= TO;
+      })
+      // Même réunion déjà importée via un autre calendrier (même UID Outlook) : on ne la double pas.
+      .filter((e) => {
+        const key = e.uid || `${e.title}@${e.start}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       })
       .map((e) => ({
         id: `${src.name}:${e.uid || slug(e.title) + ":" + e.start}`,
