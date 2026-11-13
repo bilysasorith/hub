@@ -1007,6 +1007,8 @@ function wireEventTaps(root) {
 // chevauchent de plus de MIN_OVERLAP minutes. Un simple bord qui se touche
 // (ex. un RDV qui démarre quand un cours finit) reste plein largeur et lisible.
 const MIN_OVERLAP = 15;
+// Plage importée (Teams / Google) de 6 h ou plus : affichée en fond de colonne (vue semaine).
+const isBackdrop = (e) => (e.source === "fl" || e.source === "ef" || e.source === "gc") && e.e2 - e.s >= 360;
 const overlapMin = (a, b) => Math.min(a.e2, b.e2) - Math.max(a.s, b.s);
 
 function packDay(evs) {
@@ -1147,20 +1149,24 @@ function renderWeek() {
   }
 
   // Une seule passe de positionnement, réutilisée pour les stats, la légende et la grille.
-  const perDay = days.map((d) => packDay(mergedEventsForDay(d.key).map((e) => ({
+  const rawDay = days.map((d) => mergedEventsForDay(d.key).map((e) => ({
     ...e, s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60,
-  }))));
+  })));
+  // Les longues plages importées (permanence, « Hotline » sur toute la journée…) passent en fond :
+  // elles ne prennent pas de colonne et ne créent pas de faux conflits avec chaque cours.
+  const bgDay = rawDay.map((l) => l.filter(isBackdrop));
+  const perDay = rawDay.map((l) => packDay(l.filter((e) => !isBackdrop(e))));
   const todayIdx = days.findIndex((d) => d.key === dayKey(new Date()));
   const sel = weekDay >= 0 ? weekDay : (todayIdx >= 0 ? todayIdx : 0);
 
-  const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay, days)}</div>`;
+  const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay.map((l, i) => [...l, ...bgDay[i]]), days)}</div>`;
   const conflicts = weekConflicts(perDay);
   const alert = conflicts.length
     ? `<button class="wk-alert" id="wk-alert" data-i="${conflicts[0].i}">${ico("i-alert", "si")}
         <span><b>${conflicts.length} conflit${conflicts.length > 1 ? "s" : ""} à vérifier</b> cette semaine — deux créneaux se chevauchent.</span>
         <span class="wk-alert-go">Voir&nbsp;›</span></button>`
     : "";
-  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel)}</div>`;
+  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel, bgDay)}</div>`;
 
   wireWeekNav();
   viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
@@ -1219,14 +1225,14 @@ function wirePills() {
 const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief", gc: "i-user" };
 
 // Grille horaire 7 jours (desktop) / 1 jour qui défile (mobile), câblée aux vraies sources.
-function weekGrid(days, perDay, sel) {
+function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
   const todayK = dayKey(new Date());
   const mobile = !desktop();
   const PX = mobile ? 60 : 56;
 
   // Plage horaire affichée (heures entières), bornée 8→20 puis élargie aux événements.
   let minH = 8, maxH = 20;
-  perDay.flat().forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
+  [...perDay.flat(), ...bgDay.flat()].forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
   minH = Math.max(0, minH); maxH = Math.min(24, maxH);
   const top0 = minH * 60, rows = maxH - minH;
   const yTop = (min) => (min - top0) / 60 * PX;
@@ -1267,20 +1273,28 @@ function weekGrid(days, perDay, sel) {
       const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
       const exam = isExam(ev);
       const growL = (i === days.length - 1 || ev.cols > 1) && ev.lane === ev.cols - 1 ? " grow-l" : "";
-      return `<div class="ev src-${ev.source}${size}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
-        ${exam ? `<span class="ev-exam-tag">EXAMEN</span>` : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : ""}
-        <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span></div>
+      // Nombre de lignes de titre qui tiennent dans le bloc (le reste finit par « … »).
+      const lines = Math.max(1, Math.floor((height - 34) / 15.5));
+      const confIc = exam ? `<span class="ev-exam-tag">EXAMEN</span>`
+        : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : "";
+      return `<div class="ev src-${ev.source}${size}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);--lines:${lines};left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+        <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span><span class="ev-tt">${esc(ev.title)}</span>${confIc}</div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
       </div>`;
     }).join("");
     const now = showNow ? `<div class="cal-now" style="top:${yTop(nowMin)}px"><span class="cal-now-ln"></span><span class="cal-now-dot"></span><span class="cal-now-lab mono">${fmtTime.format(new Date())}</span></div>` : "";
-    return `<div class="cal-col${t ? " is-today" : ""}${we ? " we" : ""}${hide}">${sgBands(d.key)}${slots}${blocks}${now}</div>`;
+    const bands = bgDay[i].map((ev) => {
+      const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
+      return `<div class="ev-bg src-${ev.source}" ${evAttrs(ev)} title="${esc(ev.title)} · ${range}" style="top:${yTop(ev.s)}px;height:${Math.max(22, (ev.e2 - ev.s) / 60 * PX - 4)}px">
+        <span class="ev-bg-lab">${ico(SRC_ICON[ev.source] || "i-brief")}<span class="mono">${range}</span><b>${esc(ev.title)}</b></span></div>`;
+    }).join("");
+    return `<div class="cal-col${t ? " is-today" : ""}${we ? " we" : ""}${hide}">${sgBands(d.key)}${bands}${slots}${blocks}${now}</div>`;
   }).join("");
 
   // Largeur adaptative : un jour avec des événements en parallèle (conflits) s'élargit
-  // proportionnellement au nombre de voies (plafonné à 3×) pour que les blocs restent lisibles.
-  const dayW = perDay.map((evs) => Math.min(3, Math.max(1, ...evs.map((e) => e.cols || 1))));
+  // selon le nombre de voies (plafonné à 2×) sans écraser le reste de la semaine.
+  const dayW = perDay.map((evs) => Math.min(2, Math.max(1, ...evs.map((e) => e.cols || 1))));
   const calDays = dayW.map((w) => `minmax(0, ${w}fr)`).join(" ");
 
   return `<div class="cal" data-top0="${top0}" data-px="${PX}" style="--cal-px:${PX}px;--slide-dir:${weekSlide}px;--cal-days:${calDays}"><div class="cal-head">${head}</div><div class="cal-body">${axis}${cols}</div></div>`;
@@ -1808,7 +1822,7 @@ function openEventActions(ev) {
   const examBtn = ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "";
 
   if (ev.source === "perso") {
-    const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}
+    const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}</div><div class="sheet-actions">
       <button class="btn btn-ghost" id="s-close">Fermer</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
@@ -1821,7 +1835,7 @@ function openEventActions(ev) {
   } else if (ev.source === "course") {
     if (ev._hidden) {
       const ov = openSheet(`${head}<p class="sheet-note">Tu as marqué « je n'y vais pas » pour ce cours.</p>
-        <div class="sheet-actions">${remBtn}${examBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
+        <div class="sheet-tools">${remBtn}${examBtn}</div><div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn" id="s-show">Y retourner</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-show").onclick = async () => {
@@ -1831,7 +1845,7 @@ function openEventActions(ev) {
         closeSheet("silent"); await refreshPersonal(); rerender();
       };
     } else {
-      const ov = openSheet(`${head}<div class="sheet-actions">${remBtn}${examBtn}<button class="btn btn-ghost" id="s-close">Fermer</button>
+      const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${examBtn}</div><div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn btn-danger" id="s-hide">Je n'y vais pas</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-hide").onclick = async () => {
@@ -1847,7 +1861,7 @@ function openEventActions(ev) {
       ? "Événement importé depuis ton agenda Google. Modifie-le dans Google Agenda."
       : `Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.`;
     const ov = openSheet(`${head}<p class="sheet-note">${note}</p>
-      <div class="sheet-actions">${remBtn}<button class="btn" id="s-close">Fermer</button></div>`);
+      <div class="sheet-tools">${remBtn}</div><div class="sheet-actions"><button class="btn" id="s-close">Fermer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
   }
   document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet("silent"); rerender(); });

@@ -942,3 +942,44 @@ body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la
   /* Dernière voie / dernier jour : on se déploie vers la gauche pour ne pas sortir de la grille. */
   .ev.grow-l[data-ev]:is(:hover, :focus-visible) { left: auto !important; right: 4px; }
 }
+
+/* ---- Passe lisibilité vue semaine ---- */
+.ev { z-index: 2; }
+/* En-tête du bloc : heure + badge (⚠ / EXAMEN) dans le flux, plus de chevauchement. */
+.ev .ev-hd { min-width: 0; }
+.ev .ev-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ev .ev-hd .ev-conf, .ev .ev-hd .ev-exam-tag { position: static; margin-left: auto; flex: none; }
+.ev .ev-tt { display: none; }
+/* Titre coupé proprement selon la hauteur du bloc. */
+.ev .ev-ti { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 2); overflow: hidden; overflow-wrap: anywhere; }
+.ev .ev-lo span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Créneau très court : le titre suit l'heure sur la même ligne. */
+.ev.is-tiny .ev-tt { display: block; flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev.is-tiny .ev-t { flex: none; }
+/* Conflit : liseré ambre à gauche au lieu d'un cadre complet. */
+.ev.is-conf { border-color: color-mix(in srgb, var(--c) 40%, transparent); box-shadow: 0 2px 6px rgba(0,0,0,.32), inset 3px 0 0 var(--warn); }
+@media (hover: hover) {
+  .ev[data-ev]:is(:hover, :focus-visible) .ev-ti { -webkit-line-clamp: unset; }
+  .ev[data-ev]:is(:hover, :focus-visible) .ev-lo span { white-space: normal; }
+  .ev.is-tiny[data-ev]:is(:hover, :focus-visible) .ev-tt { display: none; }
+}
+
+/* Longue plage importée (permanence…) : bande de fond, cliquable, sous les cours. */
+.ev-bg { --c: var(--ev-fl); position: absolute; left: 4px; right: 4px; z-index: 1; cursor: pointer; border-radius: 10px;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 9%, transparent) 0 8px, color-mix(in srgb, var(--c) 4%, transparent) 8px 16px);
+  border: 1px dashed color-mix(in srgb, var(--c) 38%, transparent); transition: background .16s, border-color .16s; }
+.ev-bg.src-ef { --c: var(--ev-ef); }
+.ev-bg.src-gc { --c: var(--ev-gc); }
+.ev-bg:hover { border-color: color-mix(in srgb, var(--c) 70%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.ev-bg-lab { position: sticky; top: 0; display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 11px; color: color-mix(in srgb, var(--c) 55%, var(--fg)); min-width: 0; }
+.ev-bg-lab svg { width: 11px; height: 11px; flex: none; }
+.ev-bg-lab .mono { font-family: var(--f-mono); font-weight: 600; flex: none; }
+.ev-bg-lab b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Fiche d'un événement : actions secondaires sur une ligne à part, boutons jamais coupés. */
+.sheet-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 16px; }
+.sheet-tools + .sheet-actions { margin-top: 10px; }
+.sheet-tools .btn { height: 42px; font-size: 14px; padding-inline: 12px; }
+.sheet-actions { flex-wrap: wrap; }
+.sheet-tools .btn, .sheet-actions .btn { white-space: nowrap; }
+.sheet-tools .btn svg { width: 16px; height: 16px; }
