@@ -13,6 +13,7 @@
 // Sans SUPABASE_SERVICE_KEY (ou avec DRY_RUN=1) : parse et affiche un résumé, n'écrit rien.
 
 import { parseEvents } from "./ics.mjs";
+import { planSync, inFilter } from "./sync-plan.mjs";
 
 const SOURCES = [
   { name: "freelance", url: process.env.OUTLOOK_FREELANCE_ICS_URL },
@@ -45,7 +46,10 @@ const isCanceled = (title) => /^\s*(annul[ée]e?s?\s*:|cancell?ed\s*:)/i.test(ti
 async function fetchICS(url) {
   const res = await fetch(url, { headers: { "User-Agent": "hub-planning-bot" } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.text();
+  const text = await res.text();
+  // Page d'erreur / de connexion servie en 200 : ce n'est pas un calendrier, on n'y touche pas.
+  if (!/BEGIN:VCALENDAR/.test(text)) throw new Error("réponse sans BEGIN:VCALENDAR (pas un flux ICS)");
+  return text;
 }
 
 // --- API Supabase (REST + admin), uniquement hors dry-run ---
@@ -129,24 +133,31 @@ async function run() {
 
     if (DRY_RUN) continue;
 
-    // Upsert (merge sur la clé primaire id)
-    if (rows.length) {
+    const existing = await supa(
+      `/rest/v1/calendar_events?source=eq.${src.name}&select=id,title,start_at,end_at,location`,
+      { method: "GET" },
+    ) || [];
+    const { upserts, deletes, skipPurge } = planSync(existing, rows);
+
+    // N'écrit que le nouveau / modifié : chaque ligne écrite réveille l'app (temps réel).
+    if (upserts.length) {
       await supa("/rest/v1/calendar_events", {
         method: "POST",
         headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify(rows),
+        body: JSON.stringify(upserts),
       });
     }
-    // Purge : supprime de cette source les events qui ne sont plus dans le flux
-    const keep = rows.map((r) => `"${r.id}"`).join(",");
-    const filter = keep
-      ? `source=eq.${src.name}&id=not.in.(${keep})`
-      : `source=eq.${src.name}`;
-    await supa(`/rest/v1/calendar_events?${filter}`, {
-      method: "DELETE",
-      headers: { Prefer: "return=minimal" },
-    });
-    console.log(`[${src.name}] synchronisé dans Supabase.`);
+    if (skipPurge) {
+      console.warn(`::warning::[${src.name}] flux vide alors que ${existing.length} événement(s) sont en base — purge annulée (lien ICS expiré ?).`);
+    }
+    // Purge ciblée, par paquets (URL courte).
+    for (let i = 0; i < deletes.length; i += 80) {
+      await supa(`/rest/v1/calendar_events?id=${inFilter(deletes.slice(i, i + 80))}`, {
+        method: "DELETE",
+        headers: { Prefer: "return=minimal" },
+      });
+    }
+    console.log(`[${src.name}] synchronisé : ${upserts.length} écrit(s), ${deletes.length} supprimé(s), ${rows.length - upserts.length} inchangé(s).`);
   }
 
   if (DRY_RUN) console.log("\n(DRY_RUN : rien écrit dans Supabase — pose SUPABASE_SERVICE_KEY pour activer l'écriture.)");

@@ -1609,7 +1609,23 @@ function subscribeRealtime() {
     };
     run();
   };
-  const onPerso = async () => { await refreshPersonal(); rerender(); };
+  // Un import écrit plusieurs lignes d'un coup -> une rafale d'événements temps réel.
+  // On les regroupe : un seul refreshPersonal (8 requêtes) + un seul rendu par rafale.
+  let persoTimer = null, persoBusy = false, persoAgain = false;
+  const onPerso = () => {
+    clearTimeout(persoTimer);
+    persoTimer = setTimeout(async function run() {
+      const wait = _quietUntil - Date.now();
+      if (wait > 0) { persoTimer = setTimeout(run, wait); return; }
+      if (persoBusy) { persoAgain = true; return; } // un rafraîchissement tourne déjà : on relancera après
+      persoBusy = true;
+      try { await refreshPersonal(); rerender(); }
+      finally {
+        persoBusy = false;
+        if (persoAgain) { persoAgain = false; onPerso(); }
+      }
+    }, 400);
+  };
   _sub = _store.sb.channel("hub-sync")
     .on(pg, { event: "*", schema: "public", table: "todos" }, onTodos)
     .on(pg, { event: "*", schema: "public", table: "custom_events" }, onPerso)
