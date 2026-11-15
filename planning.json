@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T00:47:56.762Z",
+  "generatedAt": "2026-11-15T10:26:14.673Z",
   "count": 108,
   "events": [
     {
@@ -1391,7 +1391,7 @@
       "location": "Efrei Bat. H H422",
       "rooms": [],
       "teacher": null,
-      "groups": "I3_SHC-EL11-2, I3_SHC-EL11-1, I3_SHC-EL11-3",
+      "groups": "I3_SHC-EL11-3, I3_SHC-EL11-1, I3_SHC-EL11-2",
       "module": "FH2HP-2627PSA01",
       "activity": "DE",
       "modalite": "Présentiel"
