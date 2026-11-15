@@ -1521,14 +1521,14 @@ function wireCalDrag(days) {
           top: el.style.top, h: el.style.getPropertyValue("--h"), label, text: label?.textContent,
         };
         try { el.setPointerCapture(e.pointerId); } catch {}
-        if (_drag.touch) _drag.timer = setTimeout(activate, DRAG_HOLD_MS);
+        if (_drag.touch && perso) _drag.timer = setTimeout(activate, DRAG_HOLD_MS); // tactile sur bloc non perso : rien, comme avant (tap + défilement)
         el.addEventListener("pointermove", onMove);
         el.addEventListener("pointerup", onUp);
         el.addEventListener("pointercancel", onCancel);
         el.addEventListener("lostpointercapture", onCancel);
       });
       // Une fois l'appui long validé, le doigt déplace le bloc au lieu de faire défiler la page.
-      el.addEventListener("touchmove", (e) => { if (_drag?.el === el && _drag.active) e.preventDefault(); }, { passive: false });
+      el.addEventListener("touchmove", (e) => { if (_drag?.el === el && _drag.perso && _drag.active) e.preventDefault(); }, { passive: false });
       // Pas de menu contextuel / loupe sur l'appui long.
       el.addEventListener("contextmenu", (e) => { if (_drag?.el === el && _drag.touch) e.preventDefault(); });
     });
@@ -1778,6 +1778,8 @@ async function refreshAfterAdd() {
 
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
+const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annulables
+const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
   if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; return; }
   const [c, o, t, s, p, g, r, x, ch] = await Promise.all([
@@ -1791,7 +1793,7 @@ async function refreshPersonal() {
     _store.sb.from("exam_flags").select("event_uid,is_exam"),
     _store.sb.from("cheat_meals").select("id,day,label").order("day", { ascending: false }),
   ]);
-  _store.custom = c.error ? [] : (c.data || []);
+  _store.custom = c.error ? [] : (c.data || []).filter((x) => !_customLeaving.has(String(x.id)));
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
   _store.teams = t.error ? [] : (t.data || []);
   _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
@@ -1799,7 +1801,7 @@ async function refreshPersonal() {
   _store.goals = g.error ? [] : (g.data || []);
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
-  _store.cheats = ch.error ? [] : (ch.data || []).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
+  _store.cheats = ch.error ? [] : (ch.data || []).filter((r) => !_cheatLeaving.has(String(r.id))).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
   updateBell();
   subscribeRealtime();
 }
@@ -2181,7 +2183,10 @@ function openEventForm(date, start, end, existing) {
     const dd = ov.querySelector("#ev-date").value;
     const start_at = parisToISO(dd, ov.querySelector("#ev-start").value);
     let end_at = parisToISO(dd, ov.querySelector("#ev-end").value);
-    if (new Date(end_at) <= new Date(start_at)) end_at = null;
+    if (new Date(end_at) <= new Date(start_at)) {
+      // « 00:00 » avant le début = minuit du lendemain ; autre fin invalide : pas de fin.
+      end_at = ov.querySelector("#ev-end").value === "00:00" ? parisToISO(addDays(dd, 1), "00:00") : null;
+    }
     const location = ov.querySelector("#ev-loc").value.trim() || null;
     if (editing) {
       closeSheet("silent");
@@ -2232,8 +2237,11 @@ function openCheatSheet() {
       const day = box.querySelector("#ch-date").value;
       if (!day || day > today) return;
       const label = box.querySelector("#ch-label").value.trim() || null;
+      const btn = e.submitter || box.querySelector("#ch-form [type=submit]");
+      if (btn?.disabled) return;
+      if (btn) btn.disabled = true;
       const { error } = await _store.sb.from("cheat_meals").insert({ day, label });
-      if (error) { oops("Ajout impossible : " + error.message + "\n(As-tu lancé le SQL cheat-meals.sql ?)"); return; }
+      if (error) { if (btn) btn.disabled = false; oops("Ajout impossible : " + error.message); return; }
       sfx("add");
       await refreshPersonal();
       box.innerHTML = body(); wire(); rerender();
@@ -2242,13 +2250,20 @@ function openCheatSheet() {
       const idx = _store.cheats.findIndex((c) => String(c.id) === b.dataset.del);
       if (idx < 0) return;
       const row = _store.cheats[idx];
+      const key = String(row.id);
       const redraw = () => { if (box.isConnected) { box.innerHTML = body(); wire(); } rerender(); };
       deferDelete({
         label: "Écart supprimé",
-        hide: () => { _store.cheats = _store.cheats.filter((c) => c !== row); redraw(); },
-        restore: () => { if (!_store.cheats.includes(row)) { _store.cheats.splice(Math.min(idx, _store.cheats.length), 0, row); redraw(); } },
+        hide: () => { _cheatLeaving.add(key); _store.cheats = _store.cheats.filter((c) => String(c.id) !== key); redraw(); },
+        restore: () => {
+          _cheatLeaving.delete(key);
+          if (!_store.cheats.some((c) => String(c.id) === key)) _store.cheats.splice(Math.min(idx, _store.cheats.length), 0, row);
+          redraw();
+        },
         commit: async () => {
           const { error } = await _store.sb.from("cheat_meals").delete().eq("id", row.id);
+          _cheatLeaving.delete(key);
+          redraw();
           if (error) { oops("Suppression impossible : " + error.message); return false; }
           return true;
         },
@@ -2298,12 +2313,19 @@ function openEventActions(ev) {
       const idx = _store.custom.findIndex((c) => String(c.id) === String(ev.cid));
       if (idx < 0) return;
       const row = _store.custom[idx];
+      const key = String(row.id);
       deferDelete({
         label: "Événement supprimé",
-        hide: () => { _store.custom = _store.custom.filter((c) => c !== row); rerender(); },
-        restore: () => { if (!_store.custom.includes(row)) { _store.custom.splice(Math.min(idx, _store.custom.length), 0, row); rerender(); } },
+        hide: () => { _customLeaving.add(key); _store.custom = _store.custom.filter((c) => String(c.id) !== key); rerender(); },
+        restore: () => {
+          _customLeaving.delete(key);
+          if (!_store.custom.some((c) => String(c.id) === key)) _store.custom.splice(Math.min(idx, _store.custom.length), 0, row);
+          rerender();
+        },
         commit: async () => {
           const { error } = await _store.sb.from("custom_events").delete().eq("id", row.id);
+          _customLeaving.delete(key);
+          rerender();
           if (error) { oops("Suppression impossible : " + error.message); return false; }
           return true;
         },
