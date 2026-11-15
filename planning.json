@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-15T10:26:14.673Z",
+  "generatedAt": "2026-11-15T12:16:59.710Z",
   "count": 108,
   "events": [
     {
@@ -695,19 +695,6 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "c-5b40e15db2bb57d3",
-      "start": "2026-12-11T12:40:00.000Z",
-      "end": "2026-12-11T16:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
       "uid": "c-b39acdbc26a0250d",
       "start": "2026-12-11T12:40:00.000Z",
       "end": "2026-12-11T16:10:00.000Z",
@@ -719,6 +706,19 @@
       "module": "RE-90-2627PSA01",
       "activity": "IE",
       "modalite": "Distanciel"
+    },
+    {
+      "uid": "c-5b40e15db2bb57d3",
+      "start": "2026-12-11T12:40:00.000Z",
+      "end": "2026-12-11T16:10:00.000Z",
+      "title": "Engineering Project",
+      "location": "Comodal",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3_PROMO",
+      "module": "FP2ENG-2627PSA01",
+      "activity": "TPA",
+      "modalite": "Comodal"
     },
     {
       "uid": "c-2ec40b7e5846ee27",
