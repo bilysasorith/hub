@@ -1,6 +1,9 @@
 // Hub — logique de l'app (planning en lecture seule + to-do synchronisée).
 // Vanilla JS, pas de framework. Supabase chargé à la demande depuis un CDN (version épinglée).
 
+import { cheatStats } from "./lib/cheat-stats.js";
+import { moveRange, resizeEnd } from "./lib/drag-math.js";
+
 const SUPABASE_VERSION = "2.47.10";
 const cfg = window.HUB_CONFIG || {};
 const SUPA_READY = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
@@ -817,6 +820,15 @@ function heroNext(evs, curIdx, nextIdx, N) {
     <div class="meta">${meta.join("")}</div>${art}</div>`;
 }
 
+// Ligne « écarts » : jours clean depuis le dernier écart (ouvre la fiche).
+function cheatLine() {
+  const st = cheatStats((_store?.cheats || []).map((c) => c.day), dayKey(now()));
+  const txt = st.clean === null
+    ? "Aucun écart noté"
+    : `<b>${st.clean}</b> ${st.clean > 1 ? "jours" : "jour"} clean · record ${st.record} j`;
+  return `<div class="ctx-row"><button class="ctx-cheat" data-cheat>${ico("i-target")}<span>${txt}</span></button></div>`;
+}
+
 // Carte contexte : badge école/entreprise, prochain trou libre, compteurs.
 function ctxCard(evs, key, N, signed) {
   const items = evs.map((e) => ({ s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60 }));
@@ -827,6 +839,7 @@ function ctxCard(evs, key, N, signed) {
   const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
   const trainRow = trainLine(trainingForDay(key), key, signed);
+  const cheatRow = signed ? cheatLine() : "";
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
   // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
   // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
@@ -838,6 +851,7 @@ function ctxCard(evs, key, N, signed) {
     ${free}
     ${topRow}
     ${trainRow}
+    ${cheatRow}
     ${stats.length ? `<div class="ctx-row ctx-stats">${stats.join("")}</div>` : ""}
   </div></div>`;
 }
@@ -976,6 +990,7 @@ function renderToday() {
   wireEventTaps(viewEl);
   wireCapture(viewEl);
   viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
+  viewEl.querySelector("[data-cheat]")?.addEventListener("click", openCheatSheet);
   viewEl.querySelector("#go-signin")?.addEventListener("click", () => document.querySelector('.tab[data-view="tasks"]')?.click());
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
@@ -1287,6 +1302,7 @@ function renderWeek() {
   wirePills();
   wireEventTaps(viewEl);
   wireCalAdd(days);
+  wireCalDrag(days);
   updateFab();
   weekSlide = 0;
   // Ajuste la hauteur des heures à la place réellement disponible (bandeau de conflit, outils…).
@@ -1317,6 +1333,204 @@ function wireCalAdd(days) {
       min = Math.max(top0, Math.round(min / 15) * 15);       // arrondi au quart d'heure
       const endMin = Math.min(24 * 60, min + 60);
       openEventForm(days[i].key, hhmm(min), hhmm(endMin));
+    });
+  });
+}
+
+// ---------- Glisser / redimensionner (vue Semaine) ----------
+// Seuls les événements perso bougent. Cours et agendas importés : toast « lecture seule ».
+const DRAG_MOUSE_PX = 4;    // souris : le geste démarre au-delà de 4 px
+const DRAG_HOLD_MS = 400;   // tactile : appui long avant de pouvoir glisser
+const DRAG_SLOP_PX = 8;     // tactile : bouger plus avant l'appui long = défilement, on abandonne
+const RO_COURSE = "Cours myefrei — non modifiable";
+const RO_IMPORTED = "Événement importé — modifie-le dans son agenda d'origine";
+const _dragBusy = new Set(); // id perso en cours d'écriture : gestes ignorés (survit au re-rendu)
+let _drag = null;            // geste en cours (un seul à la fois)
+let _swallowUntil = 0;       // avale le clic qui suit un vrai glisser (ni fiche, ni formulaire d'ajout)
+window.addEventListener("click", (e) => {
+  if (performance.now() > _swallowUntil) return;
+  _swallowUntil = 0;
+  e.preventDefault(); e.stopPropagation();
+}, true);
+const swallowClick = () => { _swallowUntil = performance.now() + 500; };
+// Filet de sécurité : si un re-rendu a détaché le bloc en plein geste, ses propres écouteurs ne
+// recevront plus rien (lostpointercapture part au document) -> on termine le geste ici.
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  document.addEventListener(type, (e) => {
+    if (_drag && e.pointerId === _drag.id && !_drag.el.isConnected) _drag.end();
+  }, true);
+}
+
+function wireCalDrag(days) {
+  // Nouveau rendu = nouveaux blocs : un geste en cours sur l'ancien DOM est abandonné proprement.
+  if (_drag) _drag.end();
+  if (!_store?.session) return;
+  const cal = viewEl.querySelector(".cal");
+  if (!cal) return;
+  const top0 = +cal.dataset.top0 || 0;
+  const PX = +cal.dataset.px || 56;
+  const cols = [...cal.querySelectorAll(".cal-col")];
+  if (!cols.length) return;
+  const gridEnd = top0 + cols[0].querySelectorAll(":scope > .cal-slot").length * 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const hhmm = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`;
+  const yTop = (min) => (min - top0) / 60 * PX;
+  const hFor = (dur) => Math.max(22, dur / 60 * PX - 4); // même formule que weekGrid
+
+  // Début/fin (minutes Paris) d'une ligne perso ; null si elle s'étale sur plusieurs jours.
+  const rangeOf = (row) => {
+    const s = parisMinutes(row.start_at);
+    if (!row.end_at) return { s, e: Math.min(1440, s + 60) };
+    const k0 = dayKey(new Date(row.start_at)), k1 = dayKey(new Date(row.end_at));
+    const e = parisMinutes(row.end_at);
+    if (k1 === k0) return e > s ? { s, e } : null;
+    if (k1 === addDays(k0, 1) && e === 0) return { s, e: 1440 }; // finit à minuit pile
+    return null;
+  };
+
+  const restore = (d) => {
+    d.el.style.top = d.top;
+    d.el.style.setProperty("--h", d.h);
+    d.el.style.translate = "";
+    if (d.label) d.label.textContent = d.text;
+  };
+
+  const end = () => {
+    const d = _drag; if (!d) return;
+    _drag = null;
+    clearTimeout(d.timer);
+    const el = d.el;
+    el.removeEventListener("pointermove", onMove);
+    el.removeEventListener("pointerup", onUp);
+    el.removeEventListener("pointercancel", onCancel);
+    el.removeEventListener("lostpointercapture", onCancel);
+    window.removeEventListener("keydown", onKey);
+    try { if (el.hasPointerCapture(d.id)) el.releasePointerCapture(d.id); } catch {}
+    el.classList.remove("is-dragging");
+    el.style.touchAction = "";
+    document.documentElement.classList.remove("is-ev-dragging", "is-ev-resizing");
+    return d;
+  };
+
+  const activate = () => {
+    const d = _drag; if (!d || d.active) return;
+    if (!d.el.isConnected) { end(); return; } // appui long arrivé après un re-rendu
+    d.active = true;
+    if (!d.perso) { toast(d.el.dataset.src === "course" ? RO_COURSE : RO_IMPORTED); return; } // une fois par geste
+    // Le doigt tient le bloc : on coupe le défilement pour la suite du geste seulement.
+    if (d.touch) { d.el.style.touchAction = "none"; try { navigator.vibrate?.(8); } catch {} }
+    d.rects = cols.map((c) => c.getBoundingClientRect());
+    d.el.classList.add("is-dragging");
+    document.documentElement.classList.add("is-ev-dragging");
+    if (d.mode === "resize") document.documentElement.classList.add("is-ev-resizing");
+    window.addEventListener("keydown", onKey);
+  };
+
+  // Aperçu live : position, hauteur, colonne et libellé horaire du bloc.
+  const preview = (x, dy) => {
+    const d = _drag;
+    const delta = dy / PX * 60;
+    let { s, e } = d.mode === "resize" ? resizeEnd(d.s0, d.e0, delta) : moveRange(d.s0, d.e0, delta);
+    // On reste dans la plage horaire affichée (le formulaire « Modifier » couvre le reste).
+    if (d.mode === "resize") e = Math.min(e, Math.max(gridEnd, s + 15));
+    else if (e - s <= gridEnd - top0) { const dur = e - s; s = Math.min(Math.max(s, top0), gridEnd - dur); e = s + dur; }
+    // Changement de jour : ordinateur seulement, colonne sous le pointeur (repérée par sa position
+    // horizontale, le bloc déplacé étant lui-même sous le pointeur). Mobile : même jour.
+    let ci = d.ci;
+    if (d.mode === "move" && desktop()) {
+      const R = d.rects;
+      ci = R.findIndex((r) => x >= r.left && x < r.right);
+      if (ci < 0) ci = x < R[0].left ? 0 : R.length - 1;
+    }
+    d.cur = { ci, s, e };
+    d.el.style.top = `${yTop(s)}px`;
+    d.el.style.setProperty("--h", `${hFor(e - s)}px`);
+    d.el.style.translate = ci === d.ci ? "" : `${d.rects[ci].left - d.rects[d.ci].left}px 0`;
+    if (d.label) d.label.textContent = `${hhmm(s)}–${hhmm(e)}`;
+  };
+
+  function onMove(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id || d.cancelled) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.active) {
+      if (d.touch) { if (Math.hypot(dx, dy) > DRAG_SLOP_PX) end(); return; } // ça défile : on laisse faire
+      if (Math.hypot(dx, dy) < DRAG_MOUSE_PX) return;
+      activate();
+    }
+    if (!d.perso) return;
+    e.preventDefault();
+    preview(e.clientX, dy);
+  }
+
+  function onUp(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id) return;
+    end();
+    if (!d.active) return;                                  // simple clic : la fiche s'ouvre normalement
+    if (d.cancelled || !d.perso) { swallowClick(); return; } // Échap, ou bloc en lecture seule
+    const c = d.cur;
+    if (!c || (c.ci === d.ci && c.s === d.s0 && c.e === d.e0)) { restore(d); return; } // rien n'a changé
+    swallowClick();
+    const key = days[c.ci].key;
+    const start_at = parisToISO(key, hhmm(c.s));
+    // 1440 min (minuit) n'est pas une heure valide pour parisToISO : on écrit 00:00 le lendemain.
+    const end_at = c.e >= 1440 ? parisToISO(addDays(key, 1), "00:00") : parisToISO(key, hhmm(c.e));
+    const cid = d.el.dataset.cid;
+    _dragBusy.add(cid);
+    sfx("toggle");
+    updateCustomEvent(cid, { start_at, end_at }, { undoLabel: d.mode === "resize" ? "Durée modifiée" : "Déplacé" })
+      .then((ok) => { if (!ok && d.el.isConnected) restore(d); })
+      .finally(() => _dragBusy.delete(cid));
+  }
+
+  function onCancel(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id) return;
+    end();
+    restore(d);
+  }
+
+  // Échap pendant le geste : le bloc revient à sa place ; le relâchement qui suit ne fait rien.
+  function onKey(e) {
+    const d = _drag;
+    if (e.key !== "Escape" || !d?.active || d.cancelled) return;
+    e.preventDefault();
+    d.cancelled = true;
+    restore(d);
+    d.el.classList.remove("is-dragging");
+    document.documentElement.classList.remove("is-ev-dragging", "is-ev-resizing");
+  }
+
+  cols.forEach((col, ci) => {
+    col.querySelectorAll("[data-ev]").forEach((el) => {
+      el.addEventListener("pointerdown", (e) => {
+        if (_drag && !_drag.el.isConnected) _drag.end(); // bloc remplacé par un re-rendu en plein geste
+        if (_drag || !e.isPrimary) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const perso = el.classList.contains("ev") && el.dataset.src === "perso";
+        let r = null;
+        if (perso) {
+          if (_dragBusy.has(el.dataset.cid)) return;             // écriture précédente pas finie
+          const row = (_store.custom || []).find((c) => String(c.id) === el.dataset.cid);
+          r = row && rangeOf(row);
+          if (!r) return;                                        // introuvable / sur plusieurs jours : clic seul
+        }
+        const label = el.querySelector(".ev-t");
+        _drag = {
+          el, ci, id: e.pointerId, touch: e.pointerType !== "mouse", x0: e.clientX, y0: e.clientY,
+          perso, s0: r?.s, e0: r?.e, mode: perso && e.target.closest(".ev-rs") ? "resize" : "move",
+          active: false, cancelled: false, timer: 0, cur: null, rects: null, end,
+          top: el.style.top, h: el.style.getPropertyValue("--h"), label, text: label?.textContent,
+        };
+        try { el.setPointerCapture(e.pointerId); } catch {}
+        if (_drag.touch && perso) _drag.timer = setTimeout(activate, DRAG_HOLD_MS); // tactile sur bloc non perso : rien, comme avant (tap + défilement)
+        el.addEventListener("pointermove", onMove);
+        el.addEventListener("pointerup", onUp);
+        el.addEventListener("pointercancel", onCancel);
+        el.addEventListener("lostpointercapture", onCancel);
+      });
+      // Une fois l'appui long validé, le doigt déplace le bloc au lieu de faire défiler la page.
+      el.addEventListener("touchmove", (e) => { if (_drag?.el === el && _drag.perso && _drag.active) e.preventDefault(); }, { passive: false });
+      // Pas de menu contextuel / loupe sur l'appui long.
+      el.addEventListener("contextmenu", (e) => { if (_drag?.el === el && _drag.touch) e.preventDefault(); });
     });
   });
 }
@@ -1398,6 +1612,7 @@ function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
         <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span><span class="ev-tt">${esc(ev.title)}</span>${confIc}</div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
+        ${ev.source === "perso" && _store?.session ? `<div class="ev-rs" aria-hidden="true"></div>` : ""}
       </div>`;
     }).join("");
     const now = showNow ? `<div class="cal-now" style="top:${yTop(nowMin)}px"><span class="cal-now-ln"></span><span class="cal-now-dot"></span><span class="cal-now-lab mono">${fmtTime.format(new Date())}</span></div>` : "";
@@ -1521,13 +1736,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map() };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [] };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -1563,9 +1778,11 @@ async function refreshAfterAdd() {
 
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
+const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annulables
+const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); return; }
-  const [c, o, t, s, p, g, r, x] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; return; }
+  const [c, o, t, s, p, g, r, x, ch] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -1574,8 +1791,9 @@ async function refreshPersonal() {
     _store.sb.from("goals").select("*").order("created_at", { ascending: true }),
     _store.sb.from("event_reminders").select("event_key"),
     _store.sb.from("exam_flags").select("event_uid,is_exam"),
+    _store.sb.from("cheat_meals").select("id,day,label").order("day", { ascending: false }),
   ]);
-  _store.custom = c.error ? [] : (c.data || []);
+  _store.custom = c.error ? [] : (c.data || []).filter((x) => !_customLeaving.has(String(x.id)));
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
   _store.teams = t.error ? [] : (t.data || []);
   _store.skips = s.error ? new Set() : new Set((s.data || []).map((r) => String(r.day).slice(0, 10)));
@@ -1583,6 +1801,7 @@ async function refreshPersonal() {
   _store.goals = g.error ? [] : (g.data || []);
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
+  _store.cheats = ch.error ? [] : (ch.data || []).filter((r) => !_cheatLeaving.has(String(r.id))).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
   updateBell();
   subscribeRealtime();
 }
@@ -1751,6 +1970,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "goals" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "event_reminders" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "exam_flags" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "cheat_meals" }, onPerso)
     .subscribe();
 }
 
@@ -1903,13 +2123,41 @@ function evWhen(ev) {
   return `${cap(fmtWeekday.format(s))} · ${range}`;
 }
 
-function openEventForm(date, start, end) {
+// Met à jour un événement perso (optimiste) ; `undoLabel` ajoute un toast « Annuler ».
+// Renvoie true si l'état voulu est en place (ou déjà en place), false si l'écriture a échoué.
+async function updateCustomEvent(id, patch, { undoLabel } = {}) {
+  const row = (_store.custom || []).find((c) => String(c.id) === String(id));
+  if (!row) return false;
+  const keys = Object.keys(patch);
+  const same = (a, b) => {
+    const ta = new Date(a).getTime(), tb = new Date(b).getTime();
+    if (a != null && b != null && !Number.isNaN(ta) && !Number.isNaN(tb)) return ta === tb;
+    return (a ?? null) === (b ?? null);
+  };
+  if (keys.every((k) => (k === "start_at" || k === "end_at") ? same(row[k], patch[k]) : (row[k] ?? null) === (patch[k] ?? null))) return true;
+  const prev = {};
+  for (const k of keys) prev[k] = row[k];
+  Object.assign(row, patch);
+  rerender();
+  const { error } = await _store.sb.from("custom_events").update(patch).eq("id", id);
+  if (error) {
+    Object.assign(row, prev);
+    rerender();
+    oops("Modification impossible : " + error.message);
+    return false;
+  }
+  if (undoLabel) toast(undoLabel, { action: "Annuler", ms: 5000, onAction: () => updateCustomEvent(id, prev) });
+  return true;
+}
+
+function openEventForm(date, start, end, existing) {
   if (!_store?.session) return;
-  const d = date || dayKey(new Date());
-  const st = start || "09:00";
-  const en = end || "10:00";
+  const editing = !!existing;
+  const d = editing ? dayKey(new Date(existing.start)) : (date || dayKey(new Date()));
+  const st = editing ? fmtTime.format(new Date(existing.start)) : (start || "09:00");
+  const en = editing ? fmtTime.format(new Date(existing.end || existing.start)) : (end || "10:00");
   const ov = openSheet(`
-    <h3 class="sheet-h">Nouvel événement</h3>
+    <h3 class="sheet-h">${editing ? "Modifier" : "Nouvel événement"}</h3>
     <form id="ev-form" class="sheet-form">
       <label>Titre<input id="ev-title" required maxlength="120" autocomplete="off" placeholder="Ex. RDV, révisions, sport…"></label>
       <label>Jour<input id="ev-date" type="date" value="${d}" required></label>
@@ -1920,9 +2168,13 @@ function openEventForm(date, start, end) {
       <label>Lieu <span class="opt">(optionnel)</span><input id="ev-loc" maxlength="120" autocomplete="off"></label>
       <div class="sheet-actions">
         <button type="button" class="btn btn-ghost" id="ev-cancel">Annuler</button>
-        <button type="submit" class="btn">Ajouter</button>
+        <button type="submit" class="btn">${editing ? "Enregistrer" : "Ajouter"}</button>
       </div>
     </form>`);
+  if (editing) {
+    ov.querySelector("#ev-title").value = existing.title || "";
+    ov.querySelector("#ev-loc").value = existing.location || "";
+  }
   ov.querySelector("#ev-cancel").onclick = closeSheet;
   ov.querySelector("#ev-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1931,14 +2183,94 @@ function openEventForm(date, start, end) {
     const dd = ov.querySelector("#ev-date").value;
     const start_at = parisToISO(dd, ov.querySelector("#ev-start").value);
     let end_at = parisToISO(dd, ov.querySelector("#ev-end").value);
-    if (new Date(end_at) <= new Date(start_at)) end_at = null;
+    if (new Date(end_at) <= new Date(start_at)) {
+      // « 00:00 » avant le début = minuit du lendemain ; autre fin invalide : pas de fin.
+      end_at = ov.querySelector("#ev-end").value === "00:00" ? parisToISO(addDays(dd, 1), "00:00") : null;
+    }
     const location = ov.querySelector("#ev-loc").value.trim() || null;
+    if (editing) {
+      closeSheet("silent");
+      sfx("toggle");
+      await updateCustomEvent(existing.cid, { title, start_at, end_at, location }, { undoLabel: "Événement modifié" });
+      return;
+    }
     const { error } = await _store.sb.from("custom_events").insert({ title, start_at, end_at, location });
     if (error) { oops("Ajout impossible : " + error.message); return; }
     sfx("add");
     closeSheet("silent"); await refreshPersonal(); rerender();
   });
   setTimeout(() => ov.querySelector("#ev-title")?.focus(), 50);
+}
+
+// Fiche « écarts » : série en cours, record, historique, ajout et suppression.
+function openCheatSheet() {
+  if (!_store?.session) return;
+  const today = dayKey(now());
+  const fmtShort = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+  const jours = (n) => `${n} jour${n > 1 ? "s" : ""}`;
+  const body = () => {
+    const list = _store.cheats || [];
+    const st = cheatStats(list.map((c) => c.day), today);
+    const big = st.clean === null
+      ? `<div class="cheat-big"><span>Aucun écart noté</span></div>`
+      : `<div class="cheat-big"><b>${st.clean}</b><span>${st.clean > 1 ? "jours" : "jour"} clean</span></div>
+         <p class="sheet-note">Record : ${jours(st.record)} · ${st.yearCount} écart${st.yearCount > 1 ? "s" : ""} en ${today.slice(0, 4)}</p>`;
+    const rows = list.length
+      ? `<ul class="cheat-list">${list.map((c) => `<li><span class="cheat-d">${esc(fmtShort.format(new Date(c.day + "T12:00:00Z")))}</span><span class="cheat-l">${c.label ? esc(c.label) : "—"}</span><button type="button" class="cheat-x" data-del="${esc(String(c.id))}" aria-label="Supprimer cet écart">×</button></li>`).join("")}</ul>`
+      : "";
+    return `${big}${rows}
+      <form id="ch-form" class="sheet-form">
+        <label>Quoi <span class="opt">(optionnel)</span><input id="ch-label" maxlength="80" autocomplete="off" placeholder="Ex. pizza, glace…"></label>
+        <label>Jour<input id="ch-date" type="date" value="${today}" max="${today}" required></label>
+        <div class="sheet-actions">
+          <button type="button" class="btn btn-ghost" id="ch-close">Fermer</button>
+          <button type="submit" class="btn">J'ai craqué</button>
+        </div>
+      </form>`;
+  };
+  const ov = openSheet(`<h3 class="sheet-h">Écarts</h3><div id="ch-body">${body()}</div>`);
+  const box = ov.querySelector("#ch-body");
+  const wire = () => {
+    box.querySelector("#ch-close").onclick = closeSheet;
+    box.querySelector("#ch-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const day = box.querySelector("#ch-date").value;
+      if (!day || day > today) return;
+      const label = box.querySelector("#ch-label").value.trim() || null;
+      const btn = e.submitter || box.querySelector("#ch-form [type=submit]");
+      if (btn?.disabled) return;
+      if (btn) btn.disabled = true;
+      const { error } = await _store.sb.from("cheat_meals").insert({ day, label });
+      if (error) { if (btn) btn.disabled = false; oops("Ajout impossible : " + error.message); return; }
+      sfx("add");
+      await refreshPersonal();
+      box.innerHTML = body(); wire(); rerender();
+    });
+    box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
+      const idx = _store.cheats.findIndex((c) => String(c.id) === b.dataset.del);
+      if (idx < 0) return;
+      const row = _store.cheats[idx];
+      const key = String(row.id);
+      const redraw = () => { if (box.isConnected) { box.innerHTML = body(); wire(); } rerender(); };
+      deferDelete({
+        label: "Écart supprimé",
+        hide: () => { _cheatLeaving.add(key); _store.cheats = _store.cheats.filter((c) => String(c.id) !== key); redraw(); },
+        restore: () => {
+          _cheatLeaving.delete(key);
+          if (!_store.cheats.some((c) => String(c.id) === key)) _store.cheats.splice(Math.min(idx, _store.cheats.length), 0, row);
+          redraw();
+        },
+        commit: async () => {
+          const { error } = await _store.sb.from("cheat_meals").delete().eq("id", row.id);
+          _cheatLeaving.delete(key);
+          redraw();
+          if (error) { oops("Suppression impossible : " + error.message); return false; }
+          return true;
+        },
+      });
+    }));
+  };
+  wire();
 }
 
 // Même jour, mois suivant (31 jan. -> 28/29 fév.) — clé AAAA-MM-JJ.
@@ -1972,19 +2304,28 @@ function openEventActions(ev) {
   if (ev.source === "perso") {
     const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${rebookBtn}</div><div class="sheet-actions">
       <button class="btn btn-ghost" id="s-close">Fermer</button>
+      <button class="btn btn-ghost" id="s-edit">Modifier</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
+    ov.querySelector("#s-edit").onclick = () => { closeSheet("silent"); openEventForm(null, null, null, ev); };
     ov.querySelector("#s-del").onclick = () => {
       closeSheet("silent");
       const idx = _store.custom.findIndex((c) => String(c.id) === String(ev.cid));
       if (idx < 0) return;
       const row = _store.custom[idx];
+      const key = String(row.id);
       deferDelete({
         label: "Événement supprimé",
-        hide: () => { _store.custom = _store.custom.filter((c) => c !== row); rerender(); },
-        restore: () => { if (!_store.custom.includes(row)) { _store.custom.splice(Math.min(idx, _store.custom.length), 0, row); rerender(); } },
+        hide: () => { _customLeaving.add(key); _store.custom = _store.custom.filter((c) => String(c.id) !== key); rerender(); },
+        restore: () => {
+          _customLeaving.delete(key);
+          if (!_store.custom.some((c) => String(c.id) === key)) _store.custom.splice(Math.min(idx, _store.custom.length), 0, row);
+          rerender();
+        },
         commit: async () => {
           const { error } = await _store.sb.from("custom_events").delete().eq("id", row.id);
+          _customLeaving.delete(key);
+          rerender();
           if (error) { oops("Suppression impossible : " + error.message); return false; }
           return true;
         },
