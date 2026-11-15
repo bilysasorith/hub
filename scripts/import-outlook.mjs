@@ -29,9 +29,10 @@ const SUPA_URL = process.env.SUPABASE_URL || "https://dcauisdxvbmcnerjklxm.supab
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY_RUN = process.env.DRY_RUN === "1" || !SERVICE_KEY;
 
-// Fenêtre : d'hier jusqu'à +120 jours (on n'importe pas tout l'historique).
+// Fenêtre : de -60 jours jusqu'à +120 jours (on n'importe pas tout l'historique).
+// Le passé récent est gardé : la purge ci-dessous efface tout ce qui sort de la fenêtre.
 const now = Date.now();
-const FROM = now - 24 * 3600 * 1000;
+const FROM = now - 60 * 24 * 3600 * 1000;
 const TO = now + 120 * 24 * 3600 * 1000;
 
 function slug(s) {
