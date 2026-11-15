@@ -2,6 +2,7 @@
 // Vanilla JS, pas de framework. Supabase chargé à la demande depuis un CDN (version épinglée).
 
 import { cheatStats } from "./lib/cheat-stats.js";
+import { moveRange, resizeEnd } from "./lib/drag-math.js";
 
 const SUPABASE_VERSION = "2.47.10";
 const cfg = window.HUB_CONFIG || {};
@@ -1301,6 +1302,7 @@ function renderWeek() {
   wirePills();
   wireEventTaps(viewEl);
   wireCalAdd(days);
+  wireCalDrag(days);
   updateFab();
   weekSlide = 0;
   // Ajuste la hauteur des heures à la place réellement disponible (bandeau de conflit, outils…).
@@ -1331,6 +1333,194 @@ function wireCalAdd(days) {
       min = Math.max(top0, Math.round(min / 15) * 15);       // arrondi au quart d'heure
       const endMin = Math.min(24 * 60, min + 60);
       openEventForm(days[i].key, hhmm(min), hhmm(endMin));
+    });
+  });
+}
+
+// ---------- Glisser / redimensionner (vue Semaine) ----------
+// Seuls les événements perso bougent. Cours et agendas importés : toast « lecture seule ».
+const DRAG_MOUSE_PX = 4;    // souris : le geste démarre au-delà de 4 px
+const DRAG_HOLD_MS = 400;   // tactile : appui long avant de pouvoir glisser
+const DRAG_SLOP_PX = 8;     // tactile : bouger plus avant l'appui long = défilement, on abandonne
+const RO_COURSE = "Cours myefrei — non modifiable";
+const RO_IMPORTED = "Événement importé — modifie-le dans son agenda d'origine";
+const _dragBusy = new Set(); // id perso en cours d'écriture : gestes ignorés (survit au re-rendu)
+let _drag = null;            // geste en cours (un seul à la fois)
+let _swallowUntil = 0;       // avale le clic qui suit un vrai glisser (ni fiche, ni formulaire d'ajout)
+window.addEventListener("click", (e) => {
+  if (performance.now() > _swallowUntil) return;
+  _swallowUntil = 0;
+  e.preventDefault(); e.stopPropagation();
+}, true);
+const swallowClick = () => { _swallowUntil = performance.now() + 500; };
+
+function wireCalDrag(days) {
+  if (!_store?.session) return;
+  const cal = viewEl.querySelector(".cal");
+  if (!cal) return;
+  const top0 = +cal.dataset.top0 || 0;
+  const PX = +cal.dataset.px || 56;
+  const cols = [...cal.querySelectorAll(".cal-col")];
+  if (!cols.length) return;
+  const gridEnd = top0 + cols[0].querySelectorAll(":scope > .cal-slot").length * 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const hhmm = (min) => `${pad(Math.floor(min / 60) % 24)}:${pad(min % 60)}`;
+  const yTop = (min) => (min - top0) / 60 * PX;
+  const hFor = (dur) => Math.max(22, dur / 60 * PX - 4); // même formule que weekGrid
+
+  // Début/fin (minutes Paris) d'une ligne perso ; null si elle s'étale sur plusieurs jours.
+  const rangeOf = (row) => {
+    const s = parisMinutes(row.start_at);
+    if (!row.end_at) return { s, e: Math.min(1440, s + 60) };
+    const k0 = dayKey(new Date(row.start_at)), k1 = dayKey(new Date(row.end_at));
+    const e = parisMinutes(row.end_at);
+    if (k1 === k0) return e > s ? { s, e } : null;
+    if (k1 === addDays(k0, 1) && e === 0) return { s, e: 1440 }; // finit à minuit pile
+    return null;
+  };
+
+  const restore = (d) => {
+    d.el.style.top = d.top;
+    d.el.style.setProperty("--h", d.h);
+    d.el.style.translate = "";
+    if (d.label) d.label.textContent = d.text;
+  };
+
+  const end = () => {
+    const d = _drag; if (!d) return;
+    _drag = null;
+    clearTimeout(d.timer);
+    const el = d.el;
+    el.removeEventListener("pointermove", onMove);
+    el.removeEventListener("pointerup", onUp);
+    el.removeEventListener("pointercancel", onCancel);
+    el.removeEventListener("lostpointercapture", onCancel);
+    window.removeEventListener("keydown", onKey);
+    try { if (el.hasPointerCapture(d.id)) el.releasePointerCapture(d.id); } catch {}
+    el.classList.remove("is-dragging");
+    el.style.touchAction = "";
+    document.documentElement.classList.remove("is-ev-dragging", "is-ev-resizing");
+    return d;
+  };
+
+  const activate = () => {
+    const d = _drag; if (!d || d.active) return;
+    d.active = true;
+    if (!d.perso) { toast(d.el.dataset.src === "course" ? RO_COURSE : RO_IMPORTED); return; } // une fois par geste
+    // Le doigt tient le bloc : on coupe le défilement pour la suite du geste seulement.
+    if (d.touch) { d.el.style.touchAction = "none"; try { navigator.vibrate?.(8); } catch {} }
+    d.rects = cols.map((c) => c.getBoundingClientRect());
+    d.el.classList.add("is-dragging");
+    document.documentElement.classList.add("is-ev-dragging");
+    if (d.mode === "resize") document.documentElement.classList.add("is-ev-resizing");
+    window.addEventListener("keydown", onKey);
+  };
+
+  // Aperçu live : position, hauteur, colonne et libellé horaire du bloc.
+  const preview = (x, dy) => {
+    const d = _drag;
+    const delta = dy / PX * 60;
+    let { s, e } = d.mode === "resize" ? resizeEnd(d.s0, d.e0, delta) : moveRange(d.s0, d.e0, delta);
+    // On reste dans la plage horaire affichée (le formulaire « Modifier » couvre le reste).
+    if (d.mode === "resize") e = Math.min(e, Math.max(gridEnd, s + 15));
+    else if (e - s <= gridEnd - top0) { const dur = e - s; s = Math.min(Math.max(s, top0), gridEnd - dur); e = s + dur; }
+    // Changement de jour : ordinateur seulement, colonne sous le pointeur (repérée par sa position
+    // horizontale, le bloc déplacé étant lui-même sous le pointeur). Mobile : même jour.
+    let ci = d.ci;
+    if (d.mode === "move" && desktop()) {
+      const R = d.rects;
+      ci = R.findIndex((r) => x >= r.left && x < r.right);
+      if (ci < 0) ci = x < R[0].left ? 0 : R.length - 1;
+    }
+    d.cur = { ci, s, e };
+    d.el.style.top = `${yTop(s)}px`;
+    d.el.style.setProperty("--h", `${hFor(e - s)}px`);
+    d.el.style.translate = ci === d.ci ? "" : `${d.rects[ci].left - d.rects[d.ci].left}px 0`;
+    if (d.label) d.label.textContent = `${hhmm(s)}–${hhmm(e)}`;
+  };
+
+  function onMove(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id || d.cancelled) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.active) {
+      if (d.touch) { if (Math.hypot(dx, dy) > DRAG_SLOP_PX) end(); return; } // ça défile : on laisse faire
+      if (Math.hypot(dx, dy) < DRAG_MOUSE_PX) return;
+      activate();
+    }
+    if (!d.perso) return;
+    e.preventDefault();
+    preview(e.clientX, dy);
+  }
+
+  function onUp(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id) return;
+    end();
+    if (!d.active) return;                                  // simple clic : la fiche s'ouvre normalement
+    if (d.cancelled || !d.perso) { swallowClick(); return; } // Échap, ou bloc en lecture seule
+    const c = d.cur;
+    if (!c || (c.ci === d.ci && c.s === d.s0 && c.e === d.e0)) { restore(d); return; } // rien n'a changé
+    swallowClick();
+    const key = days[c.ci].key;
+    const start_at = parisToISO(key, hhmm(c.s));
+    // 1440 min (minuit) n'est pas une heure valide pour parisToISO : on écrit 00:00 le lendemain.
+    const end_at = c.e >= 1440 ? parisToISO(addDays(key, 1), "00:00") : parisToISO(key, hhmm(c.e));
+    const cid = d.el.dataset.cid;
+    _dragBusy.add(cid);
+    sfx("toggle");
+    updateCustomEvent(cid, { start_at, end_at }, { undoLabel: d.mode === "resize" ? "Durée modifiée" : "Déplacé" })
+      .then((ok) => { if (!ok && d.el.isConnected) restore(d); })
+      .finally(() => _dragBusy.delete(cid));
+  }
+
+  function onCancel(e) {
+    const d = _drag; if (!d || e.pointerId !== d.id) return;
+    end();
+    restore(d);
+  }
+
+  // Échap pendant le geste : le bloc revient à sa place ; le relâchement qui suit ne fait rien.
+  function onKey(e) {
+    const d = _drag;
+    if (e.key !== "Escape" || !d?.active || d.cancelled) return;
+    e.preventDefault();
+    d.cancelled = true;
+    restore(d);
+    d.el.classList.remove("is-dragging");
+    document.documentElement.classList.remove("is-ev-dragging", "is-ev-resizing");
+  }
+
+  cols.forEach((col, ci) => {
+    col.querySelectorAll("[data-ev]").forEach((el) => {
+      el.addEventListener("pointerdown", (e) => {
+        if (_drag && !_drag.el.isConnected) _drag.end(); // bloc remplacé par un re-rendu en plein geste
+        if (_drag || !e.isPrimary) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const perso = el.classList.contains("ev") && el.dataset.src === "perso";
+        let r = null;
+        if (perso) {
+          if (_dragBusy.has(el.dataset.cid)) return;             // écriture précédente pas finie
+          const row = (_store.custom || []).find((c) => String(c.id) === el.dataset.cid);
+          r = row && rangeOf(row);
+          if (!r) return;                                        // introuvable / sur plusieurs jours : clic seul
+        }
+        const label = el.querySelector(".ev-t");
+        _drag = {
+          el, ci, id: e.pointerId, touch: e.pointerType !== "mouse", x0: e.clientX, y0: e.clientY,
+          perso, s0: r?.s, e0: r?.e, mode: perso && e.target.closest(".ev-rs") ? "resize" : "move",
+          active: false, cancelled: false, timer: 0, cur: null, rects: null, end,
+          top: el.style.top, h: el.style.getPropertyValue("--h"), label, text: label?.textContent,
+        };
+        try { el.setPointerCapture(e.pointerId); } catch {}
+        if (_drag.touch) _drag.timer = setTimeout(activate, DRAG_HOLD_MS);
+        el.addEventListener("pointermove", onMove);
+        el.addEventListener("pointerup", onUp);
+        el.addEventListener("pointercancel", onCancel);
+        el.addEventListener("lostpointercapture", onCancel);
+      });
+      // Une fois l'appui long validé, le doigt déplace le bloc au lieu de faire défiler la page.
+      el.addEventListener("touchmove", (e) => { if (_drag?.el === el && _drag.active) e.preventDefault(); }, { passive: false });
+      // Pas de menu contextuel / loupe sur l'appui long.
+      el.addEventListener("contextmenu", (e) => { if (_drag?.el === el && _drag.touch) e.preventDefault(); });
     });
   });
 }
@@ -1412,6 +1602,7 @@ function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
         <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span><span class="ev-tt">${esc(ev.title)}</span>${confIc}</div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
+        ${ev.source === "perso" && _store?.session ? `<div class="ev-rs" aria-hidden="true"></div>` : ""}
       </div>`;
     }).join("");
     const now = showNow ? `<div class="cal-now" style="top:${yTop(nowMin)}px"><span class="cal-now-ln"></span><span class="cal-now-dot"></span><span class="cal-now-lab mono">${fmtTime.format(new Date())}</span></div>` : "";

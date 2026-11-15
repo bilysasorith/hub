@@ -1096,3 +1096,23 @@ body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la
 .cheat-l { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .cheat-x { flex: none; width: 32px; height: 32px; border-radius: 99px; font-size: 20px; line-height: 1; color: var(--muted); }
 .cheat-x:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+
+/* === Glisser / redimensionner les événements perso (vue Semaine) === */
+.cal .ev.src-perso { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* Poignée de durée : bande de 8 px au bas du bloc, trait discret au centre. */
+.ev .ev-rs { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: ns-resize; z-index: 1; }
+.ev .ev-rs::after {
+  content: ""; position: absolute; left: 50%; bottom: 2px; width: 22px; height: 3px; margin-left: -11px; border-radius: 99px;
+  background: color-mix(in srgb, var(--c) 70%, var(--fg)); opacity: 0; transition: opacity .15s;
+}
+@media (hover: hover) { .ev[data-ev]:hover .ev-rs::after { opacity: .7; } }
+@media (hover: none) { .ev .ev-rs::after { opacity: .35; } }
+/* Bloc saisi : relevé, sans transition, hauteur exacte (le déploiement au survol ne s'applique pas). */
+.cal .ev.is-dragging[data-ev] {
+  height: var(--h) !important; z-index: 20; cursor: grabbing; transition: none;
+  border-color: color-mix(in srgb, var(--c) 75%, transparent);
+  box-shadow: var(--shadow), 0 0 0 1.5px color-mix(in srgb, var(--c) 45%, transparent);
+}
+html.is-ev-dragging, html.is-ev-dragging * { cursor: grabbing !important; -webkit-user-select: none; user-select: none; }
+html.is-ev-resizing, html.is-ev-resizing * { cursor: ns-resize !important; }
+@media (prefers-reduced-motion: reduce) { .ev .ev-rs::after { transition: none; } }
