@@ -1353,8 +1353,17 @@ window.addEventListener("click", (e) => {
   e.preventDefault(); e.stopPropagation();
 }, true);
 const swallowClick = () => { _swallowUntil = performance.now() + 500; };
+// Filet de sécurité : si un re-rendu a détaché le bloc en plein geste, ses propres écouteurs ne
+// recevront plus rien (lostpointercapture part au document) -> on termine le geste ici.
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  document.addEventListener(type, (e) => {
+    if (_drag && e.pointerId === _drag.id && !_drag.el.isConnected) _drag.end();
+  }, true);
+}
 
 function wireCalDrag(days) {
+  // Nouveau rendu = nouveaux blocs : un geste en cours sur l'ancien DOM est abandonné proprement.
+  if (_drag) _drag.end();
   if (!_store?.session) return;
   const cal = viewEl.querySelector(".cal");
   if (!cal) return;
@@ -1405,6 +1414,7 @@ function wireCalDrag(days) {
 
   const activate = () => {
     const d = _drag; if (!d || d.active) return;
+    if (!d.el.isConnected) { end(); return; } // appui long arrivé après un re-rendu
     d.active = true;
     if (!d.perso) { toast(d.el.dataset.src === "course" ? RO_COURSE : RO_IMPORTED); return; } // une fois par geste
     // Le doigt tient le bloc : on coupe le défilement pour la suite du geste seulement.
