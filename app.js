@@ -12,6 +12,8 @@ const fmtDayLabel = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "l
 const fmtWeekday = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
 const fmtWdShort = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short" });
 const fmtDayNum = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, day: "numeric" });
+const fmtWdLong = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "long" });
+const fmtMonthYear = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, month: "long", year: "numeric" });
 const fmtHM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false });
 const fmtRange = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, day: "numeric", month: "short" });
 // Minutes depuis minuit (heure de Paris) pour positionner dans la grille
@@ -83,8 +85,73 @@ function sfx(name) {
 }
 // Les navigateurs n'autorisent le son qu'après un geste : on réveille le contexte au premier.
 for (const evt of ["pointerdown", "keydown"]) window.addEventListener(evt, () => audio(), { passive: true });
-// Erreur : petit son grave, puis le message (laissé le temps au son de partir).
-function oops(msg) { sfx("error"); setTimeout(() => alert(msg), 140); }
+// ---------- Toasts (messages en bas d'écran, non bloquants) ----------
+// toast(texte, { action: "Annuler", onAction, ms, kind: "error" }) -> fonction pour le fermer.
+function toast(text, { action, onAction, ms = 4000, kind = "" } = {}) {
+  let host = document.getElementById("toasts");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "toasts"; host.className = "toasts";
+    host.setAttribute("role", "status"); host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
+  }
+  const el = document.createElement("div");
+  el.className = `toast${kind ? " is-" + kind : ""}`;
+  el.innerHTML = `<span class="toast-t"></span>${action ? `<button class="toast-a" type="button"></button>` : ""}`;
+  el.querySelector(".toast-t").textContent = text;
+  let timer = null;
+  const close = () => {
+    clearTimeout(timer);
+    if (!el.isConnected) return;
+    el.classList.add("is-out");
+    setTimeout(() => el.remove(), reduceMotion.matches ? 0 : 180);
+  };
+  if (action) {
+    const b = el.querySelector(".toast-a");
+    b.textContent = action;
+    b.addEventListener("click", () => { close(); onAction?.(); });
+  }
+  host.appendChild(el);
+  // Pas plus de 3 messages empilés.
+  while (host.children.length > 3) host.firstElementChild.remove();
+  timer = setTimeout(close, ms);
+  return close;
+}
+
+// Erreur : petit son grave + toast en clair. Le détail technique part dans la console.
+// Les appels gardent la forme « Action impossible : <message brut> ».
+function oops(msg) {
+  sfx("error");
+  const raw = String(msg ?? "");
+  console.warn("[Hub]", raw);
+  const head = raw.split(/\s:\s/)[0].split("\n")[0].trim() || "Ça n'a pas marché";
+  const offline = !navigator.onLine || /failed to fetch|network|load failed|timeout|réseau/i.test(raw);
+  const missing = /does not exist|schema cache|relation|column/i.test(raw);
+  const why = offline ? "Pas de connexion — réessaie." : missing ? "Fonction pas encore activée côté base." : "Réessaie dans un instant.";
+  toast(head === raw.trim() ? raw : `${head}. ${why}`, { kind: "error", ms: 5000 });
+}
+
+// Suppression avec « Annuler » : on retire tout de suite à l'écran, on n'écrit en base
+// qu'après 5 s. Si la page se ferme avant, on valide immédiatement.
+const _pendingDeletes = new Set();
+function deferDelete({ label, hide, restore, commit }) {
+  hide();
+  let done = false;
+  const run = async () => {
+    if (done) return; done = true;
+    _pendingDeletes.delete(run);
+    const ok = await commit();
+    if (!ok) restore();
+  };
+  _pendingDeletes.add(run);
+  const timer = setTimeout(run, 5000);
+  sfx("del");
+  toast(label, {
+    action: "Annuler", ms: 5000,
+    onAction: () => { if (done) return; done = true; clearTimeout(timer); _pendingDeletes.delete(run); restore(); sfx("toggle"); },
+  });
+}
+window.addEventListener("pagehide", () => { for (const run of [..._pendingDeletes]) run(); });
 
 // ---------- Mouvement ----------
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -572,11 +639,21 @@ function trainLine(tr, key, signed) {
 
 function updateLive() {
   if (!PLANNING?.generatedAt) { liveEl.classList.add("is-stale"); liveTimeEl.textContent = "hors-ligne"; liveEl.title = "Planning indisponible"; return; }
+  // Heure de la dernière mise à jour (et non une horloge) : « màj 13:16 », « màj hier 21:00 ».
+  // Le robot passe toutes les 3 h : au-delà de 6 h, un import a sans doute échoué -> orange.
   const gen = new Date(PLANNING.generatedAt);
-  const stale = Date.now() - gen.getTime() > 4 * 3600 * 1000;
+  const age = Date.now() - gen.getTime();
+  const stale = age > 6 * 3600 * 1000;
+  const k = dayKey(gen), todayK = dayKey(new Date());
+  const when = k === todayK ? fmtTime.format(gen)
+    : k === addDays(todayK, -1) ? `hier ${fmtTime.format(gen)}`
+    : fmtRange.format(gen);
   liveEl.classList.toggle("is-stale", stale);
-  liveTimeEl.textContent = fmtTime.format(gen);
-  liveEl.title = (stale ? "Planning peut-être daté — dernière mise à jour " : "Planning à jour — ") + fmtTime.format(gen);
+  liveTimeEl.textContent = `màj ${when}`;
+  liveEl.title = stale
+    ? `Pas de mise à jour depuis ${agoLabel(PLANNING.generatedAt).replace("il y a ", "")} — l'import automatique a peut-être échoué.`
+    : `Planning mis à jour ${agoLabel(PLANNING.generatedAt)} (${fmtTime.format(gen)}).`;
+  liveEl.setAttribute("aria-label", liveEl.title);
 }
 
 // ---------- Rendu des cours ----------
@@ -748,16 +825,20 @@ function ctxCard(evs, key, N, signed) {
   const freeChip = gap ? `<span class="free-chip">${ico("i-coffee")}Libre ${hmMin(gap.s)}–${hmMin(gap.e)}</span>` : "";
   const nCours = evs.filter((e) => e.source === "course").length;
   const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
-  const nTasks = signed ? openTaskCount(key) : null;
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
   const trainRow = trainLine(trainingForDay(key), key, signed);
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
-  const stats = [stat("i-cap", nCours, "cours"), stat("i-clock", hoursLabel(totalMin), "aujourd'hui")];
-  if (nTasks != null) stats.push(stat("i-tasks", nTasks, nTasks > 1 ? "tâches" : "tâche"));
+  // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
+  // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
+  const stats = [];
+  if (nCours) stats.push(stat("i-cap", nCours, "cours"));
+  if (totalMin) stats.push(stat("i-clock", hoursLabel(totalMin), "planifiées"));
+  const free = evs.length ? "" : `<div class="ctx-free">${ico("i-coffee")}<span><b>Journée libre</b> — aucun cours ni réunion.</span></div>`;
   return `<div class="hero-ctx"><div class="ctx-card">
+    ${free}
     ${topRow}
     ${trainRow}
-    <div class="ctx-row ctx-stats">${stats.join("")}</div>
+    ${stats.length ? `<div class="ctx-row ctx-stats">${stats.join("")}</div>` : ""}
   </div></div>`;
 }
 
@@ -828,9 +909,11 @@ function wireCapture(root) {
 }
 
 function renderToday() {
-  titleEl.textContent = "Aujourd'hui";
+  // L'onglet dit déjà « Aujourd'hui » : l'en-tête donne la date elle-même.
   const N = now();
-  dateEl.textContent = cap(fmtDayLabel.format(N));
+  // Téléphone étroit : « Dim. 15 » pour tenir sur une ligne à côté des boutons.
+  titleEl.innerHTML = `<span class="wd-long">${cap(fmtWdLong.format(N))}</span><span class="wd-short">${cap(fmtWdShort.format(N))}</span> ${fmtDayNum.format(N)}`;
+  dateEl.textContent = cap(fmtMonthYear.format(N));
   const key = dayKey(N);
   const signed = !!_store?.session;
 
@@ -870,15 +953,24 @@ function renderToday() {
     </form>
     <div class="nudge" id="day-nudge" hidden></div>` : "";
 
+  // Aujourd'hui sert surtout de to-do : la liste passe en premier (colonne principale),
+  // le planning du jour vient à côté (desktop) ou dessous (mobile). Journée libre : pas de
+  // carte « prochain créneau » ni de timeline vide, la carte contexte le dit en une ligne.
+  const dayPanel = evs.length
+    ? `<div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>`
+    : "";
   viewEl.innerHTML = `
     ${captureHtml}
-    <section class="hero">${heroNext(evs, curIdx, nextIdx, N)}${ctxCard(evs, key, N, signed)}</section>
     <div id="dash-exam"></div>
-    <div id="dash-goal"></div>
-    <div id="dash-upcoming"></div>
-    <section class="dash">
-      <div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>
-      ${tasksPanel}
+    <section class="dash${evs.length ? "" : " is-free"}">
+      <div class="dash-main">${tasksPanel}</div>
+      <aside class="dash-side">
+        ${evs.length ? heroNext(evs, curIdx, nextIdx, N) : ""}
+        ${ctxCard(evs, key, N, signed)}
+        <div id="dash-goal"></div>
+        <div id="dash-upcoming"></div>
+        ${dayPanel}
+      </aside>
     </section>`;
 
   wireEventTaps(viewEl);
@@ -1105,34 +1197,40 @@ function weekLegend(perDay, days) {
     `<span class="wk-chip" style="--c:${c}"><i></i>${l}</span>`).join("")}</div>`;
 }
 
-// Pastilles de jours (mobile) pour choisir le jour affiché.
-function weekPills(days, sel) {
+// Pastilles de jours (mobile) : les 7 jours tiennent sur une ligne, le jour affiché est
+// surligné (jamais retiré), un point signale les jours qui ont des créneaux.
+function weekPills(days, sel, perDay = []) {
   const todayK = dayKey(new Date());
   return `<div class="wk-pills" id="wk-pills">${days.map((d, i) => {
     const wd = new Date(d.key + "T12:00:00Z").getUTCDay();
     const we = wd === 0 || wd === 6;
-    return `<button class="wk-pill${i === sel ? " is-on" : ""}${we ? " is-we" : ""}" data-i="${i}" aria-pressed="${i === sel}">
-      <span class="pd">${cap(fmtWdShort.format(d.date)).replace(/\.$/, "")}</span><span class="pn num">${fmtDayNum.format(d.date)}</span>
+    const has = (perDay[i] || []).length > 0;
+    const t = d.key === todayK;
+    return `<button class="wk-pill${i === sel ? " is-on" : ""}${we ? " is-we" : ""}${t ? " is-today" : ""}" data-i="${i}" aria-pressed="${i === sel}" aria-label="${cap(fmtDayLabel.format(d.date))}${has ? ` · ${perDay[i].length} créneau${perDay[i].length > 1 ? "x" : ""}` : " · libre"}">
+      <span class="pd">${cap(fmtWdShort.format(d.date)).replace(/\.$/, "")}</span><span class="pn num">${fmtDayNum.format(d.date)}</span><i class="pdot${has ? " on" : ""}"></i>
     </button>`;
   }).join("")}</div>`;
 }
 
-// Nombre de cours ignorés / événements importés retirés tombant dans la semaine affichée.
+// Cours ignorés et événements importés retirés tombant dans la semaine affichée.
 function hiddenCountWeek(days) {
-  if (!_store?.session) return 0;
+  const out = { courses: 0, imported: 0 };
+  if (!_store?.session) return out;
   const hidden = _store.hidden || new Set();
   const keys = new Set(days.map((d) => d.key));
-  let n = 0;
-  for (const e of (PLANNING?.events || [])) if (hidden.has(e.uid) && keys.has(dayKey(new Date(e.start)))) n++;
-  for (const t of (_store.teams || [])) if (t.start_at && hidden.has(t.id) && keys.has(dayKey(new Date(t.start_at)))) n++;
-  return n;
+  for (const e of (PLANNING?.events || [])) if (hidden.has(e.uid) && keys.has(dayKey(new Date(e.start)))) out.courses++;
+  for (const t of (_store.teams || [])) if (t.start_at && hidden.has(t.id) && keys.has(dayKey(new Date(t.start_at)))) out.imported++;
+  return out;
 }
 
 function weekTools(days) {
   const eye = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
   const chips = [];
-  const n = hiddenCountWeek(days);
-  if (n) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden">${eye}${showHidden ? "Masquer" : "Voir"} les éléments ignorés · ${n}</button>`);
+  const { courses, imported } = hiddenCountWeek(days);
+  const parts = [];
+  if (courses) parts.push(`${courses} cours ignoré${courses > 1 ? "s" : ""}`);
+  if (imported) parts.push(`${imported} événement${imported > 1 ? "s" : ""} retiré${imported > 1 ? "s" : ""}`);
+  if (parts.length) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden" aria-pressed="${showHidden}">${eye}${showHidden ? "Masquer" : "Voir"} : ${parts.join(" · ")}</button>`);
   if (days.some((d) => dayMode(d.key) === "entreprise")) {
     chips.push(`<button class="chip${sgOn ? " is-on" : ""}" id="toggle-sg">${ico("i-clock", "si")}Horaires SG</button>`);
   }
@@ -1140,6 +1238,7 @@ function weekTools(days) {
 }
 
 let weekSlide = 0;          // mobile : direction de l'animation de glissement entre jours
+let _calTop = 300;          // ordinateur : haut réel de la grille (mesuré après rendu) pour caler la journée
 
 function renderWeek() {
   titleEl.textContent = "Semaine";
@@ -1169,7 +1268,7 @@ function renderWeek() {
         <span><b>${conflicts.length} conflit${conflicts.length > 1 ? "s" : ""} à vérifier</b> cette semaine — deux créneaux se chevauchent.</span>
         <span class="wk-alert-go">Voir&nbsp;›</span></button>`
     : "";
-  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel)}${weekGrid(days, perDay, sel, bgDay)}</div>`;
+  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel, perDay.map((l, i) => [...l, ...bgDay[i]]))}${weekGrid(days, perDay, sel, bgDay)}</div>`;
 
   wireWeekNav();
   viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
@@ -1190,6 +1289,15 @@ function renderWeek() {
   wireCalAdd(days);
   updateFab();
   weekSlide = 0;
+  // Ajuste la hauteur des heures à la place réellement disponible (bandeau de conflit, outils…).
+  // Un seul second rendu, et seulement si l'estimation était fausse de plus de quelques pixels.
+  if (desktop()) {
+    const body = viewEl.querySelector(".cal-body");
+    if (body) {
+      const top = Math.round(body.getBoundingClientRect().top + window.scrollY);
+      if (Math.abs(top - _calTop) > 4) { _calTop = top; renderWeek(); }
+    }
+  }
 }
 
 // Tap sur une zone vide d'une colonne jour -> ajout d'un événement à cette heure.
@@ -1231,13 +1339,15 @@ const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief
 function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
   const todayK = dayKey(new Date());
   const mobile = !desktop();
-  const PX = mobile ? 60 : 56;
 
   // Plage horaire affichée (heures entières), bornée 8→20 puis élargie aux événements.
   let minH = 8, maxH = 20;
   [...perDay.flat(), ...bgDay.flat()].forEach((e) => { minH = Math.min(minH, Math.floor(e.s / 60)); maxH = Math.max(maxH, Math.ceil(e.e2 / 60)); });
   minH = Math.max(0, minH); maxH = Math.min(24, maxH);
   const top0 = minH * 60, rows = maxH - minH;
+  // Ordinateur : la journée entière tient à l'écran, sans descendre sous 40 px/h pour que
+  // les créneaux d'1 h restent lisibles. _calTop = haut réel de la grille, mesuré après rendu.
+  const PX = mobile ? 60 : Math.max(40, Math.min(60, Math.floor((window.innerHeight - _calTop - 16) / rows)));
   const yTop = (min) => (min - top0) / 60 * PX;
   const nowMin = parisMinutes(new Date().toISOString());
 
@@ -1273,14 +1383,18 @@ function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
       const dur = ev.e2 - ev.s;
       const size = dur <= 40 ? " is-tiny" : dur <= 70 ? " is-sm" : "";
       const loc = (ev.rooms && ev.rooms[0]) || ev.location || ev.teacher || "";
-      const range = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
+      // Bloc étroit (deux créneaux côte à côte) : l'heure de début seule, le titre passe devant.
+      const narrow = ev.cols > 1 && !mobile;
+      const range = narrow ? fmtTime.format(new Date(ev.start))
+        : `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
+      const fullRange = `${fmtTime.format(new Date(ev.start))}${ev.end ? "–" + fmtTime.format(new Date(ev.end)) : ""}`;
       const exam = isExam(ev);
       const growL = (i === days.length - 1 || ev.cols > 1) && ev.lane === ev.cols - 1 ? " grow-l" : "";
       // Nombre de lignes de titre qui tiennent dans le bloc (le reste finit par « … »).
-      const lines = Math.max(1, Math.floor((height - 34) / 15.5));
+      const lines = Math.max(1, Math.floor((height - (narrow ? 22 : 34)) / 15.5));
       const confIc = exam ? `<span class="ev-exam-tag">EXAMEN</span>`
         : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : "";
-      return `<div class="ev src-${ev.source}${size}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);--lines:${lines};left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+      return `<div class="ev src-${ev.source}${size}${narrow ? " is-narrow" : ""}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)} · ${fullRange}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);--lines:${lines};left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
         <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span><span class="ev-tt">${esc(ev.title)}</span>${confIc}</div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
@@ -1427,7 +1541,8 @@ async function refreshTodos() {
   if (!_store?.session) return;
   const { data, error } = await _store.sb.from("todos").select("*").order("created_at", { ascending: true });
   if (!error && data) {
-    _store.todos = data;
+    // Une tâche en attente de suppression (toast « Annuler ») reste masquée même si on recharge.
+    _store.todos = data.filter((t) => !_todoLeaving.has(String(t.id)));
     try { localStorage.setItem("hub.todos", JSON.stringify(data)); } catch {}
     subscribeRealtime();
   } else if (error) {
@@ -1698,16 +1813,10 @@ function wireTodos(root, store) {
     el.querySelector(".todo-del")?.addEventListener("click", async () => {
       if (el.dataset.busy) return;
       el.dataset.busy = "1";
-      sfx("del"); quiet(800);
+      quiet(800);
       el.classList.add("is-leaving");
-      const [{ error }] = await Promise.all([store.sb.from("todos").delete().eq("id", id), stage(200)]);
-      if (error) {
-        el.classList.remove("is-leaving");
-        delete el.dataset.busy;
-        oops("Suppression impossible : " + error.message);
-        return;
-      }
-      await refreshTodos(); rerender();
+      await stage(200);
+      deleteTodoWithUndo(id);
     });
     // Ouvre la tâche (sous-tâches) au tap sur le titre.
     el.querySelector(".tt")?.addEventListener("click", () => {
@@ -1865,11 +1974,21 @@ function openEventActions(ev) {
       <button class="btn btn-ghost" id="s-close">Fermer</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
-    ov.querySelector("#s-del").onclick = async () => {
-      const { error } = await _store.sb.from("custom_events").delete().eq("id", ev.cid);
-      if (error) { oops("Suppression impossible : " + error.message); return; }
-      sfx("del");
-      closeSheet("silent"); await refreshPersonal(); rerender();
+    ov.querySelector("#s-del").onclick = () => {
+      closeSheet("silent");
+      const idx = _store.custom.findIndex((c) => String(c.id) === String(ev.cid));
+      if (idx < 0) return;
+      const row = _store.custom[idx];
+      deferDelete({
+        label: "Événement supprimé",
+        hide: () => { _store.custom = _store.custom.filter((c) => c !== row); rerender(); },
+        restore: () => { if (!_store.custom.includes(row)) { _store.custom.splice(Math.min(idx, _store.custom.length), 0, row); rerender(); } },
+        commit: async () => {
+          const { error } = await _store.sb.from("custom_events").delete().eq("id", row.id);
+          if (error) { oops("Suppression impossible : " + error.message); return false; }
+          return true;
+        },
+      });
     };
   } else if (ev.source === "course") {
     if (ev._hidden) {
@@ -1945,6 +2064,29 @@ async function mutateSubs(id, fn, sound = "tick") {
 
 const SUB_UID = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
 
+const _todoLeaving = new Set(); // ids de tâches supprimées mais encore annulables
+
+function deleteTodoWithUndo(id) {
+  const key = String(id);
+  const row = _store?.todos.find((t) => String(t.id) === key);
+  if (!row) return;
+  deferDelete({
+    label: "Tâche supprimée",
+    hide: () => { _todoLeaving.add(key); _store.todos = _store.todos.filter((t) => t !== row); rerender(); },
+    restore: () => {
+      _todoLeaving.delete(key);
+      if (!_store.todos.some((t) => String(t.id) === key)) _store.todos.push(row);
+      rerender();
+    },
+    commit: async () => {
+      const { error } = await _store.sb.from("todos").delete().eq("id", id);
+      _todoLeaving.delete(key);
+      if (error) { oops("Suppression impossible : " + error.message); return false; }
+      return true;
+    },
+  });
+}
+
 async function updateTodo(id, patch) {
   if (!_store?.session) return;
   const t = _store.todos.find((x) => String(x.id) === String(id)); if (t) Object.assign(t, patch);
@@ -2018,12 +2160,7 @@ function openTaskSheet(t0) {
     await updateTodo(id, { tag: next }); paint(); rerender();
   }));
   ov.querySelector("#ts-close").onclick = () => { closeSheet(); rerender(); };
-  ov.querySelector("#ts-del").onclick = async () => {
-    const { error } = await _store.sb.from("todos").delete().eq("id", id);
-    if (error) { oops("Suppression impossible : " + error.message); return; }
-    sfx("del");
-    closeSheet("silent"); await refreshTodos(); rerender();
-  };
+  ov.querySelector("#ts-del").onclick = () => { closeSheet("silent"); deleteTodoWithUndo(id); };
   paint();
   setTimeout(() => ov.querySelector("#sub-input")?.focus(), 50);
 }
@@ -2203,6 +2340,31 @@ function rerender() {
 }
 
 document.getElementById("notif-bell")?.addEventListener("click", openChangesSheet);
+
+// Raccourcis clavier (ordinateur) : 1/2/3 = onglets, ← → = semaine précédente/suivante,
+// T = revenir à cette semaine, N = nouvelle tâche. Ignorés pendant la saisie ou sur une fiche ouverte.
+document.addEventListener("keydown", (e) => {
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  if (document.getElementById("sheet-ov")) return;
+  const tab = (v) => document.querySelector(`.tab[data-view="${v}"]`)?.click();
+  const k = e.key;
+  if (k === "1" || k === "2" || k === "3") { e.preventDefault(); tab(TAB_ORDER[+k - 1]); return; }
+  if (current === "week" && (k === "ArrowLeft" || k === "ArrowRight" || k === "t" || k === "T")) {
+    e.preventDefault();
+    weekOffset = (k === "t" || k === "T") ? 0 : weekOffset + (k === "ArrowLeft" ? -1 : 1);
+    weekDay = -1;
+    renderWeek();
+    return;
+  }
+  if (k === "n" || k === "N") {
+    if (!_store?.session) return;
+    e.preventDefault();
+    if (current !== "today") tab("today");
+    requestAnimationFrame(() => document.getElementById("cap-input")?.focus());
+  }
+});
 
 const TAB_ORDER = ["today", "week", "tasks"];
 const tabsEl = document.querySelector(".tabs");

@@ -113,6 +113,8 @@ h1 {
 }
 .live i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
 .live.is-stale i { background: var(--warn); }
+.live.is-stale { color: color-mix(in srgb, var(--warn) 70%, var(--fg)); background: color-mix(in srgb, var(--warn) 14%, var(--surface-2)); }
+.live .num { white-space: nowrap; }
 .top-actions { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
 /* Téléphones étroits : on resserre pour que le titre tienne sur une ligne à côté des trois boutons. */
 @media (max-width: 400px) {
@@ -137,6 +139,10 @@ h1 {
 /* Cloche changements de planning */
 .icon-btn.notif { position: relative; }
 .icon-btn.notif.has-unseen { color: var(--warn); }
+/* Petites icônes inline (« si ») : taille par défaut, sinon un SVG sans taille s'affiche en 300×150. */
+svg.si { width: 15px; height: 15px; flex: none; }
+/* L'attribut hidden doit toujours gagner sur un display posé par une classe (ex. pastille « 0 »). */
+[hidden] { display: none !important; }
 .notif-badge {
   position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px;
   display: grid; place-items: center; border-radius: 99px; background: var(--danger); color: #fff;
@@ -468,7 +474,7 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 /* Bandeau « X conflits à vérifier » */
 .wk-alert { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; margin: 12px 0 0; padding: 10px 13px; border-radius: 12px; cursor: pointer; font-size: 13px; color: var(--fg); border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 13%, var(--surface)); transition: background .16s, border-color .16s; }
 .wk-alert:hover { background: color-mix(in srgb, var(--warn) 20%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 70%, var(--line)); }
-.wk-alert .si { color: var(--warn); flex: none; }
+.wk-alert .si { color: var(--warn); flex: none; width: 17px; height: 17px; }
 .wk-alert b { font-weight: 700; }
 .wk-alert-go { margin-left: auto; color: var(--warn); font-weight: 700; white-space: nowrap; }
 
@@ -983,3 +989,95 @@ body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la
 .sheet-actions { flex-wrap: wrap; }
 .sheet-tools .btn, .sheet-actions .btn { white-space: nowrap; }
 .sheet-tools .btn svg { width: 16px; height: 16px; }
+
+/* ---------- Toasts (messages non bloquants, « Annuler » après suppression) ---------- */
+.toasts {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  width: min(440px, calc(100% - 32px));
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: 12px;
+  min-height: 48px; padding: 8px 8px 8px 16px; border-radius: 14px;
+  background: var(--surface-2); color: var(--fg); border: 1px solid var(--line);
+  box-shadow: 0 12px 28px -10px rgba(0,0,0,.55);
+  font-size: 14px; line-height: 1.35;
+  animation: toast-in .26s cubic-bezier(.16,1,.3,1) both;
+}
+.toast.is-error { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); background: color-mix(in srgb, var(--danger) 12%, var(--surface-2)); }
+.toast-t { flex: 1; min-width: 0; }
+.toast-a {
+  flex: none; height: 36px; padding: 0 14px; border-radius: 10px;
+  font-weight: 700; font-size: 14px; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.toast-a:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.toast-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.toast.is-out { animation: toast-out .18s ease-in both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
+@media (min-width: 900px) { .toasts { bottom: 28px; } }
+
+/* ---------- Aujourd'hui : to-do d'abord, planning du jour en colonne latérale ---------- */
+.dash-main, .dash-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+/* Les emplacements vides (examen, objectif, rappels) ne doivent pas creuser de trou dans la grille. */
+#dash-exam:empty, #dash-goal:empty, #dash-upcoming:empty { display: none; }
+.dash-side .hero-next .cd { font-size: 34px; }
+.dash-side .hero-art { width: 140px; }
+.ctx-free { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--muted); }
+.ctx-free b { color: var(--fg); font-family: var(--f-display); font-weight: 700; font-size: 17px; text-transform: uppercase; letter-spacing: .02em; }
+.ctx-free svg { width: 17px; height: 17px; flex: none; color: var(--ok); }
+.dash-side .goal-dash, .dash-side .rem-panel { margin: 0; }
+
+/* ---------- Semaine : blocs étroits (deux créneaux côte à côte) ---------- */
+/* Le titre passe devant, l'heure de début seule dessous : plus de « 13:40–1… » ni de bloc sans nom. */
+.ev.is-narrow { display: flex; flex-direction: column; padding: 6px 8px; }
+.ev.is-narrow .ev-ti { order: -1; margin-top: 0; flex: none; }
+.ev.is-narrow .ev-hd { min-height: 0; overflow: hidden; flex: 0 1 auto; }
+.ev.is-narrow .ev-hd { margin-top: 2px; }
+.ev.is-narrow .ev-hd > svg { display: none; }
+.ev.is-narrow .ev-lo { display: none; }
+.ev.is-narrow.is-conf .ev-ti, .ev.is-narrow.is-exam .ev-ti { padding-right: 14px; }
+/* Très court ET étroit : le nom d'abord, l'heure est dans l'infobulle et la fiche. */
+.ev.is-narrow.is-tiny { padding: 4px 8px; }
+.ev.is-narrow.is-tiny .ev-hd { margin-top: 0; }
+.ev.is-narrow.is-tiny .ev-t { display: none; }
+
+/* ---------- Semaine mobile : les 7 jours sur une ligne, point = jour avec créneaux ---------- */
+.wk-pills { gap: 5px; overflow: visible; }
+@media (max-width: 899px) { .wk-pills { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.wk-pill { min-width: 0; padding: 7px 0 6px; display: grid; justify-items: center; }
+.wk-pill .pd { font-size: 11px; }
+.wk-pill .pdot { width: 5px; height: 5px; margin-top: 4px; border-radius: 50%; background: transparent; }
+.wk-pill .pdot.on { background: var(--ev-course); }
+.wk-pill.is-on .pdot.on { background: rgba(255,255,255,.85); }
+.wk-pill.is-today:not(.is-on) { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); color: var(--accent); }
+
+/* ---------- Ordinateur : barre d'onglets en rail vertical à gauche ---------- */
+/* Une barre de téléphone étirée sur 1 200 px éloigne les onglets du contenu ; un rail les garde
+   à portée de souris sans manger la hauteur utile (la semaine en profite). */
+@media (min-width: 900px) {
+  body { padding-left: 92px; }
+  .app { padding-bottom: 40px; }
+  .tabs {
+    top: 0; bottom: 0; right: auto; width: 92px; max-width: none; margin: 0;
+    grid-template-columns: 1fr; grid-auto-rows: 68px; align-content: start; gap: 4px;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 10px 20px;
+    border-top: 0; border-right: 1px solid var(--line);
+  }
+  .tab { align-content: center; gap: 5px; font-size: 11.5px; border-radius: 12px; }
+  .tab:hover:not(.is-active) { color: var(--fg); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .tab-ind {
+    top: calc(20px + env(safe-area-inset-top, 0px)); left: 10px; width: calc(100% - 20px); height: 68px;
+    align-items: start; padding-top: 9px;
+    transform: translateY(calc(var(--tab-i, 0) * (68px + 4px)));
+  }
+  .tab-ind i { width: 52px; height: 30px; }
+  .toasts { left: calc(50% + 46px); }
+}
+
+/* En-tête Aujourd'hui : jour complet, ou abrégé sur téléphone étroit */
+.wd-short { display: none; }
+@media (max-width: 430px) { .wd-long { display: none; } .wd-short { display: inline; } }
