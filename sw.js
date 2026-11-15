@@ -5,7 +5,7 @@
 //   chargement suivant, sans avoir à changer CACHE. Ne bumper CACHE que pour purger l'ancien cache.
 const CACHE = "hub-v20";
 const SHELL = [
-  ".", "index.html", "styles.css", "app.js", "config.js", "manifest.json",
+  ".", "index.html", "styles.css", "app.js", "lib/cheat-stats.js", "config.js", "manifest.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
 ];
 const DATA = ["planning.json", "alternance.json", "training.json", "changes.json"];

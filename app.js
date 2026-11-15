@@ -1,6 +1,8 @@
 // Hub — logique de l'app (planning en lecture seule + to-do synchronisée).
 // Vanilla JS, pas de framework. Supabase chargé à la demande depuis un CDN (version épinglée).
 
+import { cheatStats } from "./lib/cheat-stats.js";
+
 const SUPABASE_VERSION = "2.47.10";
 const cfg = window.HUB_CONFIG || {};
 const SUPA_READY = Boolean(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
@@ -817,6 +819,15 @@ function heroNext(evs, curIdx, nextIdx, N) {
     <div class="meta">${meta.join("")}</div>${art}</div>`;
 }
 
+// Ligne « écarts » : jours clean depuis le dernier écart (ouvre la fiche).
+function cheatLine() {
+  const st = cheatStats((_store?.cheats || []).map((c) => c.day), dayKey(now()));
+  const txt = st.clean === null
+    ? "Aucun écart noté"
+    : `<b>${st.clean}</b> ${st.clean > 1 ? "jours" : "jour"} clean · record ${st.record} j`;
+  return `<div class="ctx-row"><button class="ctx-cheat" data-cheat>${ico("i-target")}<span>${txt}</span></button></div>`;
+}
+
 // Carte contexte : badge école/entreprise, prochain trou libre, compteurs.
 function ctxCard(evs, key, N, signed) {
   const items = evs.map((e) => ({ s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60 }));
@@ -827,6 +838,7 @@ function ctxCard(evs, key, N, signed) {
   const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
   const trainRow = trainLine(trainingForDay(key), key, signed);
+  const cheatRow = signed ? cheatLine() : "";
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
   // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
   // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
@@ -838,6 +850,7 @@ function ctxCard(evs, key, N, signed) {
     ${free}
     ${topRow}
     ${trainRow}
+    ${cheatRow}
     ${stats.length ? `<div class="ctx-row ctx-stats">${stats.join("")}</div>` : ""}
   </div></div>`;
 }
@@ -976,6 +989,7 @@ function renderToday() {
   wireEventTaps(viewEl);
   wireCapture(viewEl);
   viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
+  viewEl.querySelector("[data-cheat]")?.addEventListener("click", openCheatSheet);
   viewEl.querySelector("#go-signin")?.addEventListener("click", () => document.querySelector('.tab[data-view="tasks"]')?.click());
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.
@@ -1521,13 +1535,13 @@ async function getStore() {
   try {
     const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
     const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map() };
+    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [] };
     const { data } = await sb.auth.getSession();
     _store.session = data.session;
     sb.auth.onAuthStateChange((_e, session) => {
       _store.session = session;
       if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); rerender(); }
+      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; rerender(); }
     });
     if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
     return _store;
@@ -1564,8 +1578,8 @@ async function refreshAfterAdd() {
 // Données perso (privées, RLS) : événements ajoutés, cours masqués, réunions Teams importées.
 // Les tables peuvent ne pas encore exister (avant la mise en place) -> on dégrade en silence.
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); return; }
-  const [c, o, t, s, p, g, r, x] = await Promise.all([
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; return; }
+  const [c, o, t, s, p, g, r, x, ch] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -1574,6 +1588,7 @@ async function refreshPersonal() {
     _store.sb.from("goals").select("*").order("created_at", { ascending: true }),
     _store.sb.from("event_reminders").select("event_key"),
     _store.sb.from("exam_flags").select("event_uid,is_exam"),
+    _store.sb.from("cheat_meals").select("id,day,label").order("day", { ascending: false }),
   ]);
   _store.custom = c.error ? [] : (c.data || []);
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -1583,6 +1598,7 @@ async function refreshPersonal() {
   _store.goals = g.error ? [] : (g.data || []);
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
+  _store.cheats = ch.error ? [] : (ch.data || []).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
   updateBell();
   subscribeRealtime();
 }
@@ -1751,6 +1767,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "goals" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "event_reminders" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "exam_flags" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "cheat_meals" }, onPerso)
     .subscribe();
 }
 
@@ -1939,6 +1956,67 @@ function openEventForm(date, start, end) {
     closeSheet("silent"); await refreshPersonal(); rerender();
   });
   setTimeout(() => ov.querySelector("#ev-title")?.focus(), 50);
+}
+
+// Fiche « écarts » : série en cours, record, historique, ajout et suppression.
+function openCheatSheet() {
+  if (!_store?.session) return;
+  const today = dayKey(now());
+  const fmtShort = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+  const jours = (n) => `${n} jour${n > 1 ? "s" : ""}`;
+  const body = () => {
+    const list = _store.cheats || [];
+    const st = cheatStats(list.map((c) => c.day), today);
+    const big = st.clean === null
+      ? `<div class="cheat-big"><span>Aucun écart noté</span></div>`
+      : `<div class="cheat-big"><b>${st.clean}</b><span>${st.clean > 1 ? "jours" : "jour"} clean</span></div>
+         <p class="sheet-note">Record : ${jours(st.record)} · ${st.yearCount} écart${st.yearCount > 1 ? "s" : ""} en ${today.slice(0, 4)}</p>`;
+    const rows = list.length
+      ? `<ul class="cheat-list">${list.map((c) => `<li><span class="cheat-d">${esc(fmtShort.format(new Date(c.day + "T12:00:00Z")))}</span><span class="cheat-l">${c.label ? esc(c.label) : "—"}</span><button type="button" class="cheat-x" data-del="${esc(String(c.id))}" aria-label="Supprimer cet écart">×</button></li>`).join("")}</ul>`
+      : "";
+    return `${big}${rows}
+      <form id="ch-form" class="sheet-form">
+        <label>Quoi <span class="opt">(optionnel)</span><input id="ch-label" maxlength="80" autocomplete="off" placeholder="Ex. pizza, glace…"></label>
+        <label>Jour<input id="ch-date" type="date" value="${today}" max="${today}" required></label>
+        <div class="sheet-actions">
+          <button type="button" class="btn btn-ghost" id="ch-close">Fermer</button>
+          <button type="submit" class="btn">J'ai craqué</button>
+        </div>
+      </form>`;
+  };
+  const ov = openSheet(`<h3 class="sheet-h">Écarts</h3><div id="ch-body">${body()}</div>`);
+  const box = ov.querySelector("#ch-body");
+  const wire = () => {
+    box.querySelector("#ch-close").onclick = closeSheet;
+    box.querySelector("#ch-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const day = box.querySelector("#ch-date").value;
+      if (!day || day > today) return;
+      const label = box.querySelector("#ch-label").value.trim() || null;
+      const { error } = await _store.sb.from("cheat_meals").insert({ day, label });
+      if (error) { oops("Ajout impossible : " + error.message + "\n(As-tu lancé le SQL cheat-meals.sql ?)"); return; }
+      sfx("add");
+      await refreshPersonal();
+      box.innerHTML = body(); wire(); rerender();
+    });
+    box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
+      const idx = _store.cheats.findIndex((c) => String(c.id) === b.dataset.del);
+      if (idx < 0) return;
+      const row = _store.cheats[idx];
+      const redraw = () => { if (box.isConnected) { box.innerHTML = body(); wire(); } rerender(); };
+      deferDelete({
+        label: "Écart supprimé",
+        hide: () => { _store.cheats = _store.cheats.filter((c) => c !== row); redraw(); },
+        restore: () => { if (!_store.cheats.includes(row)) { _store.cheats.splice(Math.min(idx, _store.cheats.length), 0, row); redraw(); } },
+        commit: async () => {
+          const { error } = await _store.sb.from("cheat_meals").delete().eq("id", row.id);
+          if (error) { oops("Suppression impossible : " + error.message); return false; }
+          return true;
+        },
+      });
+    }));
+  };
+  wire();
 }
 
 // Même jour, mois suivant (31 jan. -> 28/29 fév.) — clé AAAA-MM-JJ.

@@ -1081,3 +1081,18 @@ body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la
 /* En-tête Aujourd'hui : jour complet, ou abrégé sur téléphone étroit */
 .wd-short { display: none; }
 @media (max-width: 430px) { .wd-long { display: none; } .wd-short { display: inline; } }
+
+/* Écarts : ligne sur la carte contexte + fiche */
+.ctx-cheat { display: inline-flex; align-items: center; gap: 8px; min-width: 0; min-height: 28px; padding: 0; font-size: 13px; font-weight: 600; color: var(--muted); text-align: left; }
+.ctx-cheat .mi { width: 17px; height: 17px; flex: none; }
+.ctx-cheat b { font-family: var(--f-display); font-weight: 700; font-size: 15px; letter-spacing: .01em; color: var(--fg); }
+.ctx-cheat:hover { color: var(--fg); }
+.cheat-big { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; }
+.cheat-big b { font-family: var(--f-display); font-weight: 700; font-size: 56px; line-height: 1; color: var(--fg); }
+.cheat-big span { color: var(--muted); font-size: 15px; font-weight: 600; }
+.cheat-list { list-style: none; margin: 14px 0 0; padding: 0; max-height: 28vh; overflow-y: auto; border-top: 1px solid var(--line); }
+.cheat-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.cheat-d { flex: none; min-width: 84px; color: var(--muted); text-transform: capitalize; }
+.cheat-l { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cheat-x { flex: none; width: 32px; height: 32px; border-radius: 99px; font-size: 20px; line-height: 1; color: var(--muted); }
+.cheat-x:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
