@@ -180,7 +180,7 @@ function parisToISO(dateStr, timeStr) {
 const SRC_LABEL = { course: "Cours", perso: "Perso", fl: "Pro", ef: "École", gc: "Agenda" };
 const normCustom = (c) => ({ source: "perso", cid: c.id, title: c.title, start: c.start_at, end: c.end_at, location: c.location, rooms: [], teacher: null });
 const CAL_SRC = { efrei: "ef", google: "gc" }; // source DB -> source d'affichage (défaut : fl)
-const normTeams = (t) => ({ source: CAL_SRC[t.source] || "fl", tid: t.id, title: t.title, start: t.start_at, end: t.end_at, location: t.location, rooms: [], teacher: null });
+const normTeams = (t) => ({ source: CAL_SRC[t.source] || "fl", tid: t.id, _hidden: (_store?.hidden || new Set()).has(t.id), title: t.title, start: t.start_at, end: t.end_at, location: t.location, rooms: [], teacher: null });
 
 const viewEl = document.getElementById("view");
 const titleEl = document.getElementById("top-title");
@@ -468,6 +468,7 @@ function upcomingReminders() {
   for (const c of (_store.custom || [])) if (c.start_at) consider(normCustom(c));
   for (const t of (_store.teams || [])) {
     if (!t.start_at || isCanceledMeeting(t.title)) continue;
+    if ((_store.hidden || new Set()).has(t.id)) continue;
     consider(normTeams(t));
   }
   return out.sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -964,6 +965,7 @@ function mergedEventsForDay(key) {
     for (const t of (_store.teams || [])) {
       if (!t.start_at || dayKey(new Date(t.start_at)) !== key) continue;
       if (isCanceledMeeting(t.title)) continue; // réunions annulées masquées
+      if (hidden.has(t.id) && !showHidden) continue; // événement importé retiré par l'utilisateur
       out.push(normTeams(t));
     }
   }
@@ -1115,13 +1117,14 @@ function weekPills(days, sel) {
   }).join("")}</div>`;
 }
 
-// Nombre de cours ignorés tombant dans la semaine affichée.
+// Nombre de cours ignorés / événements importés retirés tombant dans la semaine affichée.
 function hiddenCountWeek(days) {
   if (!_store?.session) return 0;
   const hidden = _store.hidden || new Set();
   const keys = new Set(days.map((d) => d.key));
   let n = 0;
   for (const e of (PLANNING?.events || [])) if (hidden.has(e.uid) && keys.has(dayKey(new Date(e.start)))) n++;
+  for (const t of (_store.teams || [])) if (t.start_at && hidden.has(t.id) && keys.has(dayKey(new Date(t.start_at)))) n++;
   return n;
 }
 
@@ -1129,7 +1132,7 @@ function weekTools(days) {
   const eye = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
   const chips = [];
   const n = hiddenCountWeek(days);
-  if (n) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden">${eye}${showHidden ? "Masquer" : "Voir"} les cours ignorés · ${n}</button>`);
+  if (n) chips.push(`<button class="chip${showHidden ? " is-on" : ""}" id="toggle-hidden">${eye}${showHidden ? "Masquer" : "Voir"} les éléments ignorés · ${n}</button>`);
   if (days.some((d) => dayMode(d.key) === "entreprise")) {
     chips.push(`<button class="chip${sgOn ? " is-on" : ""}" id="toggle-sg">${ico("i-clock", "si")}Horaires SG</button>`);
   }
@@ -1813,16 +1816,36 @@ function openEventForm(date, start, end) {
   setTimeout(() => ov.querySelector("#ev-title")?.focus(), 50);
 }
 
+// Même jour, mois suivant (31 jan. -> 28/29 fév.) — clé AAAA-MM-JJ.
+const fmtMonShort = (key) => new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", month: "short" }).format(new Date(key + "T12:00:00Z"));
+function addMonthKey(key, n = 1) {
+  const [y, m, d] = key.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m - 1 + n + 1, 0)).getUTCDate();
+  const x = new Date(Date.UTC(y, m - 1 + n, Math.min(d, last)));
+  return x.toISOString().slice(0, 10);
+}
+const rebookPrefix = (ev) => `Reprendre RDV — ${ev.title}`;
+const REBOOK_LEAD = 14; // on reprend RDV ~2 semaines avant la date visée
+
 function openEventActions(ev) {
   if (!_store?.session) return;
   const head = `<h3 class="sheet-h">${esc(ev.title)}</h3><p class="sheet-sub">${evWhen(ev)}${(ev.location) ? " · " + esc(ev.location) : ""}</p>`;
   const isRem = (_store.reminders || new Set()).has(eventKey(ev));
   const remBtn = `<button class="btn btn-ghost rem-toggle${isRem ? " on" : ""}" id="s-rem">${ico("i-bell")}${isRem ? "Rappel activé" : "Ne pas oublier"}</button>`;
   const exam = isExam(ev);
+  // Rendez-vous perso / importés : prochain RDV visé un mois après ; la tâche « reprendre RDV »
+  // tombe REBOOK_LEAD jours avant, avec la date visée dans le titre.
+  const rebookTarget = addMonthKey(dayKey(new Date(ev.start)));
+  const rebookDue = addDays(rebookTarget, -REBOOK_LEAD);
+  const rebookTitle = `${rebookPrefix(ev)} (pour le ${fmtWdDay.format(new Date(rebookTarget + "T12:00:00Z"))} ${fmtMonShort(rebookTarget)})`;
+  const rebookTodo = (_store.todos || []).find((t) => !t.done && t.title.startsWith(rebookPrefix(ev)));
+  const rebookBtn = ev.source === "course" ? "" : rebookTodo
+    ? `<button class="btn btn-ghost rem-toggle on" id="s-rebook" disabled>${ico("i-check")}Rappel prévu · ${esc(dueLabel(rebookTodo.due_date))}</button>`
+    : `<button class="btn btn-ghost" id="s-rebook">${ico("i-today")}Reprendre RDV dans 1 mois</button>`;
   const examBtn = ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "";
 
   if (ev.source === "perso") {
-    const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}</div><div class="sheet-actions">
+    const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${rebookBtn}</div><div class="sheet-actions">
       <button class="btn btn-ghost" id="s-close">Fermer</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
@@ -1860,12 +1883,33 @@ function openEventActions(ev) {
     const note = ev.source === "gc"
       ? "Événement importé depuis ton agenda Google. Modifie-le dans Google Agenda."
       : `Réunion ${ev.source === "ef" ? "école" : "pro"}, importée depuis ton calendrier. Modifie-la dans Outlook / Teams.`;
-    const ov = openSheet(`${head}<p class="sheet-note">${note}</p>
-      <div class="sheet-tools">${remBtn}</div><div class="sheet-actions"><button class="btn" id="s-close">Fermer</button></div>`);
+    const ov = openSheet(`${head}<p class="sheet-note">${ev._hidden ? "Tu as retiré cet événement du Hub (il reste dans ton agenda d'origine)." : note}</p>
+      <div class="sheet-tools">${remBtn}${rebookBtn}</div><div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+      ${ev._hidden ? `<button class="btn" id="s-show">Réafficher</button>` : `<button class="btn btn-danger" id="s-hide">Retirer du Hub</button>`}</div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
+    // Retiré côté Hub seulement (event_overrides) : le prochain import ne le fait pas réapparaître.
+    ov.querySelector("#s-hide")?.addEventListener("click", async () => {
+      const { error } = await _store.sb.from("event_overrides")
+        .upsert({ user_id: _store.session.user.id, event_uid: ev.tid, hidden: true }, { onConflict: "user_id,event_uid" });
+      if (error) { oops("Erreur : " + error.message); return; }
+      sfx("del");
+      closeSheet("silent"); await refreshPersonal(); rerender();
+    });
+    ov.querySelector("#s-show")?.addEventListener("click", async () => {
+      const { error } = await _store.sb.from("event_overrides").delete().eq("event_uid", ev.tid);
+      if (error) { oops("Erreur : " + error.message); return; }
+      sfx("toggle");
+      closeSheet("silent"); await refreshPersonal(); rerender();
+    });
   }
   document.getElementById("s-rem")?.addEventListener("click", async () => { await toggleReminder(ev); closeSheet("silent"); rerender(); });
   document.getElementById("s-exam")?.addEventListener("click", async () => { await toggleExam(ev); closeSheet("silent"); rerender(); });
+  document.getElementById("s-rebook")?.addEventListener("click", async () => {
+    const { error } = await _store.sb.from("todos").insert({ title: rebookTitle, due_date: rebookDue });
+    if (error) { oops("Ajout impossible : " + error.message); return; }
+    sfx("add");
+    closeSheet("silent"); await refreshTodos(); rerender();
+  });
 }
 
 // ---------- Sous-tâches ----------
