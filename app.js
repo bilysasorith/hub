@@ -1920,13 +1920,41 @@ function evWhen(ev) {
   return `${cap(fmtWeekday.format(s))} · ${range}`;
 }
 
-function openEventForm(date, start, end) {
+// Met à jour un événement perso (optimiste) ; `undoLabel` ajoute un toast « Annuler ».
+// Renvoie true si l'état voulu est en place (ou déjà en place), false si l'écriture a échoué.
+async function updateCustomEvent(id, patch, { undoLabel } = {}) {
+  const row = (_store.custom || []).find((c) => String(c.id) === String(id));
+  if (!row) return false;
+  const keys = Object.keys(patch);
+  const same = (a, b) => {
+    const ta = new Date(a).getTime(), tb = new Date(b).getTime();
+    if (a != null && b != null && !Number.isNaN(ta) && !Number.isNaN(tb)) return ta === tb;
+    return (a ?? null) === (b ?? null);
+  };
+  if (keys.every((k) => (k === "start_at" || k === "end_at") ? same(row[k], patch[k]) : (row[k] ?? null) === (patch[k] ?? null))) return true;
+  const prev = {};
+  for (const k of keys) prev[k] = row[k];
+  Object.assign(row, patch);
+  rerender();
+  const { error } = await _store.sb.from("custom_events").update(patch).eq("id", id);
+  if (error) {
+    Object.assign(row, prev);
+    rerender();
+    oops("Modification impossible : " + error.message);
+    return false;
+  }
+  if (undoLabel) toast(undoLabel, { action: "Annuler", ms: 5000, onAction: () => updateCustomEvent(id, prev) });
+  return true;
+}
+
+function openEventForm(date, start, end, existing) {
   if (!_store?.session) return;
-  const d = date || dayKey(new Date());
-  const st = start || "09:00";
-  const en = end || "10:00";
+  const editing = !!existing;
+  const d = editing ? dayKey(new Date(existing.start)) : (date || dayKey(new Date()));
+  const st = editing ? fmtTime.format(new Date(existing.start)) : (start || "09:00");
+  const en = editing ? fmtTime.format(new Date(existing.end || existing.start)) : (end || "10:00");
   const ov = openSheet(`
-    <h3 class="sheet-h">Nouvel événement</h3>
+    <h3 class="sheet-h">${editing ? "Modifier" : "Nouvel événement"}</h3>
     <form id="ev-form" class="sheet-form">
       <label>Titre<input id="ev-title" required maxlength="120" autocomplete="off" placeholder="Ex. RDV, révisions, sport…"></label>
       <label>Jour<input id="ev-date" type="date" value="${d}" required></label>
@@ -1937,9 +1965,13 @@ function openEventForm(date, start, end) {
       <label>Lieu <span class="opt">(optionnel)</span><input id="ev-loc" maxlength="120" autocomplete="off"></label>
       <div class="sheet-actions">
         <button type="button" class="btn btn-ghost" id="ev-cancel">Annuler</button>
-        <button type="submit" class="btn">Ajouter</button>
+        <button type="submit" class="btn">${editing ? "Enregistrer" : "Ajouter"}</button>
       </div>
     </form>`);
+  if (editing) {
+    ov.querySelector("#ev-title").value = existing.title || "";
+    ov.querySelector("#ev-loc").value = existing.location || "";
+  }
   ov.querySelector("#ev-cancel").onclick = closeSheet;
   ov.querySelector("#ev-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1950,6 +1982,12 @@ function openEventForm(date, start, end) {
     let end_at = parisToISO(dd, ov.querySelector("#ev-end").value);
     if (new Date(end_at) <= new Date(start_at)) end_at = null;
     const location = ov.querySelector("#ev-loc").value.trim() || null;
+    if (editing) {
+      closeSheet("silent");
+      sfx("toggle");
+      await updateCustomEvent(existing.cid, { title, start_at, end_at, location }, { undoLabel: "Événement modifié" });
+      return;
+    }
     const { error } = await _store.sb.from("custom_events").insert({ title, start_at, end_at, location });
     if (error) { oops("Ajout impossible : " + error.message); return; }
     sfx("add");
@@ -2050,8 +2088,10 @@ function openEventActions(ev) {
   if (ev.source === "perso") {
     const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${rebookBtn}</div><div class="sheet-actions">
       <button class="btn btn-ghost" id="s-close">Fermer</button>
+      <button class="btn btn-ghost" id="s-edit">Modifier</button>
       <button class="btn btn-danger" id="s-del">Supprimer</button></div>`);
     ov.querySelector("#s-close").onclick = closeSheet;
+    ov.querySelector("#s-edit").onclick = () => { closeSheet("silent"); openEventForm(null, null, null, ev); };
     ov.querySelector("#s-del").onclick = () => {
       closeSheet("silent");
       const idx = _store.custom.findIndex((c) => String(c.id) === String(ev.cid));
