@@ -911,6 +911,91 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 body { overflow-x: clip; } /* le glissement de la vue ne doit jamais élargir la page */
 @keyframes view-enter { from { opacity: 0; transform: translateX(calc(var(--view-dir, 1) * 14px)); } }
 
+/* ---------- Transitions de vue (API View Transitions) ----------
+   html[data-vt] dit laquelle est en cours ; --vt-dir (1 / -1) donne le sens. */
+::view-transition-group(*) { animation-duration: .38s; animation-timing-function: cubic-bezier(.16,1,.3,1); }
+
+/* Onglets et semaines : seule la zone concernée bouge, le reste de l'écran ne clignote pas. */
+html[data-vt="view"] #view, html[data-vt="week"] .cal { view-transition-name: pane; }
+html[data-vt="view"]::view-transition-old(root), html[data-vt="week"]::view-transition-old(root) { display: none; }
+html[data-vt="view"]::view-transition-new(root), html[data-vt="week"]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(pane), ::view-transition-new(pane) { height: 100%; object-fit: none; object-position: top left; mix-blend-mode: normal; }
+::view-transition-old(pane) { animation: pane-out .16s cubic-bezier(.4,0,1,1) both; }
+::view-transition-new(pane) { animation: pane-in .42s cubic-bezier(.16,1,.3,1) both; }
+@keyframes pane-out { to { opacity: 0; transform: translateX(calc(var(--vt-dir, 1) * -36px)); filter: blur(4px); } }
+@keyframes pane-in { from { opacity: 0; transform: translateX(calc(var(--vt-dir, 1) * 48px)); filter: blur(6px); } }
+html[data-vt] .ev, html[data-vt] .tl-area .tev, html[data-vt] .cal { animation: none; }
+/* L'en-tête et la barre d'onglets restent au-dessus de la zone qui glisse, sans fondu. */
+html[data-vt="view"] .tabs, html[data-vt="week"] .tabs { view-transition-name: tabs; }
+html[data-vt="view"] .top, html[data-vt="week"] .top { view-transition-name: top; }
+::view-transition-old(tabs), ::view-transition-old(top) { display: none; }
+::view-transition-new(tabs), ::view-transition-new(top) { animation: none; mix-blend-mode: normal; }
+
+/* Fiche : le bloc touché s'agrandit pour devenir la fiche, et s'y replie à la fermeture. */
+.sheet-overlay.no-tr, .sheet-overlay.no-tr .sheet { transition: none; }
+::view-transition-group(morph) { border-radius: 20px; overflow: clip; animation-duration: .44s; }
+html[data-vt="sheet-out"]::view-transition-group(morph) { animation-duration: .28s; animation-timing-function: cubic-bezier(.3,0,.2,1); }
+::view-transition-old(morph), ::view-transition-new(morph) { height: 100%; object-fit: cover; object-position: top left; mix-blend-mode: normal; }
+html[data-vt="sheet"]::view-transition-old(morph) { animation: vt-fade-out .14s linear both; }
+html[data-vt="sheet"]::view-transition-new(morph) { animation: vt-fade-in .2s linear both; }
+html[data-vt="sheet-out"]::view-transition-old(morph) { animation: vt-fade-out .2s .06s linear both; }
+html[data-vt="sheet-out"]::view-transition-new(morph) { animation: vt-fade-in .16s .1s linear both; }
+html[data-vt="sheet"]::view-transition-old(root), html[data-vt="sheet"]::view-transition-new(root),
+html[data-vt="sheet-out"]::view-transition-old(root), html[data-vt="sheet-out"]::view-transition-new(root) { animation-duration: .24s; }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+
+/* Thème : le nouveau thème s'ouvre en cercle depuis le bouton (--tx, --ty, --tr posés en JS). */
+html[data-vt="theme"]::view-transition-old(root) { animation: none; mix-blend-mode: normal; }
+html[data-vt="theme"]::view-transition-new(root) { mix-blend-mode: normal; animation: theme-reveal .6s cubic-bezier(.16,1,.3,1) both; }
+@keyframes theme-reveal { from { clip-path: circle(0 at var(--tx) var(--ty)); } to { clip-path: circle(var(--tr) at var(--tx) var(--ty)); } }
+
+/* Cascade : une seule fois, quand l'écran d'entrée se lève. */
+#view.cascade .dash-main > *, #view.cascade .dash-side > *, #view.cascade > *:not(.dash) { animation: rise .7s cubic-bezier(.16,1,.3,1) backwards; }
+#view.cascade .dash-side > * { animation-delay: .1s; }
+#view.cascade :is(.dash-main, .dash-side) > *:nth-child(2) { animation-delay: .16s; }
+#view.cascade :is(.dash-main, .dash-side) > *:nth-child(3) { animation-delay: .22s; }
+#view.cascade :is(.dash-main, .dash-side) > *:nth-child(n+4) { animation-delay: .28s; }
+@keyframes rise { from { opacity: 0; transform: translateY(26px); filter: blur(6px); } }
+
+/* ====================== Écran d'entrée ====================== */
+/* Affiché par un petit script dans index.html ; se retire seul, même si app.js échoue. */
+.intro {
+  position: fixed; inset: 0; z-index: 100; display: grid; align-items: end; overflow: hidden;
+  padding: max(28px, env(safe-area-inset-top)) clamp(22px, 6vw, 96px) max(40px, calc(28px + env(safe-area-inset-bottom)));
+  background: radial-gradient(90% 70% at 12% 108%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%), var(--bg);
+  color: var(--fg); cursor: pointer; user-select: none; -webkit-user-select: none;
+  clip-path: inset(0 0 0 0);
+}
+.intro-day {
+  font-family: var(--f-display); font-weight: 700; text-transform: uppercase; letter-spacing: -.01em;
+  font-size: clamp(64px, 21vw, 250px); line-height: .84; white-space: nowrap;
+}
+.intro-day span { display: inline-block; overflow: clip; padding-top: .06em; vertical-align: bottom; }
+.intro-day b { display: inline-block; font-weight: inherit; animation: intro-letter .85s cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--i) * 42ms + 60ms); }
+.intro-row { display: flex; align-items: flex-end; gap: clamp(12px, 2.4vw, 32px); margin-top: clamp(6px, 1.2vw, 16px); }
+.intro-num {
+  font-family: var(--f-display); font-weight: 700; font-size: clamp(64px, 21vw, 250px); line-height: .84; color: var(--accent);
+  font-variant-numeric: tabular-nums; animation: intro-wipe .8s .34s cubic-bezier(.16,1,.3,1) both;
+}
+.intro-meta { flex: 1; min-width: 0; padding-bottom: clamp(6px, 1.6vw, 22px); }
+.intro-month { font-family: var(--f-mono); font-weight: 500; font-size: clamp(13px, 1.5vw, 18px); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); animation: intro-fade .5s .62s both; }
+.intro-bar { display: block; height: 2px; margin-top: 10px; background: var(--accent); transform-origin: left; animation: intro-bar .9s .48s cubic-bezier(.16,1,.3,1) both; }
+@keyframes intro-letter { from { transform: translateY(108%) rotate(5deg); } }
+@keyframes intro-wipe { from { clip-path: inset(0 100% 0 0); transform: translateX(-.12em); } to { clip-path: inset(0 0 0 0); } }
+@keyframes intro-bar { from { transform: scaleX(0); } }
+@keyframes intro-fade { from { opacity: 0; } }
+/* Lever de rideau : l'écran remonte, son contenu part un peu plus vite. */
+.intro.is-out { pointer-events: none; animation: intro-lift .62s cubic-bezier(.7,0,.2,1) both; }
+.intro.is-out .intro-in { animation: intro-in-out .62s cubic-bezier(.7,0,.2,1) both; }
+@keyframes intro-lift { to { clip-path: inset(0 0 100% 0); } }
+@keyframes intro-in-out { to { transform: translateY(-22vh); opacity: .2; } }
+/* L'app attend derrière, légèrement en retrait, puis se met en place. */
+html.intro-on .app { opacity: 0; transform: translateY(32px) scale(.975); }
+html.intro-on .tabs { opacity: 0; }
+html.intro-on.intro-lift .app { opacity: 1; transform: none; transition: opacity .5s .12s ease, transform .75s .12s cubic-bezier(.16,1,.3,1); }
+html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
+
 /* Journée pliée : quelques confettis depuis la case, l'anneau qui se referme. */
 .confetti { position: fixed; z-index: 40; width: 0; height: 0; pointer-events: none; }
 .confetti i { position: absolute; left: -3px; top: -4px; width: 6px; height: 9px; border-radius: 2px; opacity: 0; animation: confetti .9s cubic-bezier(.16,1,.3,1) both; }
