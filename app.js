@@ -2418,7 +2418,7 @@ function openCheatSheet() {
       : `<div class="cheat-big"><b>${st.clean}</b><span>${st.clean > 1 ? "jours" : "jour"} clean</span></div>
          <p class="sheet-note">Record : ${jours(st.record)} · ${st.yearCount} écart${st.yearCount > 1 ? "s" : ""} en ${today.slice(0, 4)}</p>`;
     const rows = list.length
-      ? `<ul class="cheat-list">${list.map((c) => `<li><span class="cheat-d">${esc(fmtShort.format(new Date(c.day + "T12:00:00Z")))}</span><span class="cheat-l">${c.label ? esc(c.label) : "—"}</span><button type="button" class="cheat-x" data-del="${esc(String(c.id))}" aria-label="Supprimer cet écart">×</button></li>`).join("")}</ul>`
+      ? `<ul class="cheat-list">${list.map((c) => `<li><span class="cheat-d">${esc(fmtShort.format(new Date(c.day + "T12:00:00Z")))}</span><span class="cheat-l">${c.label ? esc(c.label) : "—"}</span><button type="button" class="cheat-x" data-del="${esc(String(c.id))}" aria-label="Supprimer cet écart">${ico("i-x")}</button></li>`).join("")}</ul>`
       : "";
     return `${big}${rows}
       <form id="ch-form" class="sheet-form">

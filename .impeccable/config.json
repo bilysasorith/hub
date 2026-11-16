@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "index.html"
+        ],
+        "createdAt": "2026-11-16T00:29:00.483Z",
+        "reason": "Claude: la pastille .live a son padding dans styles.css (6px 12px) ; à petite largeur elle n'affiche qu'un point, sans texte. Faux positif de l'analyse statique."
+      }
+    ]
+  }
+}
