@@ -925,11 +925,13 @@ html[data-vt="view"]::view-transition-new(root), html[data-vt="week"]::view-tran
 @keyframes pane-out { to { opacity: 0; transform: translateX(calc(var(--vt-dir, 1) * -36px)); filter: blur(4px); } }
 @keyframes pane-in { from { opacity: 0; transform: translateX(calc(var(--vt-dir, 1) * 48px)); filter: blur(6px); } }
 html[data-vt] .ev, html[data-vt] .tl-area .tev, html[data-vt] .cal { animation: none; }
-/* L'en-tête et la barre d'onglets restent au-dessus de la zone qui glisse, sans fondu. */
+/* L'en-tête, la barre d'onglets et le bouton + restent au-dessus de la zone qui glisse, sans fondu. */
 html[data-vt="view"] .tabs, html[data-vt="week"] .tabs { view-transition-name: tabs; }
 html[data-vt="view"] .top, html[data-vt="week"] .top { view-transition-name: top; }
+html[data-vt="view"] .fab.is-show, html[data-vt="week"] .fab.is-show { view-transition-name: fab; }
 ::view-transition-old(tabs), ::view-transition-old(top) { display: none; }
 ::view-transition-new(tabs), ::view-transition-new(top) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(fab), ::view-transition-new(fab) { animation-duration: .18s; }
 
 /* Fiche : le bloc touché s'agrandit pour devenir la fiche, et s'y replie à la fermeture. */
 .sheet-overlay.no-tr, .sheet-overlay.no-tr .sheet { transition: none; }
