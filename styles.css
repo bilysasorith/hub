@@ -952,6 +952,13 @@ html[data-vt="theme"]::view-transition-old(root) { animation: none; mix-blend-mo
 html[data-vt="theme"]::view-transition-new(root) { mix-blend-mode: normal; animation: theme-reveal .6s cubic-bezier(.16,1,.3,1) both; }
 @keyframes theme-reveal { from { clip-path: circle(0 at var(--tx) var(--ty)); } to { clip-path: circle(var(--tr) at var(--tx) var(--ty)); } }
 
+/* Gestes tactiles : le défilement vertical reste au navigateur, l'horizontal va au balayage. */
+#view { touch-action: pan-y pinch-zoom; }
+/* Fiche du bas (mobile) : petite poignée, elle se tire vers le bas pour se fermer. */
+@media (max-width: 559px) and (pointer: coarse) {
+  .sheet::before { content: ""; display: block; width: 38px; height: 4px; margin: -8px auto 14px; border-radius: 99px; background: color-mix(in srgb, var(--muted) 45%, transparent); }
+}
+
 /* Cascade : une seule fois, quand l'écran d'entrée se lève. */
 #view.cascade .dash-main > *, #view.cascade .dash-side > *, #view.cascade > *:not(.dash) { animation: rise .7s cubic-bezier(.16,1,.3,1) backwards; }
 #view.cascade .dash-side > * { animation-delay: .1s; }

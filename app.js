@@ -1056,7 +1056,7 @@ function renderToday() {
 async function renderDashTasks() {
   const mount = document.getElementById("dash-tasks");
   if (!mount) return;
-  const store = await getStore();
+  const store = _store?.session ? _store : await getStore();
   if (!store?.session) return;
   const todayK = dayKey(now());
   const todos = store.todos;
@@ -1303,6 +1303,7 @@ function weekTools(days) {
   return chips.length ? `<div class="wk-tools">${chips.join("")}</div>` : "";
 }
 
+let _weekSel = 0;           // index du jour affiché (mobile), lu par le balayage
 let weekSlide = 0;          // mobile : direction de l'animation de glissement entre jours
 let _calTop = 300;          // ordinateur : haut réel de la grille (mesuré après rendu) pour caler la journée
 
@@ -1326,6 +1327,7 @@ function renderWeek() {
   const perDay = rawDay.map((l) => packDay(l.filter((e) => !isBackdrop(e))));
   const todayIdx = days.findIndex((d) => d.key === dayKey(new Date()));
   const sel = weekDay >= 0 ? weekDay : (todayIdx >= 0 ? todayIdx : 0);
+  _weekSel = sel;
 
   const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay.map((l, i) => [...l, ...bgDay[i]]), days)}</div>`;
   const conflicts = weekConflicts(perDay);
@@ -1689,7 +1691,7 @@ async function renderTasks() {
   dateEl.textContent = "Tâches";
   if (!SUPA_READY) { viewEl.innerHTML = setupNote(); return; }
 
-  const store = await getStore();
+  const store = _store?.session ? _store : await getStore();
   if (!store) { viewEl.innerHTML = `<div class="note">${illus("art-offline")}<h3>Connexion impossible</h3><p>Impossible de joindre Supabase. Réessaie quand tu as du réseau.</p></div>`; return; }
 
   if (!store.session) { viewEl.innerHTML = signInView(); wireSignIn(store); return; }
@@ -1780,31 +1782,100 @@ function signInView() {
 
 // ---------- Supabase ----------
 let _store = null;
+let _storeP = null;      // chargement de Supabase en cours ou abouti
 let _storeTried = false; // a-t-on déjà tenté d'initialiser le store (évite les boucles si hors-ligne) ?
-async function getStore() {
-  if (_store) return _store;
-  if (!SUPA_READY) return null;
-  try {
-    const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
-    const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-    _store = { sb, session: null, todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [] };
-    const { data } = await sb.auth.getSession();
-    _store.session = data.session;
-    sb.auth.onAuthStateChange((_e, session) => {
-      _store.session = session;
-      if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
-      else { _store.todos = []; _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; rerender(); }
-    });
-    if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
-    return _store;
-  } catch (e) {
-    console.error("Supabase indisponible", e);
-    return null;
-  }
+const SIGNED_KEY = "hub.signed", PERSO_KEY = "hub.personal";
+const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [] });
+const OFFLINE = { data: null, error: { message: "Hors ligne — réessaie quand le réseau revient." } };
+
+// Client « en attente » : utilisé tant que Supabase n'est pas chargé (ou hors ligne). Il retient
+// l'appel (sb.from(…).update(…).eq(…)) et le rejoue sur le vrai client dès qu'il est là ;
+// sans réseau, l'appel répond par une erreur lisible au lieu de planter.
+function lazySb(path = []) {
+  return new Proxy(function () {}, {
+    get: (_t, k) => k === "then"
+      ? (ok, ko) => getStore().then((st) => {
+          const sb = st && st.live ? st.sb : null;
+          if (!sb) return OFFLINE;
+          let ctx = null, cur = sb;
+          for (const step of path) {
+            if (step.call) cur = cur.apply(ctx, step.call);
+            else { ctx = cur; cur = cur[step.get]; }
+          }
+          return cur;
+        }).then(ok, ko)
+      : lazySb([...path, { get: k }]),
+    apply: (_t, _this, args) => lazySb([...path, { call: args }]),
+  });
 }
 
+// Dernier état connu, gardé sur l'appareil : l'app s'affiche tout de suite, connectée, avec ses
+// données, puis se met à jour quand Supabase répond. Fonctionne aussi hors ligne (lecture).
+function seedStore() {
+  if (_store || !SUPA_READY) return;
+  try {
+    const uid = localStorage.getItem(SIGNED_KEY);
+    if (!uid) return;
+    const p = JSON.parse(localStorage.getItem(PERSO_KEY) || "{}");
+    _store = {
+      ...blankPersonal(), sb: lazySb(), live: false, session: { cached: true, user: { id: uid } },
+      todos: JSON.parse(localStorage.getItem("hub.todos") || "[]"),
+      custom: p.custom || [], hidden: new Set(p.hidden || []), teams: p.teams || [], skips: new Set(p.skips || []),
+      seenAt: p.seenAt || null, goals: p.goals || [], reminders: new Set(p.reminders || []),
+      examFlags: new Map(p.examFlags || []), cheats: p.cheats || [],
+    };
+  } catch { _store = null; }
+}
+function savePersonal() {
+  if (!_store?.session?.user?.id) return;
+  try {
+    localStorage.setItem(SIGNED_KEY, _store.session.user.id);
+    localStorage.setItem(PERSO_KEY, JSON.stringify({
+      custom: _store.custom, hidden: [..._store.hidden], teams: _store.teams, skips: [..._store.skips], seenAt: _store.seenAt,
+      goals: _store.goals, reminders: [..._store.reminders], examFlags: [..._store.examFlags], cheats: _store.cheats,
+    }));
+  } catch {}
+}
+function forgetPersonal() {
+  Object.assign(_store, blankPersonal());
+  try { for (const k of [SIGNED_KEY, PERSO_KEY, "hub.todos"]) localStorage.removeItem(k); } catch {}
+}
+
+function getStore() {
+  if (_storeP) return _storeP;
+  if (!SUPA_READY) return Promise.resolve(null);
+  _storeP = (async () => {
+    try {
+      // Outil de dev (localhost seulement) : retarder Supabase pour observer l'état affiché depuis le cache.
+      if (location.hostname === "localhost") { const d = Number(sessionStorage.getItem("hub.dev.sbDelay")) || 0; if (d) await new Promise((r) => setTimeout(r, d)); }
+      const { createClient } = await import(`https://esm.sh/@supabase/supabase-js@${SUPABASE_VERSION}`);
+      const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+      const { data } = await sb.auth.getSession();
+      if (!_store) _store = { ...blankPersonal(), sb, live: true, session: null };
+      _store.sb = sb; _store.live = true;
+      _store.session = data.session;
+      if (!data.session) forgetPersonal();
+      sb.auth.onAuthStateChange((_e, session) => {
+        _store.session = session;
+        if (session) Promise.all([refreshTodos(), refreshPersonal()]).then(() => rerender());
+        else { forgetPersonal(); rerender(); }
+      });
+      if (_store.session) await Promise.all([refreshTodos(), refreshPersonal()]);
+      return _store;
+    } catch (e) {
+      console.error("Supabase indisponible", e);
+      _storeP = null;
+      // Hors ligne : on garde l'état connu (lecture seule) s'il y en a un.
+      return _store?.session ? _store : null;
+    }
+  })();
+  return _storeP;
+}
+// Le réseau revient : on retente le chargement et on rafraîchit.
+window.addEventListener("online", () => { if (!_store?.live) getStore().then((st) => { if (st?.live) rerender(); }); });
+
 async function refreshTodos() {
-  if (!_store?.session) return;
+  if (!_store?.session || !_store.live) return;
   const { data, error } = await _store.sb.from("todos").select("*").order("created_at", { ascending: true });
   if (!error && data) {
     // Une tâche en attente de suppression (toast « Annuler ») reste masquée même si on recharge.
@@ -1833,6 +1904,7 @@ const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annula
 const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
   if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; return; }
+  if (!_store.live) return; // état connu affiché ; le vrai chargement arrive avec Supabase
   const [c, o, t, s, p, g, r, x, ch] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
@@ -1853,12 +1925,14 @@ async function refreshPersonal() {
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
   _store.cheats = ch.error ? [] : (ch.data || []).filter((r) => !_cheatLeaving.has(String(r.id))).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
+  savePersonal();
   updateBell();
   subscribeRealtime();
 }
 
 async function refreshGoals() {
   if (!_store?.session) { _store.goals = []; return; }
+  if (!_store.live) return;
   const { data, error } = await _store.sb.from("goals").select("*").order("created_at", { ascending: true });
   if (!error) _store.goals = data || [];
 }
@@ -1981,7 +2055,7 @@ function upcomingExams() {
 
 let _sub = null;
 function subscribeRealtime() {
-  if (_sub || !_store?.session) return;
+  if (_sub || !_store?.session || !_store.live) return;
   const pg = "postgres_changes";
   // L'écho temps réel de nos propres écritures attend la fin de l'animation en cours.
   let rtTimer = null;
@@ -2150,6 +2224,7 @@ function openSheet(inner) {
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${inner}</div>`;
   ov.addEventListener("click", (e) => { if (e.target === ov) closeSheet(); });
   document.body.appendChild(ov);
+  wireSheetDrag(ov);
   // Ouverte depuis un bloc qu'on vient de toucher : le bloc s'agrandit pour devenir la fiche.
   const src = canVT() && _tapSrc?.isConnected && Date.now() - _tapAt < 1500 && inViewport(_tapSrc) ? _tapSrc : null;
   _tapSrc = null;
@@ -2170,6 +2245,43 @@ function openSheet(inner) {
   }
   return ov;
 }
+// Tactile : tirer la fiche vers le bas la fait suivre le doigt ; lâchée assez bas (ou d'un geste
+// vif), elle se ferme, sinon elle revient en place.
+function wireSheetDrag(ov) {
+  const sheet = ov.querySelector(".sheet");
+  let g = null;
+  const scrolled = (el) => { for (let n = el; n && n !== ov; n = n.parentElement) if (n.scrollTop > 0) return true; return false; };
+  sheet.addEventListener("touchstart", (e) => {
+    g = null;
+    if (e.touches.length !== 1 || e.target.closest("input, textarea, select") || scrolled(e.target)) return;
+    g = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now(), on: false, dy: 0 };
+  }, { passive: true });
+  sheet.addEventListener("touchmove", (e) => {
+    if (!g) return;
+    const dy = e.touches[0].clientY - g.y, dx = e.touches[0].clientX - g.x;
+    if (!g.on) {
+      if (dy < -8 || Math.abs(dx) > 14) { g = null; return; }
+      if (dy < 8 || dy < Math.abs(dx) * 1.2) return;
+      g.on = true;
+      sheet.style.transition = "none"; ov.style.transition = "none";
+    }
+    if (e.cancelable) e.preventDefault();
+    g.dy = Math.max(0, dy - 8);
+    sheet.style.transform = `translateY(${g.dy}px)`;
+    ov.style.backgroundColor = `rgba(0,0,0,${(0.5 * (1 - Math.min(1, g.dy / 420))).toFixed(3)})`;
+  }, { passive: false });
+  const end = () => {
+    if (!g?.on) { g = null; return; }
+    const fast = g.dy / Math.max(1, performance.now() - g.t) > 0.55 && g.dy > 36;
+    const close = g.dy > Math.min(140, sheet.offsetHeight * 0.3) || fast;
+    g = null;
+    sheet.style.transition = ""; ov.style.transition = "";
+    if (close) { closeSheet("drag"); return; }
+    sheet.style.transform = ""; ov.style.backgroundColor = "";
+  };
+  sheet.addEventListener("touchend", end);
+  sheet.addEventListener("touchcancel", end);
+}
 // Retire toute feuille sans animation (avant d'en ouvrir une autre).
 function dropSheet() {
   if (document.documentElement.dataset.vt === "sheet-out") _vtCur?.skipTransition();
@@ -2184,6 +2296,16 @@ function closeSheet(how) {
   if (how !== "silent") sfx("close");
   // Fermeture simple : la fiche se replie dans le bloc d'où elle est sortie.
   const src = ov._src, sheet = ov.querySelector(".sheet");
+  if (how === "drag") {
+    // Lâchée en cours de glissement : elle finit sa course vers le bas depuis là où elle est.
+    sheet.style.transition = "transform .22s cubic-bezier(.4,0,1,1)";
+    sheet.style.transform = "translateY(calc(100% + 48px))";
+    ov.style.backgroundColor = "";
+    ov.classList.remove("is-open");
+    ov.classList.add("is-closing");
+    setTimeout(() => ov.remove(), 230);
+    return;
+  }
   if (how !== "silent" && src?.isConnected && canVT() && inViewport(src) && document.documentElement.dataset.vt !== "sheet") {
     sheet.style.viewTransitionName = "morph";
     const t = vt("sheet-out", () => { ov.remove(); src.style.viewTransitionName = "morph"; });
@@ -2808,7 +2930,8 @@ document.querySelectorAll(".tab").forEach((btn) => {
       tabsEl?.style.setProperty("--tab-i", to);
       sfx("tab");
       _entering = true;
-      if (canVT()) { vt("view", rerender, to > from ? 1 : -1); return; }
+      // Arrivée par balayage : la vue a déjà suivi le doigt, la nouvelle entre simplement.
+      if (canVT() && !_swipeNav) { vt("view", rerender, to > from ? 1 : -1); return; }
       viewEl.style.setProperty("--view-dir", to > from ? 1 : -1);
       viewEl.classList.remove("view-enter");
       void viewEl.offsetWidth;
@@ -2817,6 +2940,80 @@ document.querySelectorAll(".tab").forEach((btn) => {
     rerender();
   });
 });
+
+// ---------- Gestes tactiles : balayer à l'horizontale ----------
+// Aujourd'hui / À faire : onglet voisin. Semaine : jour voisin (mobile) ou semaine voisine (grille).
+// La zone suit le doigt ; au bord (rien de ce côté) elle résiste et revient.
+let _swipeNav = false;
+(() => {
+  let g = null;
+  const hScroll = (el) => {
+    for (let n = el; n && n !== viewEl; n = n.parentElement) {
+      if (n.scrollWidth > n.clientWidth + 4 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return true;
+    }
+    return false;
+  };
+  const plan = () => {
+    const i = TAB_ORDER.indexOf(current);
+    if (current !== "week") return { el: viewEl, prev: i > 0, next: i < TAB_ORDER.length - 1, go: (dir) => {
+      _swipeNav = true;
+      try { document.querySelector(`.tab[data-view="${TAB_ORDER[i + dir]}"]`)?.click(); } finally { _swipeNav = false; }
+    } };
+    const el = viewEl.querySelector(".cal") || viewEl;
+    return { el, prev: true, next: true, go: (dir) => {
+      weekSlide = dir * 22;
+      if (desktop()) { weekOffset += dir; weekDay = -1; }
+      else {
+        const n = _weekSel + dir;
+        if (n < 0) { weekOffset -= 1; weekDay = 6; } else if (n > 6) { weekOffset += 1; weekDay = 0; } else weekDay = n;
+      }
+      renderWeek();
+    } };
+  };
+  const reset = (el) => { el.style.transition = ""; el.style.transform = ""; el.style.opacity = ""; };
+  viewEl.addEventListener("touchstart", (e) => {
+    g = null;
+    if (e.touches.length !== 1 || document.getElementById("sheet-ov")) return;
+    const t = e.target;
+    if (!(t instanceof Element) || t.closest("input, textarea, select, .ev.src-perso") || hScroll(t)) return;
+    g = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: performance.now(), on: false, dx: 0 };
+  }, { passive: true });
+  viewEl.addEventListener("touchmove", (e) => {
+    if (!g) return;
+    const dx = e.touches[0].clientX - g.x, dy = e.touches[0].clientY - g.y;
+    if (!g.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) { g = null; return; }
+      if (Math.abs(dx) < 12 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (_drag?.active) { g = null; return; }
+      g.on = true; g.p = plan();
+      g.p.el.style.transition = "none";
+    }
+    if (e.cancelable) e.preventDefault();
+    const d = dx - Math.sign(dx) * 12;
+    g.can = d < 0 ? g.p.next : g.p.prev;
+    g.dx = g.can ? d : d * 0.2;
+    g.p.el.style.transform = `translateX(${g.dx.toFixed(1)}px)`;
+    g.p.el.style.opacity = String(1 - Math.min(0.45, Math.abs(g.dx) / 520));
+  }, { passive: false });
+  const end = () => {
+    const s = g; g = null;
+    if (!s?.on) return;
+    const { el, go } = s.p, dist = Math.abs(s.dx);
+    const fast = dist / Math.max(1, performance.now() - s.t) > 0.4 && dist > 24;
+    if (!s.can || !(dist > 72 || fast)) {
+      el.style.transition = "transform .32s cubic-bezier(.16,1,.3,1), opacity .32s";
+      el.style.transform = ""; el.style.opacity = "";
+      setTimeout(() => { el.style.transition = ""; }, 340);
+      return;
+    }
+    const dir = s.dx < 0 ? 1 : -1;
+    el.style.transition = "transform .12s cubic-bezier(.4,0,1,1), opacity .12s";
+    el.style.transform = `translateX(${-dir * 34}%)`; el.style.opacity = "0";
+    setTimeout(() => { reset(el); go(dir); }, reduceMotion.matches ? 0 : 120);
+  };
+  viewEl.addEventListener("touchend", end);
+  viewEl.addEventListener("touchcancel", end);
+})();
 
 // Bascule liste/grille de la vue Semaine au redimensionnement
 let _rsz;
@@ -2888,6 +3085,8 @@ window.addEventListener("hub-intro-lift", () => {
   setTimeout(() => viewEl.classList.remove("cascade"), 900);
   countUp(viewEl);
 }, { once: true });
+seedStore();
+if (_store?.session) { _storeTried = true; getStore().then(() => rerender()); }
 await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges()]);
 rerender();
 // Rafraîchit l'état "en cours / prochain" et les changements quand on revient sur l'app
