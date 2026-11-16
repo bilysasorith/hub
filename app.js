@@ -165,6 +165,54 @@ const quiet = (ms) => { _quietUntil = Math.max(_quietUntil, Date.now() + ms); };
 let _cheerAt = 0;            // instant où la dernière tâche du jour a été cochée
 let _newIds = new Set();     // tâches tout juste ajoutées (animation d'entrée)
 
+// Transitions de vue (API View Transitions) : continuité entre deux états de l'écran.
+// `kind` choisit la chorégraphie côté CSS (html[data-vt="…"]), `dir` le sens (1 ou -1).
+// Sans l'API, ou si l'utilisateur a demandé moins d'animations, `update` s'applique tel quel.
+const canVT = () => typeof document.startViewTransition === "function" && !reduceMotion.matches;
+let _vtSeq = 0, _vtCur = null;
+function vt(kind, update, dir = 1) {
+  if (!canVT()) { update(); return null; }
+  const root = document.documentElement, id = ++_vtSeq;
+  root.dataset.vt = kind;
+  root.style.setProperty("--vt-dir", dir);
+  let t;
+  try { t = document.startViewTransition(update); } catch { delete root.dataset.vt; update(); return null; }
+  _vtCur = t;
+  const done = () => { if (_vtSeq === id) { delete root.dataset.vt; _vtCur = null; } };
+  t.finished.then(done, done);
+  t.ready.catch(() => {});
+  return t;
+}
+
+// Dernier élément touché : sert de point de départ à la fiche qui s'ouvre.
+let _tapSrc = null, _tapAt = 0;
+document.addEventListener("pointerdown", (e) => {
+  const el = e.target instanceof Element ? e.target.closest(".ev, .tev, .goal-card, .ctx-cheat, .hero-next, .fab, .wk-alert, .notif") : null;
+  _tapSrc = el && !el.closest(".sheet-overlay") ? el : null;
+  _tapAt = Date.now();
+}, true);
+const inViewport = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
+
+// Compteurs : à l'arrivée sur une vue, les nombres marqués data-count défilent jusqu'à leur valeur.
+let _entering = false;
+function countUp(root) {
+  if (reduceMotion.matches) return;
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    const end = Number(el.dataset.count);
+    if (!Number.isFinite(end) || end < 2) return;
+    const suffix = el.textContent.replace(/^[\d\s]+/, "");
+    const dur = Math.min(900, 380 + end * 14), t0 = performance.now();
+    const tick = (t) => {
+      if (!el.isConnected) return;
+      const p = Math.min(1, (t - t0) / dur);
+      el.textContent = Math.round(end * (1 - Math.pow(2, -10 * p)) / (1 - Math.pow(2, -10))) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    el.textContent = "0" + suffix;
+    requestAnimationFrame(tick);
+  });
+}
+
 // Confettis sobres partant d'un élément (la case cochée). Réservés à « journée pliée ».
 function celebrate(origin) {
   if (reduceMotion.matches || !origin) return;
@@ -825,7 +873,7 @@ function cheatLine() {
   const st = cheatStats((_store?.cheats || []).map((c) => c.day), dayKey(now()));
   const txt = st.clean === null
     ? "Aucun écart noté"
-    : `<b>${st.clean}</b> ${st.clean > 1 ? "jours" : "jour"} clean · record ${st.record} j`;
+    : `<b data-count="${st.clean}">${st.clean}</b> ${st.clean > 1 ? "jours" : "jour"} clean · record ${st.record} j`;
   return `<div class="ctx-row"><button class="ctx-cheat" data-cheat>${ico("i-target")}<span>${txt}</span></button></div>`;
 }
 
@@ -840,7 +888,7 @@ function ctxCard(evs, key, N, signed) {
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
   const trainRow = trainLine(trainingForDay(key), key, signed);
   const cheatRow = signed ? cheatLine() : "";
-  const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b>${v}</b> ${l}</span>`;
+  const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b${typeof v === "number" ? ` data-count="${v}"` : ""}>${v}</b> ${l}</span>`;
   // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
   // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
   const stats = [];
@@ -1175,9 +1223,12 @@ function weekNav(days) {
 function wireWeekNav() {
   viewEl.querySelectorAll("[data-wk]").forEach((b) => b.addEventListener("click", () => {
     const v = b.dataset.wk;
+    const before = weekOffset;
     weekOffset = v === "0" ? 0 : weekOffset + Number(v);
     weekDay = -1; // on repasse en mode auto (aujourd'hui) à chaque changement de semaine
-    renderWeek(); window.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
+    if (weekOffset === before) renderWeek();
+    else vt("week", renderWeek, weekOffset > before ? 1 : -1);
   }));
 }
 
@@ -1190,7 +1241,7 @@ function weekStats(perDay) {
     if (e.source === "fl") nPro++;
   });
   const hours = Math.round(totalMin / 60);
-  const stat = (id, k, l) => `<div class="wk-stat">${ico(id, "si")}<span class="k num">${k}</span><span class="l">${l}</span></div>`;
+  const stat = (id, k, l) => `<div class="wk-stat">${ico(id, "si")}<span class="k num"${/^d+h?$/.test(String(k)) ? ` data-count="${parseInt(k, 10)}"` : ""}>${k}</span><span class="l">${l}</span></div>`;
   let html = stat("i-cap", nCours, nCours > 1 ? "cours" : "cours");
   html += stat("i-clock", `${hours}h`, "planifiées");
   if (_store?.session && nPro) html += stat("i-brief", nPro, nPro > 1 ? "réunions pro" : "réunion pro");
@@ -2099,20 +2150,49 @@ function openSheet(inner) {
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${inner}</div>`;
   ov.addEventListener("click", (e) => { if (e.target === ov) closeSheet(); });
   document.body.appendChild(ov);
-  requestAnimationFrame(() => ov.classList.add("is-open"));
+  // Ouverte depuis un bloc qu'on vient de toucher : le bloc s'agrandit pour devenir la fiche.
+  const src = canVT() && _tapSrc?.isConnected && Date.now() - _tapAt < 1500 && inViewport(_tapSrc) ? _tapSrc : null;
+  _tapSrc = null;
+  if (src) {
+    const sheet = ov.querySelector(".sheet");
+    ov._src = src;
+    ov.classList.add("no-tr");
+    src.style.viewTransitionName = "morph";
+    const t = vt("sheet", () => {
+      src.style.viewTransitionName = "";
+      ov.classList.add("is-open");
+      sheet.style.viewTransitionName = "morph";
+    });
+    const end = () => { sheet.style.viewTransitionName = ""; ov.classList.remove("no-tr"); };
+    t.finished.then(end, end);
+  } else {
+    requestAnimationFrame(() => ov.classList.add("is-open"));
+  }
   return ov;
 }
 // Retire toute feuille sans animation (avant d'en ouvrir une autre).
-function dropSheet() { document.querySelectorAll(".sheet-overlay").forEach((o) => o.remove()); }
+function dropSheet() {
+  if (document.documentElement.dataset.vt === "sheet-out") _vtCur?.skipTransition();
+  document.querySelectorAll(".sheet-overlay").forEach((o) => o.remove());
+}
 // Ferme la feuille en la laissant redescendre. `how === "silent"` : pas de son de fermeture
 // (l'action qui vient d'aboutir a déjà le sien). Sert aussi de gestionnaire de clic direct.
 function closeSheet(how) {
   const ov = document.getElementById("sheet-ov");
   if (!ov) return;
   ov.removeAttribute("id");
+  if (how !== "silent") sfx("close");
+  // Fermeture simple : la fiche se replie dans le bloc d'où elle est sortie.
+  const src = ov._src, sheet = ov.querySelector(".sheet");
+  if (how !== "silent" && src?.isConnected && canVT() && inViewport(src) && document.documentElement.dataset.vt !== "sheet") {
+    sheet.style.viewTransitionName = "morph";
+    const t = vt("sheet-out", () => { ov.remove(); src.style.viewTransitionName = "morph"; });
+    const end = () => { src.style.viewTransitionName = ""; };
+    t.finished.then(end, end);
+    return;
+  }
   ov.classList.remove("is-open");
   ov.classList.add("is-closing");
-  if (how !== "silent") sfx("close");
   setTimeout(() => ov.remove(), reduceMotion.matches ? 0 : 200);
 }
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
@@ -2678,6 +2758,7 @@ function rerender() {
   else renderTasks();
   updateFab();
   updateBell();
+  if (_entering) { _entering = false; countUp(viewEl); }
 }
 
 document.getElementById("notif-bell")?.addEventListener("click", openChangesSheet);
@@ -2694,9 +2775,11 @@ document.addEventListener("keydown", (e) => {
   if (k === "1" || k === "2" || k === "3") { e.preventDefault(); tab(TAB_ORDER[+k - 1]); return; }
   if (current === "week" && (k === "ArrowLeft" || k === "ArrowRight" || k === "t" || k === "T")) {
     e.preventDefault();
+    const before = weekOffset;
     weekOffset = (k === "t" || k === "T") ? 0 : weekOffset + (k === "ArrowLeft" ? -1 : 1);
     weekDay = -1;
-    renderWeek();
+    if (weekOffset === before) renderWeek();
+    else vt("week", renderWeek, weekOffset > before ? 1 : -1);
     return;
   }
   if (k === "n" || k === "N") {
@@ -2723,11 +2806,13 @@ document.querySelectorAll(".tab").forEach((btn) => {
     if (to !== from) {
       // La pastille glisse sous l'onglet ; la vue entre du côté où l'on va.
       tabsEl?.style.setProperty("--tab-i", to);
+      sfx("tab");
+      _entering = true;
+      if (canVT()) { vt("view", rerender, to > from ? 1 : -1); return; }
       viewEl.style.setProperty("--view-dir", to > from ? 1 : -1);
       viewEl.classList.remove("view-enter");
       void viewEl.offsetWidth;
       viewEl.classList.add("view-enter");
-      sfx("tab");
     }
     rerender();
   });
@@ -2738,7 +2823,7 @@ let _rsz;
 window.addEventListener("resize", () => { clearTimeout(_rsz); _rsz = setTimeout(() => { if (current === "week") renderWeek(); }, 200); });
 
 // ---------- Thème (clair / sombre) ----------
-// Par défaut on suit le système. Dès que l'utilisateur bascule, on force son choix
+// Sombre par défaut (quel que soit le système). Dès que l'utilisateur bascule, on garde son choix
 // (data-theme sur <html>) et on le mémorise par appareil (localStorage).
 const THEME_KEY = "hub-theme";
 const themeMeta = document.querySelector('meta[name="theme-color"]');
@@ -2746,8 +2831,8 @@ const themeIcon = document.getElementById("theme-icon");
 const themeBtn = document.getElementById("theme-toggle");
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 const storedTheme = () => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } };
-// Thème réellement affiché : choix forcé, sinon préférence système.
-const effectiveTheme = () => storedTheme() || (systemDark.matches ? "dark" : "light");
+// Thème réellement affiché : choix mémorisé, sinon sombre.
+const effectiveTheme = () => storedTheme() || "dark";
 function syncThemeUI() {
   const dark = effectiveTheme() === "dark";
   // On propose l'inverse : lune pour passer au clair… non : lune = sombre actif.
@@ -2757,9 +2842,17 @@ function syncThemeUI() {
 }
 themeBtn?.addEventListener("click", () => {
   const next = effectiveTheme() === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem(THEME_KEY, next); } catch {}
-  syncThemeUI();
+  const apply = () => {
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME_KEY, next); } catch {}
+    syncThemeUI();
+  };
+  // Le nouveau thème s'ouvre en cercle depuis le bouton.
+  const r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const st = document.documentElement.style;
+  st.setProperty("--tx", `${x}px`); st.setProperty("--ty", `${y}px`);
+  st.setProperty("--tr", `${Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)))}px`);
+  vt("theme", apply);
   sfx("toggle");
 });
 
@@ -2789,6 +2882,12 @@ if (location.hostname === "localhost") {
 }
 
 // ---------- Démarrage ----------
+// Au lever de l'écran d'entrée (index.html) : les cartes arrivent en cascade, les compteurs défilent.
+window.addEventListener("hub-intro-lift", () => {
+  viewEl.classList.add("cascade");
+  setTimeout(() => viewEl.classList.remove("cascade"), 900);
+  countUp(viewEl);
+}, { once: true });
 await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges()]);
 rerender();
 // Rafraîchit l'état "en cours / prochain" et les changements quand on revient sur l'app

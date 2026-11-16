@@ -5,8 +5,8 @@
 <title>Hub</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0D1013">
-<!-- Applique le thème mémorisé avant le rendu (évite le flash de couleur). -->
-<script>try{var t=localStorage.getItem("hub-theme");if(t){document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==="dark"?"#0D1013":"#F1F3F5";}}catch(e){}</script>
+<!-- Sombre par défaut ; applique le thème mémorisé avant le rendu (évite le flash de couleur). -->
+<script>(function(){var t="dark";try{t=localStorage.getItem("hub-theme")||"dark";}catch(e){}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name=theme-color]');if(m)m.content=t==="dark"?"#0D1013":"#F1F3F5";})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hub">
@@ -50,6 +50,42 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- Écran d'entrée : le jour en grand, puis un rideau se lève sur l'app. Au plus une fois par
+     demi-heure, jamais si « réduire les animations » est activé. Un tap le passe. -->
+<div class="intro" id="intro" aria-hidden="true">
+  <div class="intro-in">
+    <p class="intro-day" id="intro-day"></p>
+    <div class="intro-row">
+      <span class="intro-num" id="intro-num"></span>
+      <div class="intro-meta"><p class="intro-month" id="intro-month"></p><i class="intro-bar"></i></div>
+    </div>
+  </div>
+</div>
+<script>(function(){
+  var el=document.getElementById("intro"),root=document.documentElement;
+  try{
+    var last=+localStorage.getItem("hub-intro")||0;
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches||Date.now()-last<18e5){el.remove();return;}
+    localStorage.setItem("hub-intro",Date.now());
+  }catch(e){}
+  var d=new Date(),f=function(o){o.timeZone="Europe/Paris";return new Intl.DateTimeFormat("fr-FR",o).format(d);};
+  var day=f({weekday:"long"}),h="";
+  for(var i=0;i<day.length;i++)h+='<span><b style="--i:'+i+'">'+day[i]+'</b></span>';
+  document.getElementById("intro-day").innerHTML=h;
+  document.getElementById("intro-num").textContent=f({day:"numeric"});
+  document.getElementById("intro-month").textContent=f({month:"long",year:"numeric"});
+  root.classList.add("intro-on");
+  var done=false;
+  function lift(){
+    if(done)return;done=true;
+    root.classList.add("intro-lift");el.classList.add("is-out");
+    window.dispatchEvent(new Event("hub-intro-lift"));
+    setTimeout(function(){el.remove();root.classList.remove("intro-on","intro-lift");},950);
+  }
+  setTimeout(lift,1350);
+  el.addEventListener("pointerdown",lift);
+})();</script>
+
 <!-- Jeu d'icônes dessinées (trait 1.6, cohérent) réutilisées via <use> -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
