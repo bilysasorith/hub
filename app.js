@@ -1754,9 +1754,9 @@ async function decideBooking(id, accept) {
     _bookingBusy.delete(key);
   }
 }
-function sendBookingEmail(_id) {
-  // Task 5 : envoi de l'e-mail
-  return Promise.resolve();
+async function sendBookingEmail(id) {
+  const { error } = await _store.sb.functions.invoke("booking-email", { body: { id } });
+  if (error) throw error;
 }
 
 // Formulaire de demande (invité). date "AAAA-MM-JJ", start/end "HH:MM" (pré-remplis par un tap).
