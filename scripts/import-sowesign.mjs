@@ -10,13 +10,14 @@
 // Si SoWeSign exige un captcha, la connexion échoue : on s'arrête, on ne tente pas de le contourner.
 
 const API = "https://app.sowesign.com/api";
-const CODE = (process.env.SOWESIGN_CODE || "").replace(/\s/g, "");
+// On ne garde que les chiffres : espaces, tirets ou retours à la ligne dans le secret sont tolérés.
+const CODE = (process.env.SOWESIGN_CODE || "").replace(/\D/g, "");
 const SUPA_URL = process.env.SUPABASE_URL || "https://dcauisdxvbmcnerjklxm.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY_RUN = process.env.DRY_RUN === "1" || !SERVICE_KEY;
 
 if (!/^\d{16}$/.test(CODE)) {
-  console.log("SOWESIGN_CODE absent ou invalide (16 chiffres attendus) — import ignoré.");
+  console.log(`SOWESIGN_CODE absent ou invalide : ${CODE.length} chiffre(s) trouvé(s), 16 attendus — import ignoré.`);
   process.exit(0);
 }
 
