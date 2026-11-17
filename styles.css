@@ -748,6 +748,7 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .tg-opt.tg-sg.on { background: var(--warn); color: #1a1205; }
 .tg-opt.tg-perso.on { background: var(--ev-perso); color: #06150d; }
 .tg-opt.tg-fl.on { background: var(--ev-fl); color: #140a24; }
+.tg-opt.rp.on { background: var(--accent); }
 
 /* Étiquettes de tâche — affichage sur une tâche */
 .tg { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .02em; }

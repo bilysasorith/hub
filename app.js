@@ -272,6 +272,29 @@ const TASK_TAGS = {
 const tagChip = (tag) => TASK_TAGS[tag] ? `<span class="tg ${TASK_TAGS[tag].cls}">${TASK_TAGS[tag].label}</span>` : "";
 const tagPickHtml = (sel) => Object.entries(TASK_TAGS).map(([k, m]) =>
   `<button type="button" class="tg-opt ${m.cls}${sel === k ? " on" : ""}" data-tag="${k}">${m.label}</button>`).join("");
+// Récurrence de tâche. « monthly » : même jour le mois suivant (31 -> dernier jour du mois).
+const REPEATS = { "": "Une fois", monthly: "Tous les mois" };
+const repeatPickHtml = (sel) => Object.entries(REPEATS).map(([k, label]) =>
+  `<button type="button" class="tg-opt rp${(sel || "") === k ? " on" : ""}" data-rep="${k}">${label}</button>`).join("");
+const repeatPill = (t) => t.repeat === "monthly" && !t.done ? `<span class="pill">${ico("i-repeat")}chaque mois</span>` : "";
+function nextMonthly(due) {
+  const [Y, M, D] = (due || dayKey(now())).split("-").map(Number);
+  const last = new Date(Date.UTC(Y, M + 1, 0)).getUTCDate(); // dernier jour du mois suivant
+  const x = new Date(Date.UTC(Y, M, Math.min(D, last)));
+  return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
+}
+// Tâche récurrente cochée : crée l'occurrence suivante (sous-tâches remises à zéro), sans doublon.
+async function spawnNextRepeat(store, t) {
+  if (t.repeat !== "monthly") return;
+  const due_date = nextMonthly(t.due_date);
+  if (store.todos.some((x) => !x.done && x.title === t.title && x.due_date === due_date)) return;
+  const row = { title: t.title, due_date, tag: t.tag || null, repeat: t.repeat };
+  const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
+  if (subs.length) row.subtasks = subs.map((s) => ({ ...s, id: SUB_UID(), done: false }));
+  const { error } = await store.sb.from("todos").insert(row);
+  if (error) oops("Prochaine occurrence non créée : " + error.message);
+}
+
 // Pastille d'échéance : en retard / aujourd'hui / avant [jour].
 function deadlinePill(t) {
   if (t.done || !t.due_date) return "";
@@ -1735,7 +1758,7 @@ function todoRow(t) {
   const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
   const doneN = subs.filter((s) => s.done).length;
   const hasSubs = !t.done && subs.length > 0;
-  const subInner = tagChip(t.tag) + deadlinePill(t);
+  const subInner = tagChip(t.tag) + deadlinePill(t) + repeatPill(t);
   const prog = hasSubs ? `<span class="prog">${doneN}/${subs.length}</span>` : "";
   const sub = subInner ? `<div class="sub">${subInner}</div>` : "";
   const pbar = hasSubs ? `<div class="pbar"><i style="width:${Math.round(doneN / subs.length * 100)}%"></i></div>` : "";
@@ -2153,6 +2176,7 @@ function wireTodos(root, store) {
         return;
       }
       if (finishing) _cheerAt = Date.now();
+      if (checking) await spawnNextRepeat(store, t);
       await refreshTodos(); rerender();
     });
     el.querySelector(".todo-del")?.addEventListener("click", async () => {
@@ -2648,6 +2672,7 @@ function openTaskSheet(t0) {
     <div class="ts-meta">
       <label class="ts-field">À faire avant<input id="ts-date" type="date"></label>
       <div class="ts-field"><span class="ts-lab">Étiquette</span><div class="tag-pick" id="ts-tags">${tagPickHtml(null)}</div></div>
+      <div class="ts-field"><span class="ts-lab">Répéter</span><div class="tag-pick" id="ts-rep">${repeatPickHtml(null)}</div></div>
     </div>
     <p class="section-label" style="margin-top:4px">Sous-tâches</p>
     <div id="ts-subs"></div>
@@ -2669,6 +2694,7 @@ function openTaskSheet(t0) {
     const dateEl2 = ov.querySelector("#ts-date");
     if (document.activeElement !== dateEl2) dateEl2.value = t.due_date || "";
     ov.querySelectorAll("#ts-tags .tg-opt").forEach((b) => b.classList.toggle("on", b.dataset.tag === t.tag));
+    ov.querySelectorAll("#ts-rep .tg-opt").forEach((b) => b.classList.toggle("on", b.dataset.rep === (t.repeat || "")));
     const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
     const mount = ov.querySelector("#ts-subs");
     mount.innerHTML = subs.length
@@ -2702,6 +2728,13 @@ function openTaskSheet(t0) {
     const t = cur(); const next = t.tag === b.dataset.tag ? null : b.dataset.tag;
     await updateTodo(id, { tag: next }); paint(); rerender();
   }));
+  ov.querySelectorAll("#ts-rep .tg-opt").forEach((b) => b.addEventListener("click", async () => {
+    const t = cur(); const rep = b.dataset.rep || null;
+    if ((t.repeat || null) === rep) return;
+    const patch = { repeat: rep };
+    if (rep && !t.due_date) patch.due_date = dayKey(now()); // une récurrence a besoin d'une date de départ
+    await updateTodo(id, patch); paint(); rerender();
+  }));
   ov.querySelector("#ts-close").onclick = () => { closeSheet(); rerender(); };
   ov.querySelector("#ts-del").onclick = () => { closeSheet("silent"); deleteTodoWithUndo(id); };
   paint();
@@ -2717,6 +2750,7 @@ function openTaskAdd(defaultDate) {
       <label>Tâche<input id="ta-title" required maxlength="200" autocomplete="off" placeholder="Ex. réviser, rendre le TP…"></label>
       <label>À faire avant<input id="ta-date" type="date" value="${defaultDate || dayKey(now())}"></label>
       <div class="ts-field"><span class="ts-lab">Étiquette</span><div class="tag-pick" id="ta-tags">${tagPickHtml(null)}</div></div>
+      <div class="ts-field"><span class="ts-lab">Répéter</span><div class="tag-pick" id="ta-rep">${repeatPickHtml(null)}</div></div>
       <div class="sheet-actions">
         <button type="button" class="btn btn-ghost" id="ta-cancel">Annuler</button>
         <button type="submit" class="btn">Ajouter</button>
@@ -2727,14 +2761,21 @@ function openTaskAdd(defaultDate) {
     taTag = taTag === b.dataset.tag ? null : b.dataset.tag;
     ov.querySelectorAll("#ta-tags .tg-opt").forEach((x) => x.classList.toggle("on", x.dataset.tag === taTag));
   }));
+  let taRep = null;
+  ov.querySelectorAll("#ta-rep .tg-opt").forEach((b) => b.addEventListener("click", () => {
+    taRep = b.dataset.rep || null;
+    ov.querySelectorAll("#ta-rep .tg-opt").forEach((x) => x.classList.toggle("on", x === b));
+  }));
   ov.querySelector("#ta-cancel").onclick = closeSheet;
   ov.querySelector("#ta-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = ov.querySelector("#ta-title").value.trim();
     if (!title) return;
-    const due_date = ov.querySelector("#ta-date").value || null;
+    let due_date = ov.querySelector("#ta-date").value || null;
+    const row = { title, due_date, tag: taTag };
+    if (taRep) { row.repeat = taRep; row.due_date = due_date || dayKey(now()); } // colonne envoyée seulement si utilisée
     quiet(1500);
-    const { error } = await _store.sb.from("todos").insert({ title, due_date, tag: taTag });
+    const { error } = await _store.sb.from("todos").insert(row);
     if (error) { oops("Ajout impossible : " + error.message); return; }
     closeSheet("silent"); await refreshAfterAdd(); rerender();
   });
