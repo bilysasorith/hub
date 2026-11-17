@@ -154,23 +154,15 @@ begin
   perform pg_advisory_xact_lock(hashtext('booking_requests'));
 
   if (select count(*) from booking_requests
-       where guest_token = p_token and status = 'pending') >= 3 then
+       where guest_token = p_token and status = 'pending' and start_at > now()) >= 3 then
     raise exception 'Trop de demandes en attente';
   end if;
   if (select count(*) from booking_requests
-       where owner_id = v_owner and status = 'pending') >= 30 then
+       where owner_id = v_owner and status = 'pending' and start_at > now()) >= 30 then
     raise exception 'Trop de demandes en attente';
   end if;
 
   if exists (select 1 from busy_slots(p_start, p_end)) then
-    raise exception 'Créneau déjà pris';
-  end if;
-  -- Un autre invité a déjà une demande en attente sur ce créneau.
-  if exists (
-    select 1 from booking_requests b
-     where b.owner_id = v_owner and b.status = 'pending'
-       and b.start_at < p_end and b.end_at > p_start
-  ) then
     raise exception 'Créneau déjà pris';
   end if;
 
