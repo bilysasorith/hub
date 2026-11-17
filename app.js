@@ -792,6 +792,26 @@ function subjectIcon(ev) {
   if (/web|front|back|dévelop|develop|program|code|java|python|algo|\binfo/.test(t)) return "i-code";
   return "i-cap";
 }
+// Espace Moodle de chaque matière, indexé par code module du planning (ev.module).
+// Les codes changent chaque année (suffixe -2627…) : à mettre à jour à la rentrée.
+const MOODLE_COURSES = {
+  "FE2BG-2627PSA01": 24573,   // Business Game
+  "FG2CSR-2627PSA01": 24634,  // CSR
+  "FH2HP-2627PSA01": 24669,   // Histoire de la philosophie
+  "FP2ENG-2627PSA01": 24612,  // Engineering Project
+  "LXP-4GOOD-2627PSA01": 22709, // Efrei For Good Xperience
+  "SEMMAJ-01-2627PSP01": 22711, // Séminaire
+  "ST2AAN-2627PSA01": 24591,  // Data Integration and Analytics
+  "ST2AML-2627PSA01": 24586,  // Machine Learning for Data Analysts
+  "ST2BDPV-2627PSA01": 24594, // 3D Data Visualization
+  "ST2BIG-2627PSA01": 24598,  // Big Data Processing
+  "ST2CGAI-2627PSA01": 24596, // Chatbots & Generative AI
+  "ST2DABI-2627PSA01": 24587, // Data Analyst Certification
+};
+function moodleUrl(ev) {
+  const id = ev && MOODLE_COURSES[ev.module];
+  return id ? `https://moodle.myefrei.fr/course/view.php?id=${id}` : null;
+}
 const SRC_HC = { course: "var(--ev-course)", perso: "var(--ev-perso)", fl: "var(--ev-fl)", ef: "var(--ev-ef)", gc: "var(--ev-gc)" };
 
 // Trous libres (≥ 45 min) entre les créneaux de la journée (sur l'union des créneaux).
@@ -884,6 +904,9 @@ function heroNext(evs, curIdx, nextIdx, N) {
   const meta = [`<span>${ico("i-clock")}${fmtTime.format(start)}${end ? " – " + fmtTime.format(end) : ""}</span>`];
   if (place) meta.push(`<span>${ico("i-pin")}${esc(place)}</span>`);
   meta.push(`<span>${ico(subjectIcon(ev))}${SRC_LABEL[ev.source] || "Cours"}</span>`);
+  const moodle = ev.source === "course" ? moodleUrl(ev) : null;
+  // stopPropagation : le lien ne doit pas aussi ouvrir la fiche de la carte.
+  if (moodle) meta.push(`<a class="meta-link" href="${moodle}" target="_blank" rel="noopener" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">${ico("i-ext")}Moodle</a>`);
   return `<div class="hero-next" style="--hc:${hc}" ${evAttrs(ev)}>
     <div class="kicker"><i></i>${isNow ? "En ce moment" : "Prochain créneau"}</div>
     <div class="cd">${cd}</div>
@@ -2525,7 +2548,9 @@ function openEventActions(ev) {
   const rebookBtn = ev.source === "course" ? "" : rebookTodo
     ? `<button class="btn btn-ghost rem-toggle on" id="s-rebook" disabled>${ico("i-check")}Rappel prévu · ${esc(dueLabel(rebookTodo.due_date))}</button>`
     : `<button class="btn btn-ghost" id="s-rebook">${ico("i-today")}Reprendre RDV dans 1 mois</button>`;
-  const examBtn = ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "";
+  const moodle = ev.source === "course" ? moodleUrl(ev) : null;
+  const moodleBtn = moodle ? `<a class="btn btn-ghost" href="${moodle}" target="_blank" rel="noopener">${ico("i-ext")}Espace Moodle</a>` : "";
+  const examBtn = (ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "") + moodleBtn;
 
   if (ev.source === "perso") {
     const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${rebookBtn}</div><div class="sheet-actions">

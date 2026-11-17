@@ -627,6 +627,9 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .hero-next .meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--muted); font-size: 13px; margin-top: 10px; }
 .hero-next .meta span { display: inline-flex; align-items: center; gap: 6px; }
 .hero-next .meta svg { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.hero-next .meta-link { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; color: var(--fg); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line); }
+.hero-next .meta-link:hover { text-decoration-color: currentColor; }
+.hero-next .meta-link svg { color: currentColor; }
 /* Illustration de fond (line-art discret, recoloré par la source) */
 .hero-art { position: absolute; right: -8px; bottom: -16px; z-index: 0; width: 184px; height: auto; color: var(--hc); opacity: .09; pointer-events: none; }
 :root[data-theme="light"] .hero-art { opacity: .14; }
@@ -1092,6 +1095,7 @@ html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
 .sheet-actions { flex-wrap: wrap; }
 .sheet-tools .btn, .sheet-actions .btn { white-space: nowrap; }
 .sheet-tools .btn svg { width: 16px; height: 16px; }
+.sheet-tools a.btn { text-decoration: none; }
 
 /* ---------- Toasts (messages non bloquants, « Annuler » après suppression) ---------- */
 .toasts {
