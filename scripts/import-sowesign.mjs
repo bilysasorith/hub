@@ -1,7 +1,9 @@
 // Importe l'émargement SoWeSign (signé / absent) des 30 derniers jours dans Supabase, en PRIVÉ.
 //
-// Variables d'env (secrets GitHub) :
-//   SOWESIGN_CODE         — code de connexion à 16 chiffres : établissement (4) + identifiant (8) + PIN (4)
+// Variables d'env :
+//   SOWESIGN_INSTITUTION  — code établissement, 4 chiffres (variable GitHub, pas secret)
+//   SOWESIGN_ID           — identifiant étudiant, 8 chiffres (variable GitHub, pas secret)
+//   SOWESIGN_PIN          — code PIN, 4 chiffres (secret GitHub SOWESIGN_CODE)
 //   SUPABASE_URL          — URL du projet [public]
 //   SUPABASE_SERVICE_KEY  — clé service_role
 //   HUB_USER_ID           — UUID du compte propriétaire du Hub
@@ -10,14 +12,23 @@
 // Si SoWeSign exige un captcha, la connexion échoue : on s'arrête, on ne tente pas de le contourner.
 
 const API = "https://app.sowesign.com/api";
-// On ne garde que les chiffres : espaces, tirets ou retours à la ligne dans le secret sont tolérés.
-const CODE = (process.env.SOWESIGN_CODE || "").replace(/\D/g, "");
+// On ne garde que les chiffres : espaces ou tirets sont tolérés.
+const digits = (v) => (v || "").replace(/\D/g, "");
+const PARTS = {
+  établissement: [digits(process.env.SOWESIGN_INSTITUTION), 4],
+  identifiant: [digits(process.env.SOWESIGN_ID), 8],
+  PIN: [digits(process.env.SOWESIGN_PIN), 4],
+};
+// Code de connexion SoWeSign : établissement + identifiant + PIN (16 chiffres).
+const CODE = Object.values(PARTS).map(([v]) => v).join("");
 const SUPA_URL = process.env.SUPABASE_URL || "https://dcauisdxvbmcnerjklxm.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const DRY_RUN = process.env.DRY_RUN === "1" || !SERVICE_KEY;
 
-if (!/^\d{16}$/.test(CODE)) {
-  console.log(`SOWESIGN_CODE absent ou invalide : ${CODE.length} chiffre(s) trouvé(s), 16 attendus — import ignoré.`);
+const bad = Object.entries(PARTS).filter(([, [v, n]]) => v.length !== n);
+if (bad.length) {
+  // Longueurs seulement : jamais la valeur.
+  console.log(`SoWeSign non configuré — ${bad.map(([k, [v, n]]) => `${k} : ${v.length} chiffre(s) au lieu de ${n}`).join(", ")}. Import ignoré.`);
   process.exit(0);
 }
 

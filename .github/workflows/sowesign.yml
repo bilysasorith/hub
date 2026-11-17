@@ -20,7 +20,9 @@ jobs:
           node-version: "20"
       - name: Importer l'émargement (SoWeSign -> Supabase)
         env:
-          SOWESIGN_CODE: ${{ secrets.SOWESIGN_CODE }}
+          SOWESIGN_INSTITUTION: ${{ vars.SOWESIGN_INSTITUTION }}
+          SOWESIGN_ID: ${{ vars.SOWESIGN_ID }}
+          SOWESIGN_PIN: ${{ secrets.SOWESIGN_CODE }} # le secret contient seulement le PIN
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           HUB_USER_ID: ${{ secrets.HUB_USER_ID }}
