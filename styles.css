@@ -1097,6 +1097,22 @@ html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
 .sheet-tools .btn svg { width: 16px; height: 16px; }
 .sheet-tools a.btn { text-decoration: none; }
 
+/* Émargement SoWeSign */
+.sign-tag { display: inline-flex; align-items: center; gap: 4px; flex: none; margin-left: auto; font-family: var(--f-display); font-weight: 700; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 5px; border: 1px solid; text-decoration: none; }
+.sign-tag svg { width: 11px !important; height: 11px !important; margin: 0 !important; color: currentColor !important; }
+.exam-tag + .sign-tag, svg + .sign-tag { margin-left: 4px; }
+.sign-tag.is-ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, var(--surface)); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.sign-tag.is-bad { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.sign-tag.is-open { position: relative; z-index: 1; color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.hero-sign { position: relative; z-index: 1; margin-top: 12px; }
+.hero-sign .sign-tag { margin-left: 0; font-size: 11px; padding: 3px 8px; }
+.hero-sign-btn { height: 40px; font-size: 14px; text-decoration: none; }
+.hero-sign-btn svg { width: 16px; height: 16px; }
+.sign-note { display: flex; align-items: center; gap: 8px; }
+.sign-note svg { width: 16px; height: 16px; flex: none; }
+.sign-note.is-ok { color: var(--ok); }
+.sign-note.is-bad { color: var(--danger); }
+
 /* ---------- Toasts (messages non bloquants, « Annuler » après suppression) ---------- */
 .toasts {
   position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);

@@ -812,6 +812,42 @@ function moodleUrl(ev) {
   const id = ev && MOODLE_COURSES[ev.module];
   return id ? `https://moodle.myefrei.fr/course/view.php?id=${id}` : null;
 }
+// Émargement SoWeSign : on ne peut signer que pendant les 15 premières minutes du cours.
+const SOWESIGN_URL = "https://app.sowesign.com/student/next-course";
+const SIGN_WINDOW_MS = 15 * 60000;
+// "present" | "absent" (synchro SoWeSign) · "open" (fenêtre de signature en cours)
+// · "pending" (fenêtre passée, synchro pas encore arrivée) · null (cours à venir / pas un cours).
+function signState(ev, N = now()) {
+  if (ev?.source !== "course" || ev._hidden) return null;
+  const start = new Date(ev.start);
+  const st = _store?.attendance?.get(start.toISOString());
+  if (st === "present" || st === "absent") return st;
+  const t = N - start;
+  if (t < 0) return null;
+  return t <= SIGN_WINDOW_MS ? "open" : "pending";
+}
+// Lien « Signer » avec minutes restantes, mis à jour sur place par tickSignLinks().
+function signLink(ev, cls) {
+  const until = new Date(ev.start).getTime() + SIGN_WINDOW_MS;
+  return `<a class="${cls}" href="${SOWESIGN_URL}" target="_blank" rel="noopener" data-sign-until="${until}" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">${ico("i-pen")}<span>Signer · ${signLeft(until)}</span></a>`;
+}
+const signLeft = (until) => `reste ${Math.max(1, Math.ceil((until - now().getTime()) / 60000))} min`;
+function tickSignLinks() {
+  document.querySelectorAll("[data-sign-until]").forEach((a) => {
+    const until = Number(a.dataset.signUntil);
+    if (now().getTime() > until) { a.remove(); return; }
+    const s = a.querySelector("span"); if (s) s.textContent = `Signer · ${signLeft(until)}`;
+  });
+}
+setInterval(tickSignLinks, 20000);
+// Petite pastille de statut sur la tuile d'un cours.
+function signTag(ev) {
+  const st = signState(ev);
+  if (st === "present") return `<span class="sign-tag is-ok" title="Signé sur SoWeSign">${ico("i-check")}signé</span>`;
+  if (st === "absent") return `<span class="sign-tag is-bad" title="Absent sur SoWeSign">${ico("i-alert")}non signé</span>`;
+  if (st === "open") return signLink(ev, "sign-tag is-open");
+  return "";
+}
 const SRC_HC = { course: "var(--ev-course)", perso: "var(--ev-perso)", fl: "var(--ev-fl)", ef: "var(--ev-ef)", gc: "var(--ev-gc)" };
 
 // Trous libres (≥ 45 min) entre les créneaux de la journée (sur l'union des créneaux).
@@ -865,7 +901,7 @@ function dayTimeline(evs) {
     const exam = isExam(ev);
     return `<div class="tev src-${ev.source}${size}${conf ? " is-conf" : ""}${ev._hidden ? " is-hidden" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)}"
       style="top:${y(ev.s)}px;height:${h}px;left:calc(${left}% + ${left ? 3 : 0}px);width:calc(${w}% - ${ev.cols > 1 ? 6 : 0}px)">
-      <div class="hd"><span class="emb">${ico(exam ? "i-alert" : subjectIcon(ev))}</span><span class="t">${hmMin(ev.s)} – ${hmMin(ev.e2)}</span>${exam ? `<span class="exam-tag">EXAMEN</span>` : conf ? ico("i-alert") : ""}</div>
+      <div class="hd"><span class="emb">${ico(exam ? "i-alert" : subjectIcon(ev))}</span><span class="t">${hmMin(ev.s)} – ${hmMin(ev.e2)}</span>${exam ? `<span class="exam-tag">EXAMEN</span>` : conf ? ico("i-alert") : ""}${signTag(ev)}</div>
       <div class="ti">${esc(ev.title)}</div>
       ${loc ? `<div class="lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
     </div>`;
@@ -907,11 +943,15 @@ function heroNext(evs, curIdx, nextIdx, N) {
   const moodle = ev.source === "course" ? moodleUrl(ev) : null;
   // stopPropagation : le lien ne doit pas aussi ouvrir la fiche de la carte.
   if (moodle) meta.push(`<a class="meta-link" href="${moodle}" target="_blank" rel="noopener" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">${ico("i-ext")}Moodle</a>`);
+  const sign = signState(ev, N);
+  const signRow = sign === "open" ? `<div class="hero-sign">${signLink(ev, "btn hero-sign-btn")}</div>`
+    : sign === "present" ? `<div class="hero-sign"><span class="sign-tag is-ok">${ico("i-check")}signé</span></div>`
+    : sign === "absent" ? `<div class="hero-sign"><span class="sign-tag is-bad">${ico("i-alert")}non signé</span></div>` : "";
   return `<div class="hero-next" style="--hc:${hc}" ${evAttrs(ev)}>
     <div class="kicker"><i></i>${isNow ? "En ce moment" : "Prochain créneau"}</div>
     <div class="cd">${cd}</div>
     <div class="ti">${esc(ev.title)}</div>
-    <div class="meta">${meta.join("")}</div>${art}</div>`;
+    <div class="meta">${meta.join("")}</div>${signRow}${art}</div>`;
 }
 
 // Ligne « écarts » : jours clean depuis le dernier écart (ouvre la fiche).
@@ -1831,7 +1871,7 @@ let _store = null;
 let _storeP = null;      // chargement de Supabase en cours ou abouti
 let _storeTried = false; // a-t-on déjà tenté d'initialiser le store (évite les boucles si hors-ligne) ?
 const SIGNED_KEY = "hub.signed", PERSO_KEY = "hub.personal";
-const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [] });
+const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [], attendance: new Map() });
 const OFFLINE = { data: null, error: { message: "Hors ligne — réessaie quand le réseau revient." } };
 
 // Client « en attente » : utilisé tant que Supabase n'est pas chargé (ou hors ligne). Il retient
@@ -1868,7 +1908,7 @@ function seedStore() {
       todos: JSON.parse(localStorage.getItem("hub.todos") || "[]"),
       custom: p.custom || [], hidden: new Set(p.hidden || []), teams: p.teams || [], skips: new Set(p.skips || []),
       seenAt: p.seenAt || null, goals: p.goals || [], reminders: new Set(p.reminders || []),
-      examFlags: new Map(p.examFlags || []), cheats: p.cheats || [],
+      examFlags: new Map(p.examFlags || []), cheats: p.cheats || [], attendance: new Map(p.attendance || []),
     };
   } catch { _store = null; }
 }
@@ -1879,6 +1919,7 @@ function savePersonal() {
     localStorage.setItem(PERSO_KEY, JSON.stringify({
       custom: _store.custom, hidden: [..._store.hidden], teams: _store.teams, skips: [..._store.skips], seenAt: _store.seenAt,
       goals: _store.goals, reminders: [..._store.reminders], examFlags: [..._store.examFlags], cheats: _store.cheats,
+      attendance: [..._store.attendance],
     }));
   } catch {}
 }
@@ -1949,9 +1990,9 @@ async function refreshAfterAdd() {
 const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annulables
 const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; return; }
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; _store.attendance = new Map(); return; }
   if (!_store.live) return; // état connu affiché ; le vrai chargement arrive avec Supabase
-  const [c, o, t, s, p, g, r, x, ch] = await Promise.all([
+  const [c, o, t, s, p, g, r, x, ch, at] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -1961,6 +2002,7 @@ async function refreshPersonal() {
     _store.sb.from("event_reminders").select("event_key"),
     _store.sb.from("exam_flags").select("event_uid,is_exam"),
     _store.sb.from("cheat_meals").select("id,day,label").order("day", { ascending: false }),
+    _store.sb.from("attendance").select("start_at,status"),
   ]);
   _store.custom = c.error ? [] : (c.data || []).filter((x) => !_customLeaving.has(String(x.id)));
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -1971,6 +2013,8 @@ async function refreshPersonal() {
   _store.reminders = r.error ? new Set() : new Set((r.data || []).map((x) => x.event_key));
   _store.examFlags = x.error ? new Map() : new Map((x.data || []).map((e) => [e.event_uid, !!e.is_exam]));
   _store.cheats = ch.error ? [] : (ch.data || []).filter((r) => !_cheatLeaving.has(String(r.id))).map((r) => ({ ...r, day: String(r.day).slice(0, 10) }));
+  // Table absente (SQL attendance.sql pas encore lancé) : on garde simplement une Map vide.
+  _store.attendance = at.error ? new Map() : new Map((at.data || []).map((a) => [new Date(a.start_at).toISOString(), a.status]));
   savePersonal();
   updateBell();
   subscribeRealtime();
@@ -2549,7 +2593,12 @@ function openEventActions(ev) {
     ? `<button class="btn btn-ghost rem-toggle on" id="s-rebook" disabled>${ico("i-check")}Rappel prévu · ${esc(dueLabel(rebookTodo.due_date))}</button>`
     : `<button class="btn btn-ghost" id="s-rebook">${ico("i-today")}Reprendre RDV dans 1 mois</button>`;
   const moodle = ev.source === "course" ? moodleUrl(ev) : null;
-  const moodleBtn = moodle ? `<a class="btn btn-ghost" href="${moodle}" target="_blank" rel="noopener">${ico("i-ext")}Espace Moodle</a>` : "";
+  const moodleBtn = (moodle ? `<a class="btn btn-ghost" href="${moodle}" target="_blank" rel="noopener">${ico("i-ext")}Espace Moodle</a>` : "")
+    + (signState(ev) === "open" ? signLink(ev, "btn") : "");
+  const signSt = signState(ev);
+  const signNote = signSt === "present" ? `<p class="sheet-note sign-note is-ok">${ico("i-check")}Signé sur SoWeSign.</p>`
+    : signSt === "absent" ? `<p class="sheet-note sign-note is-bad">${ico("i-alert")}Pas signé : SoWeSign te compte absent.</p>`
+    : signSt === "pending" ? `<p class="sheet-note sign-note">Statut SoWeSign pas encore synchronisé.</p>` : "";
   const examBtn = (ev.source === "course" ? `<button class="btn btn-ghost exam-toggle${exam ? " on" : ""}" id="s-exam">${ico("i-alert")}${exam ? "Ce n'est pas un examen" : "Marquer comme examen"}</button>` : "") + moodleBtn;
 
   if (ev.source === "perso") {
@@ -2595,7 +2644,7 @@ function openEventActions(ev) {
         closeSheet("silent"); await refreshPersonal(); rerender();
       };
     } else {
-      const ov = openSheet(`${head}<div class="sheet-tools">${remBtn}${examBtn}</div><div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
+      const ov = openSheet(`${head}${signNote}<div class="sheet-tools">${remBtn}${examBtn}</div><div class="sheet-actions"><button class="btn btn-ghost" id="s-close">Fermer</button>
         <button class="btn btn-danger" id="s-hide">Je n'y vais pas</button></div>`);
       ov.querySelector("#s-close").onclick = closeSheet;
       ov.querySelector("#s-hide").onclick = async () => {

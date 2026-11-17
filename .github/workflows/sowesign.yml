@@ -1,0 +1,27 @@
+name: Émargement SoWeSign
+
+on:
+  schedule:
+    # Toutes les 30 min, du lundi au vendredi, ~7h–20h heure de Paris (cron en UTC).
+    - cron: "*/30 6-19 * * 1-5"
+  workflow_dispatch: {}
+
+concurrency:
+  group: sowesign
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Importer l'émargement (SoWeSign -> Supabase)
+        env:
+          SOWESIGN_CODE: ${{ secrets.SOWESIGN_CODE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          HUB_USER_ID: ${{ secrets.HUB_USER_ID }}
+        run: node scripts/import-sowesign.mjs
