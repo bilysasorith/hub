@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     const { data: r, error: rErr } = await db.from("booking_requests")
       .select("id, owner_id, start_at, end_at, email, status, emailed_at").eq("id", id).maybeSingle();
-    if (rErr) return json({ sent: false, error: rErr.message }, 500);
+    if (rErr) { console.error("[booking-email] lecture", rErr); return json({ sent: false, error: "Erreur serveur." }, 500); }
     if (!r || r.owner_id !== u.user.id) return json({ sent: false });
     if (!["accepted", "declined"].includes(r.status)) return json({ sent: false });
     if (!r.email || !String(r.email).trim() || r.emailed_at) return json({ sent: false });
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const { data: claimed, error: cErr } = await db.from("booking_requests")
       .update({ emailed_at: new Date().toISOString() })
       .eq("id", id).is("emailed_at", null).select("id");
-    if (cErr) return json({ sent: false, error: cErr.message }, 500);
+    if (cErr) { console.error("[booking-email] réservation", cErr); return json({ sent: false, error: "Erreur serveur." }, 500); }
     if (!claimed || claimed.length === 0) return json({ sent: false });
 
     try {
@@ -80,10 +80,13 @@ Deno.serve(async (req) => {
       });
       return json({ sent: true });
     } catch (e) {
-      await db.from("booking_requests").update({ emailed_at: null }).eq("id", id);
-      return json({ sent: false, error: String((e as Error)?.message || e) }, 502);
+      console.error("[booking-email] envoi", e);
+      const { error: rbErr } = await db.from("booking_requests").update({ emailed_at: null }).eq("id", id);
+      if (rbErr) console.error("[booking-email] rollback emailed_at", rbErr);
+      return json({ sent: false, error: "Envoi de l'e-mail impossible." }, 502);
     }
   } catch (e) {
-    return json({ sent: false, error: String((e as Error)?.message || e) }, 500);
+    console.error("[booking-email]", e);
+    return json({ sent: false, error: "Erreur serveur." }, 500);
   }
 });

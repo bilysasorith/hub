@@ -1,4 +1,9 @@
+# Seulement pour le déploiement des fonctions (npx supabase functions deploy).
 project_id = "dcauisdxvbmcnerjklxm"
+
+[functions.notify-sign]
+# Appelée par pg_cron sans jeton : elle ne fait qu'envoyer la notif d'un cours qui commence, une fois.
+verify_jwt = false
 
 [functions.booking-email]
 verify_jwt = true
