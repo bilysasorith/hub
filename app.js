@@ -3,6 +3,7 @@
 
 import { cheatStats } from "./lib/cheat-stats.js";
 import { moveRange, resizeEnd } from "./lib/drag-math.js";
+import { validateRequest, conflictsWith, loadGuest, rememberRequest } from "./lib/booking.js";
 
 const SUPABASE_VERSION = "2.47.10";
 const cfg = window.HUB_CONFIG || {};
@@ -1108,6 +1109,7 @@ function renderToday() {
     ? `<div class="panel"><div class="panel-h"><h2>Journée</h2><span class="count">${countTxt}</span></div>${timeline}</div>`
     : "";
   viewEl.innerHTML = `
+    ${guestMode() ? guestBanner() : ""}
     ${captureHtml}
     <div id="dash-exam"></div>
     <section class="dash${evs.length ? "" : " is-free"}">
@@ -1137,6 +1139,7 @@ function renderToday() {
     renderDashGoal();
     renderDashUpcoming();
   }
+  if (guestMode()) guestSync(null);
 }
 
 async function renderDashTasks() {
@@ -1229,6 +1232,8 @@ function findEventFromDataset(ds) {
 
 // Attributs d'identification posés sur chaque bloc cliquable.
 function evAttrs(ev) {
+  // Créneau occupé / demande de l'invité : simple repère, ni cliquable ni focalisable.
+  if (ev.source === "busy" || ev.source === "request") return `data-src="${ev.source}"`;
   const id = ev.source === "course" ? `data-uid="${esc(ev.uid)}"`
     : ev.source === "perso" ? `data-cid="${esc(ev.cid)}"`
     : `data-tid="${esc(ev.tid)}"`;
@@ -1322,6 +1327,7 @@ function wireWeekNav() {
 function weekStats(perDay) {
   let nCours = 0, nPro = 0, totalMin = 0;
   perDay.flat().forEach((e) => {
+    if (e.source === "request") return; // demande de l'invité : pas encore dans l'agenda
     totalMin += Math.max(0, e.e2 - e.s);
     if (e.source === "course") nCours++;
     if (e.source === "fl") nPro++;
@@ -1343,6 +1349,8 @@ function weekLegend(perDay, days) {
   if (present.has("fl")) items.push(["var(--ev-fl)", "Pro"]);
   if (present.has("ef")) items.push(["var(--ev-ef)", "École (Teams)"]);
   if (present.has("gc")) items.push(["var(--ev-gc)", "Agenda Google"]);
+  if (present.has("busy")) items.push(["var(--muted)", "Occupé"]);
+  if (present.has("request")) items.push(["var(--accent)", "Ta demande"]);
   if (days.some((d) => dayMode(d.key) === "entreprise")) items.push(["var(--warn)", "Entreprise"]);
   if (!items.length) return "";
   return `<div class="wk-legend">${items.map(([c, l]) =>
@@ -1403,9 +1411,16 @@ function renderWeek() {
     wireWeekNav(); return;
   }
 
+  // Invité (hors session) : créneaux occupés + ses demandes, chargés à part (guestSync).
+  if (SUPA_READY && !_store && !_storeTried) {
+    _storeTried = true;
+    getStore().then(() => { if (current === "week") rerender(); });
+  }
+  const guest = guestMode();
+  if (guest) guestSync(days);
   // Une seule passe de positionnement, réutilisée pour les stats, la légende et la grille.
-  const rawDay = days.map((d) => mergedEventsForDay(d.key).map((e) => ({
-    ...e, s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60,
+  const rawDay = days.map((d) => [...mergedEventsForDay(d.key), ...(guest ? guestEventsForDay(d.key) : [])].map((e) => ({
+    ...e, s: e._s ?? parisMinutes(e.start), e2: e._e2 ?? (e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60),
   })));
   // Les longues plages importées (permanence, « Hotline » sur toute la journée…) passent en fond :
   // elles ne prennent pas de colonne et ne créent pas de faux conflits avec chaque cours.
@@ -1415,14 +1430,16 @@ function renderWeek() {
   const sel = weekDay >= 0 ? weekDay : (todayIdx >= 0 ? todayIdx : 0);
   _weekSel = sel;
 
+  // Invité : pas d'alerte de conflit (un « Occupé » sur un cours ne le regarde pas).
+  if (guest) for (const e of perDay.flat()) e.conflict = false;
   const bar = `<div class="wk-bar">${weekNav(days)}${weekStats(perDay)}<div class="wk-spacer"></div>${weekLegend(perDay.map((l, i) => [...l, ...bgDay[i]]), days)}</div>`;
-  const conflicts = weekConflicts(perDay);
+  const conflicts = guest ? [] : weekConflicts(perDay);
   const alert = conflicts.length
     ? `<button class="wk-alert" id="wk-alert" data-i="${conflicts[0].i}">${ico("i-alert", "si")}
         <span><b>${conflicts.length} conflit${conflicts.length > 1 ? "s" : ""} à vérifier</b> cette semaine — deux créneaux se chevauchent.</span>
         <span class="wk-alert-go">Voir&nbsp;›</span></button>`
     : "";
-  viewEl.innerHTML = `<div class="wk">${bar}${alert}${weekTools(days)}${weekPills(days, sel, perDay.map((l, i) => [...l, ...bgDay[i]]))}${weekGrid(days, perDay, sel, bgDay)}</div>`;
+  viewEl.innerHTML = `<div class="wk">${bar}${guest ? guestBanner() : ""}${alert}${weekTools(days)}${weekPills(days, sel, perDay.map((l, i) => [...l, ...bgDay[i]]))}${weekGrid(days, perDay, sel, bgDay)}</div>`;
 
   wireWeekNav();
   viewEl.querySelector("#toggle-hidden")?.addEventListener("click", () => { showHidden = !showHidden; renderWeek(); });
@@ -1457,7 +1474,8 @@ function renderWeek() {
 
 // Tap sur une zone vide d'une colonne jour -> ajout d'un événement à cette heure.
 function wireCalAdd(days) {
-  if (!_store?.session) return;
+  const guest = guestMode();
+  if (!_store?.session && !guest) return;
   const cal = viewEl.querySelector(".cal");
   if (!cal) return;
   const top0 = +cal.dataset.top0 || 0;
@@ -1471,9 +1489,218 @@ function wireCalAdd(days) {
       let min = top0 + ((e.clientY - rect.top) / PX) * 60;  // minutes depuis minuit
       min = Math.max(top0, Math.round(min / 15) * 15);       // arrondi au quart d'heure
       const endMin = Math.min(24 * 60, min + 60);
-      openEventForm(days[i].key, hhmm(min), hhmm(endMin));
+      if (guest) openBookingForm(days[i].key, hhmm(min), hhmm(endMin));
+      else openEventForm(days[i].key, hhmm(min), hhmm(endMin));
     });
   });
+}
+
+// ---------- Réservations invités (hors session) ----------
+// Un invité voit la semaine avec des blocs « Occupé » (heures seules, via busy_slots) et peut
+// demander un créneau. Son navigateur garde un jeton anonyme + ses demandes (lib/booking.js).
+// Si les fonctions SQL ne répondent pas, la vue reste celle d'avant, sans blocs occupés.
+const _guest = { busy: [], mine: [], weekKey: null, mineLoaded: false };
+const guestMode = () => SUPA_READY && !!_store?.live && !_store.session;
+const _guestMem = new Map();
+// localStorage peut être inaccessible (navigation privée stricte) : repli en mémoire.
+function guestStorage() {
+  try { const ls = window.localStorage; ls.getItem("hub.guest"); return ls; } catch {
+    return { getItem: (k) => _guestMem.get(k) ?? null, setItem: (k, v) => { _guestMem.set(k, String(v)); } };
+  }
+}
+// Fusionne les créneaux occupés qui se chevauchent : moins de bruit, et on ne trahit pas
+// combien d'événements se cachent derrière un bloc.
+function mergeBusy(rows) {
+  const list = (rows || []).map((r) => ({ s: Date.parse(r.start_at), e: Date.parse(r.end_at) }))
+    .filter((r) => !Number.isNaN(r.s) && !Number.isNaN(r.e) && r.e > r.s)
+    .sort((a, b) => a.s - b.s);
+  const out = [];
+  for (const r of list) {
+    const last = out[out.length - 1];
+    if (last && r.s <= last.e) last.e = Math.max(last.e, r.e);
+    else out.push({ ...r });
+  }
+  return out.map((r) => ({ start: new Date(r.s).toISOString(), end: new Date(r.e).toISOString() }));
+}
+// Créneaux occupés entre deux instants ISO ; null si la fonction SQL ne répond pas.
+async function busyBetween(from, to) {
+  try {
+    const { data, error } = await _store.sb.rpc("busy_slots", { p_from: from, p_to: to });
+    if (error) throw error;
+    return mergeBusy(data);
+  } catch (e) {
+    console.warn("[Hub] busy_slots", e?.message || e);
+    return null;
+  }
+}
+async function fetchGuestBusy(days) {
+  const wk = days[0].key;
+  const busy = await busyBetween(parisToISO(wk, "00:00"), parisToISO(addDays(days[6].key, 1), "00:00"));
+  if (_guest.weekKey !== wk) return false; // semaine changée entre-temps : réponse périmée
+  if (busy === null) { const had = _guest.busy.length > 0; _guest.busy = []; return had; }
+  _guest.busy = busy;
+  return true;
+}
+async function fetchGuestMine() {
+  const g = loadGuest(guestStorage());
+  if (!g.ids.length) { const had = _guest.mine.length > 0; _guest.mine = []; return had; }
+  try {
+    const { data, error } = await _store.sb.rpc("my_bookings", { p_token: g.token });
+    if (error) throw error;
+    _guest.mine = (data || []).map((r) => ({ id: r.id, start: r.start_at, end: r.end_at, status: r.status }));
+    return true;
+  } catch (e) {
+    console.warn("[Hub] my_bookings", e?.message || e);
+    return false;
+  }
+}
+// Charge (une fois par semaine affichée / par retour sur l'app) puis re-rend si besoin.
+function guestSync(days) {
+  if (!guestMode()) return;
+  const jobs = [];
+  if (days && _guest.weekKey !== days[0].key) { _guest.weekKey = days[0].key; jobs.push(fetchGuestBusy(days)); }
+  if (!_guest.mineLoaded) { _guest.mineLoaded = true; jobs.push(fetchGuestMine()); }
+  if (!jobs.length) return;
+  Promise.all(jobs).then((r) => {
+    if (r.some(Boolean) && guestMode() && (current === "today" || current === "week")) rerender();
+  });
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) { _guest.weekKey = null; _guest.mineLoaded = false; } // le re-rendu suit (démarrage)
+});
+// Blocs invité d'un jour (heure de Paris), découpés aux bornes du jour.
+function guestEventsForDay(key) {
+  const d0 = Date.parse(parisToISO(key, "00:00")), d1 = Date.parse(parisToISO(addDays(key, 1), "00:00"));
+  const out = [];
+  const clip = (s, e, extra) => {
+    const a = Math.max(s, d0), b = Math.min(e, d1);
+    if (!(b > a)) return;
+    const start = new Date(a).toISOString(), end = new Date(b).toISOString();
+    out.push({ ...extra, start, end, _s: parisMinutes(start), _e2: b >= d1 ? 24 * 60 : parisMinutes(end) });
+  };
+  for (const b of _guest.busy) clip(Date.parse(b.start), Date.parse(b.end), { source: "busy", title: "Occupé" });
+  for (const r of _guest.mine) {
+    if (r.status === "pending") clip(Date.parse(r.start), Date.parse(r.end), { source: "request", title: "Ta demande" });
+  }
+  return out;
+}
+// Bandeau « Ta demande du jeu. 19 à 14:00 : en attente » (demandes des 28 derniers jours).
+const GUEST_STATUS = { pending: "en attente", accepted: "acceptée ✓", declined: "refusée" };
+function guestBanner() {
+  const since = now().getTime() - 28 * 24 * 3600 * 1000;
+  const rows = _guest.mine.filter((r) => Date.parse(r.end) >= since).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  if (!rows.length) return "";
+  return `<div class="guest-reqs">${rows.map((r) => {
+    const d = new Date(r.start);
+    const st = GUEST_STATUS[r.status] || r.status;
+    return `<div class="guest-req st-${esc(r.status)}">${ico(r.status === "accepted" ? "i-check" : "i-clock", "si")}<span>Ta demande du ${esc(fmtWdShort.format(d))} ${esc(fmtDayNum.format(d))} à ${esc(fmtTime.format(d))} : <b>${esc(st)}</b></span></div>`;
+  }).join("")}</div>`;
+}
+
+// Formulaire de demande (invité). date "AAAA-MM-JJ", start/end "HH:MM" (pré-remplis par un tap).
+function openBookingForm(dateKey, start, end) {
+  if (!guestMode()) return;
+  const N = now();
+  const today = dayKey(N);
+  const pad = (n) => String(n).padStart(2, "0");
+  let d = dateKey, st = start, en = end;
+  if (!d) {
+    // Par défaut : l'heure pleine suivante, 1 h ; trop tard dans la journée -> demain 10:00.
+    let h = Math.max(9, Math.floor(parisMinutes(N.toISOString()) / 60) + 1);
+    d = today;
+    if (h > 21) { d = addDays(today, 1); h = 10; }
+    st = `${pad(h)}:00`; en = `${pad(h + 1)}:00`;
+  }
+  st = st || "09:00"; en = en || "10:00";
+  const err = (f) => `<p class="field-err" id="bk-err-${f}" role="alert" hidden></p>`;
+  const ov = openSheet(`
+    <h3 class="sheet-h">Demander un créneau</h3>
+    <p class="sheet-note">Bily reçoit ta demande et te répond. Les blocs « Occupé » sont déjà pris.</p>
+    <form id="bk-form" class="sheet-form" novalidate>
+      <label>Jour<input id="bk-date" type="date" value="${esc(d)}" min="${today}" max="${addDays(today, 27)}" required></label>
+      <div class="sheet-two">
+        <label>Début<input id="bk-start" type="time" step="900" value="${esc(st)}" required></label>
+        <label>Fin<input id="bk-end" type="time" step="900" value="${esc(en)}" required></label>
+      </div>
+      ${err("when")}
+      <label>Ton nom<input id="bk-name" maxlength="60" autocomplete="name" required></label>
+      ${err("name")}
+      <label>Motif<input id="bk-reason" maxlength="200" autocomplete="off" placeholder="Ex. bosser le projet, un café…" required></label>
+      ${err("reason")}
+      <label>Contact <span class="opt">(optionnel)</span><input id="bk-contact" maxlength="100" autocomplete="off" placeholder="Numéro, Insta…"></label>
+      ${err("contact")}
+      <label>E-mail — pour recevoir la réponse <span class="opt">(optionnel)</span><input id="bk-email" type="email" maxlength="254" autocomplete="email" inputmode="email"></label>
+      ${err("email")}
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="bk-cancel">Annuler</button>
+        <button type="submit" class="btn" id="bk-send">Envoyer la demande</button>
+      </div>
+    </form>`);
+  const $ = (id) => ov.querySelector("#" + id);
+  const INPUT = { start: "bk-start", end: "bk-end", name: "bk-name", reason: "bk-reason", contact: "bk-contact", email: "bk-email" };
+  const SLOT = { start: "when", end: "when", name: "name", reason: "reason", contact: "contact", email: "email" };
+  const clearErrs = () => {
+    ov.querySelectorAll(".field-err").forEach((p) => { p.hidden = true; p.textContent = ""; });
+    ov.querySelectorAll("[aria-invalid]").forEach((i) => i.removeAttribute("aria-invalid"));
+  };
+  const showErr = (field, msg) => {
+    const p = $("bk-err-" + (SLOT[field] || "when"));
+    p.textContent = msg; p.hidden = false;
+    const inp = $(INPUT[field] || "bk-start");
+    inp?.setAttribute("aria-invalid", "true");
+    inp?.focus();
+    sfx("error");
+  };
+  $("bk-cancel").onclick = closeSheet;
+  let sending = false;
+  $("bk-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (sending) return;
+    clearErrs();
+    const dd = $("bk-date").value, sv = $("bk-start").value, evv = $("bk-end").value;
+    if (!dd || !sv || !evv) { showErr(!dd || !sv ? "start" : "end", "Choisis le jour, le début et la fin."); return; }
+    const startISO = parisToISO(dd, sv);
+    let endISO = parisToISO(dd, evv);
+    // « 00:00 » en fin = minuit du lendemain (comme le formulaire d'événement).
+    if (Date.parse(endISO) <= Date.parse(startISO) && evv === "00:00") endISO = parisToISO(addDays(dd, 1), "00:00");
+    const req = {
+      start: startISO, end: endISO,
+      name: $("bk-name").value.trim(), reason: $("bk-reason").value.trim(),
+      contact: $("bk-contact").value.trim(), email: $("bk-email").value.trim(),
+    };
+    const v = validateRequest(req, now().getTime());
+    if (!v.ok) { showErr(v.field, v.error); return; }
+    const btn = $("bk-send");
+    sending = true; btn.disabled = true;
+    const done = () => { sending = false; btn.disabled = false; };
+    // Occupé (relu à l'instant, sinon ce qu'on a déjà) + cours du planning public.
+    const fresh = await busyBetween(startISO, endISO);
+    const courses = (PLANNING?.events || []).filter((x) => x.start && x.end).map((x) => ({ start: x.start, end: x.end }));
+    if (conflictsWith(req, [...(fresh ?? _guest.busy), ...courses])) { done(); showErr("start", "Ce créneau est déjà pris"); return; }
+    const g = loadGuest(guestStorage());
+    let res;
+    try {
+      res = await _store.sb.rpc("request_booking", {
+        p_start: startISO, p_end: endISO, p_name: req.name, p_reason: req.reason,
+        p_contact: req.contact || null, p_email: req.email || null, p_token: g.token,
+      });
+    } catch (err) { res = { error: err }; }
+    if (res?.error || !res?.data) {
+      done();
+      const msg = String(res?.error?.message || "Réponse vide");
+      // Messages du serveur (« Créneau déjà pris »…) affichés tels quels ; erreurs techniques préfixées.
+      oops(/schema cache|does not exist|could not find|failed to fetch|network|vide/i.test(msg) ? "Demande impossible : " + msg : msg);
+      return;
+    }
+    const id = String(res.data);
+    rememberRequest(guestStorage(), id);
+    _guest.mine = [..._guest.mine.filter((r) => r.id !== id), { id, start: startISO, end: endISO, status: "pending" }];
+    closeSheet("silent");
+    sfx("add");
+    toast("Demande envoyée à Bily");
+    rerender();
+  });
+  setTimeout(() => $("bk-name")?.focus(), 50);
 }
 
 // ---------- Glisser / redimensionner (vue Semaine) ----------
@@ -1686,7 +1913,7 @@ function wirePills() {
   }));
 }
 
-const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief", gc: "i-user" };
+const SRC_ICON = { course: "i-cap", perso: "i-user", fl: "i-brief", ef: "i-brief", gc: "i-user", busy: "i-clock", request: "i-user" };
 
 // Grille horaire 7 jours (desktop) / 1 jour qui défile (mobile), câblée aux vraies sources.
 function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
@@ -1747,7 +1974,7 @@ function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
       const lines = Math.max(1, Math.floor((height - (narrow ? 22 : 34)) / 15.5));
       const confIc = exam ? `<span class="ev-exam-tag">EXAMEN</span>`
         : ev.conflict ? `<span class="ev-conf" aria-label="Conflit">${ico("i-alert")}</span>` : "";
-      return `<div class="ev src-${ev.source}${size}${narrow ? " is-narrow" : ""}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)} · ${fullRange}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);--lines:${lines};left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
+      return `<div class="ev src-${ev.source}${ev.source === "request" ? " is-request" : ""}${size}${narrow ? " is-narrow" : ""}${growL}${ev._hidden ? " is-hidden" : ""}${ev.conflict ? " is-conf" : ""}${exam ? " is-exam" : ""}" ${evAttrs(ev)} title="${esc(ev.title)} · ${fullRange}${exam ? " — EXAMEN" : ev.conflict ? " — conflit à vérifier" : ""}" style="top:${yTop(ev.s)}px;--h:${height}px;height:var(--h);--lines:${lines};left:calc(${left}% + 4px);width:calc(${w}% - 8px);animation-delay:${j * 32}ms">
         <div class="ev-hd">${ico(exam ? "i-alert" : (SRC_ICON[ev.source] || "i-cap"))}<span class="ev-t mono">${range}</span><span class="ev-tt">${esc(ev.title)}</span>${confIc}</div>
         <div class="ev-ti">${esc(ev.title)}</div>
         ${loc ? `<div class="ev-lo">${ico("i-pin")}<span>${esc(loc)}</span></div>` : ""}
@@ -2297,14 +2524,17 @@ function ensureFab() {
   fabEl = document.createElement("button");
   fabEl.className = "fab"; fabEl.type = "button";
   fabEl.setAttribute("aria-label", "Nouvel événement");
-  fabEl.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
-  fabEl.addEventListener("click", () => openEventForm());
+  fabEl.innerHTML = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fab-l">Demander un créneau</span>`;
+  fabEl.addEventListener("click", () => { if (_store?.session) openEventForm(); else if (guestMode()) openBookingForm(); });
   document.body.appendChild(fabEl);
   return fabEl;
 }
 function updateFab() {
   const f = ensureFab();
-  f.classList.toggle("is-show", (current === "today" || current === "week") && !!_store?.session);
+  const guest = guestMode();
+  f.classList.toggle("is-show", (current === "today" || current === "week") && (!!_store?.session || guest));
+  f.classList.toggle("is-guest", guest);
+  f.setAttribute("aria-label", guest ? "Demander un créneau" : "Nouvel événement");
 }
 
 function openSheet(inner) {

@@ -558,6 +558,29 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .fab:hover { transform: translateY(-2px); }
 .fab:active { transform: translateY(0) scale(.96); }
 @media (min-width: 900px) { .fab { bottom: 28px; } }
+/* Invité : le bouton dit ce qu'il fait (« Demander un créneau »). */
+.fab .fab-l { display: none; }
+.fab.is-guest { width: auto; padding: 0 18px 0 14px; grid-auto-flow: column; gap: 8px; font-weight: 600; font-size: 15px; }
+.fab.is-guest svg { width: 22px; height: 22px; }
+.fab.is-guest .fab-l { display: inline; }
+
+/* Réservations invités : blocs « Occupé », demandes en pointillés, bandeau de statut */
+.ev.src-busy { --c: var(--muted); }
+.ev.src-busy .ev-ti { color: var(--muted); }
+.ev.is-request, .ev.src-request {
+  --c: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: none;
+}
+.guest-reqs { display: grid; gap: 6px; margin: 12px 0 0; }
+.guest-req { display: flex; align-items: center; gap: 9px; padding: 10px 13px; border-radius: 12px; font-size: 13px; color: var(--fg); border: 1px solid var(--line); background: var(--surface); }
+.guest-req .si { width: 15px; height: 15px; flex: none; color: var(--muted); }
+.guest-req.st-accepted { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.guest-req.st-accepted .si, .guest-req.st-accepted b { color: var(--ok); }
+.guest-req.st-declined b { color: var(--danger); }
+.field-err { color: var(--danger); font-size: 13px; margin-top: -6px; line-height: 1.4; }
+.sheet-form input[aria-invalid="true"] { border-color: var(--danger); }
 
 /* Feuille d'action (modale centrée) */
 .sheet-overlay {
