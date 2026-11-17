@@ -579,6 +579,7 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .guest-req.st-accepted { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
 .guest-req.st-accepted .si, .guest-req.st-accepted b { color: var(--ok); }
 .guest-req.st-declined b { color: var(--danger); }
+.guest-req.st-expired b { color: var(--muted); }
 /* Propriétaire : demandes reçues (bloc pointillé cliquable + feuille Accepter / Refuser) */
 .ev.src-booking { cursor: pointer; }
 .ev.src-booking:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

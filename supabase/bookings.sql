@@ -79,13 +79,26 @@ begin
     return;
   end if;
 
+  -- Miroir de la vue propriétaire (app.js) :
+  --  * fin absente → 1 h, comme à l'affichage ;
+  --  * événements importés masqués (event_overrides.hidden) ignorés ;
+  --  * réunions annulées ignorées (même motif que isCanceledMeeting) ;
+  --  * plages importées de 6 h ou plus = fond de colonne (isBackdrop), pas occupé.
   return query
     select s.s, s.e from (
-      select c.start_at as s, coalesce(c.end_at, c.start_at) as e
+      select c.start_at as s, coalesce(c.end_at, c.start_at + interval '1 hour') as e
         from calendar_events c
        where c.user_id = v_owner
+         and coalesce(c.title, '') !~* '^\s*(annul[ée]e?s?\s*:|cancell?ed\s*:)'
+         and coalesce(c.end_at, c.start_at + interval '1 hour') - c.start_at < interval '6 hours'
+         and not exists (
+           select 1 from event_overrides o
+            where o.user_id = v_owner
+              and o.event_uid = c.id
+              and o.hidden
+         )
       union all
-      select x.start_at as s, coalesce(x.end_at, x.start_at) as e
+      select x.start_at as s, coalesce(x.end_at, x.start_at + interval '1 hour') as e
         from custom_events x
        where x.user_id = v_owner
     ) s
@@ -145,7 +158,8 @@ begin
   end if;
   if v_email is not null then
     if char_length(v_email) > 254 then raise exception 'Adresse e-mail trop longue'; end if;
-    if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    -- '?' et '&' interdits : l'adresse ne doit pas pouvoir injecter de paramètres mailto.
+    if v_email !~ '^[^@?&[:space:]]+@[^@?&[:space:]]+\.[^@?&[:space:]]+$' then
       raise exception 'Adresse e-mail invalide';
     end if;
   end if;

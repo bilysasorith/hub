@@ -1340,7 +1340,7 @@ function wireWeekNav() {
 function weekStats(perDay) {
   let nCours = 0, nPro = 0, totalMin = 0;
   perDay.flat().forEach((e) => {
-    if (e.source === "request" || e.source === "booking") return; // demande : pas encore dans l'agenda
+    if (e.source === "request" || e.source === "booking" || e.source === "busy") return; // demande / occupé invité : hors agenda
     totalMin += Math.max(0, e.e2 - e.s);
     if (e.source === "course") nCours++;
     if (e.source === "fl") nPro++;
@@ -1348,7 +1348,8 @@ function weekStats(perDay) {
   const hours = Math.round(totalMin / 60);
   const stat = (id, k, l) => `<div class="wk-stat">${ico(id, "si")}<span class="k num"${/^d+h?$/.test(String(k)) ? ` data-count="${parseInt(k, 10)}"` : ""}>${k}</span><span class="l">${l}</span></div>`;
   let html = stat("i-cap", nCours, nCours > 1 ? "cours" : "cours");
-  html += stat("i-clock", `${hours}h`, "planifiées");
+  // Invité : les heures « occupé » du propriétaire ne sont pas les siennes, pas de total.
+  if (!guestMode()) html += stat("i-clock", `${hours}h`, "planifiées");
   if (_store?.session && nPro) html += stat("i-brief", nPro, nPro > 1 ? "réunions pro" : "réunion pro");
   return `<div class="wk-stats">${html}</div>`;
 }
@@ -1601,15 +1602,18 @@ function guestEventsForDay(key) {
   return out;
 }
 // Bandeau « Ta demande du jeu. 19 à 14:00 : en attente » (demandes des 28 derniers jours).
-const GUEST_STATUS = { pending: "en attente", accepted: "acceptée ✓", declined: "refusée" };
+// Demande restée en attente après la fin du créneau : « sans réponse » (style atténué).
+const GUEST_STATUS = { pending: "en attente", accepted: "acceptée ✓", declined: "refusée", expired: "sans réponse" };
 function guestBanner() {
-  const since = now().getTime() - 28 * 24 * 3600 * 1000;
+  const t = now().getTime();
+  const since = t - 28 * 24 * 3600 * 1000;
   const rows = _guest.mine.filter((r) => Date.parse(r.end) >= since).sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
   if (!rows.length) return "";
   return `<div class="guest-reqs">${rows.map((r) => {
     const d = new Date(r.start);
-    const st = GUEST_STATUS[r.status] || r.status;
-    return `<div class="guest-req st-${esc(r.status)}">${ico(r.status === "accepted" ? "i-check" : "i-clock", "si")}<span>Ta demande du ${esc(fmtWdShort.format(d))} ${esc(fmtDayNum.format(d))} à ${esc(fmtTime.format(d))} : <b>${esc(st)}</b></span></div>`;
+    const status = r.status === "pending" && Date.parse(r.end) <= t ? "expired" : r.status;
+    const st = GUEST_STATUS[status] || status;
+    return `<div class="guest-req st-${esc(status)}">${ico(status === "accepted" ? "i-check" : "i-clock", "si")}<span>Ta demande du ${esc(fmtWdShort.format(d))} ${esc(fmtDayNum.format(d))} à ${esc(fmtTime.format(d))} : <b>${esc(st)}</b></span></div>`;
   }).join("")}</div>`;
 }
 
