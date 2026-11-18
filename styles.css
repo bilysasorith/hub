@@ -1337,3 +1337,4 @@ html.is-ev-resizing, html.is-ev-resizing * { cursor: ns-resize !important; }
 .cr-bulk { margin: 0 14px 14px; display: inline-flex; align-items: center; gap: 6px; }
 .cr-bulk .mi { width: 16px; height: 16px; }
 @media (max-width: 430px) { .cr-a { display: none; } .cr-s { grid-template-columns: 40px 22px 1fr; } }
+.cr-more { display: flex; margin: 14px auto 0; }

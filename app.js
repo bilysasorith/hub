@@ -3460,6 +3460,8 @@ const COURSE_SKIP = new Set(["IE", "LXP"]); // amphis, forums, événements : pa
 const ACT_LABEL = { CM: "Cours magistral", CTD: "Cours · TD", CTP: "Cours · TP", TD: "TD", TP: "TP", TPA: "TP encadré", PRJ: "Projet", DE: "Examen" };
 const fmtSessDay = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
 const _coursesOpen = new Set(); // cours dépliés (survit au re-rendu)
+// Matières pas encore commencées : masquées par défaut, réaffichables (choix gardé sur l'appareil).
+let _showUpcomingCourses = (() => { try { return localStorage.getItem("hub.coursesUpcoming") === "1"; } catch { return false; } })();
 
 function courseList() {
   // Historique (courses.json) + planning du moment : planning.json peut être plus récent.
@@ -3536,7 +3538,18 @@ function renderCourses() {
         : `<b>Tu es à jour</b> sur tous tes cours`}</span></div>` : "";
   const signNote = SUPA_READY && !signed && (_store || _storeTried)
     ? `<p class="cr-sign">Connecte-toi (onglet À faire) pour cocher les séances revues.</p>` : "";
-  viewEl.innerHTML = `${summary}${signNote}<div class="cr-grid">${list.map((c) => courseCard(c, signed)).join("")}</div>`;
+  const started = list.filter((c) => c.past), upcoming = list.filter((c) => !c.past);
+  const shown = _showUpcomingCourses ? list : started;
+  const toggle = upcoming.length
+    ? `<button class="btn btn-ghost cr-more" type="button" id="cr-more" aria-expanded="${_showUpcomingCourses}">${_showUpcomingCourses
+        ? `Masquer les matières pas encore commencées`
+        : `Afficher ${upcoming.length} matière${upcoming.length > 1 ? "s" : ""} pas encore commencée${upcoming.length > 1 ? "s" : ""}`}</button>` : "";
+  viewEl.innerHTML = `${summary}${signNote}<div class="cr-grid">${shown.map((c) => courseCard(c, signed)).join("")}</div>${toggle}`;
+  viewEl.querySelector("#cr-more")?.addEventListener("click", () => {
+    _showUpcomingCourses = !_showUpcomingCourses;
+    try { localStorage.setItem("hub.coursesUpcoming", _showUpcomingCourses ? "1" : "0"); } catch {}
+    sfx("toggle"); rerender();
+  });
 
   viewEl.querySelectorAll("details.cr").forEach((d) => d.addEventListener("toggle", () => {
     if (d.open) _coursesOpen.add(d.dataset.course); else _coursesOpen.delete(d.dataset.course);
