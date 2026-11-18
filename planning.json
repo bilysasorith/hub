@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-17T18:11:02.779Z",
+  "generatedAt": "2026-11-18T02:44:18.096Z",
   "count": 99,
   "events": [
     {
@@ -548,19 +548,6 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "c-b39acdbc26a0250d",
-      "start": "2026-12-11T12:40:00.000Z",
-      "end": "2026-12-11T16:10:00.000Z",
-      "title": "Forum 1er emploi",
-      "location": "Distanciel",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3-ING, I3-PRO",
-      "module": "RE-90-2627PSA01",
-      "activity": "IE",
-      "modalite": "Distanciel"
-    },
-    {
       "uid": "c-5b40e15db2bb57d3",
       "start": "2026-12-11T12:40:00.000Z",
       "end": "2026-12-11T16:10:00.000Z",
@@ -572,6 +559,19 @@
       "module": "FP2ENG-2627PSA01",
       "activity": "TPA",
       "modalite": "Comodal"
+    },
+    {
+      "uid": "c-b39acdbc26a0250d",
+      "start": "2026-12-11T12:40:00.000Z",
+      "end": "2026-12-11T16:10:00.000Z",
+      "title": "Forum 1er emploi",
+      "location": "Distanciel",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3-ING, I3-PRO",
+      "module": "RE-90-2627PSA01",
+      "activity": "IE",
+      "modalite": "Distanciel"
     },
     {
       "uid": "c-2ec40b7e5846ee27",
