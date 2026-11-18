@@ -558,6 +558,54 @@ main { padding-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr); 
 .fab:hover { transform: translateY(-2px); }
 .fab:active { transform: translateY(0) scale(.96); }
 @media (min-width: 900px) { .fab { bottom: 28px; } }
+/* Invité : le bouton dit ce qu'il fait (« Demander un créneau »). */
+.fab .fab-l { display: none; }
+.fab.is-guest { width: auto; padding: 0 18px 0 14px; grid-auto-flow: column; gap: 8px; font-weight: 600; font-size: 15px; }
+.fab.is-guest svg { width: 22px; height: 22px; }
+.fab.is-guest .fab-l { display: inline; }
+
+/* Réservations invités : blocs « Occupé », demandes en pointillés, bandeau de statut */
+.ev.src-busy { --c: var(--muted); }
+.ev.src-busy .ev-ti { color: var(--muted); }
+.ev.is-request, .ev.src-request {
+  --c: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: none;
+}
+.guest-reqs { display: grid; gap: 6px; margin: 12px 0 0; }
+.guest-req { display: flex; align-items: center; gap: 9px; padding: 10px 13px; border-radius: 12px; font-size: 13px; color: var(--fg); border: 1px solid var(--line); background: var(--surface); }
+.guest-req .si { width: 15px; height: 15px; flex: none; color: var(--muted); }
+.guest-req.st-accepted { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.guest-req.st-accepted .si, .guest-req.st-accepted b { color: var(--ok); }
+.guest-req.st-declined b { color: var(--danger); }
+.guest-req.st-expired b { color: var(--muted); }
+/* Propriétaire : demandes reçues (bloc pointillé cliquable + feuille Accepter / Refuser) */
+.ev.src-booking { cursor: pointer; }
+.ev.src-booking:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctx-book .mi { color: var(--accent); }
+.bk-list { display: grid; gap: 10px; margin-top: 14px; max-height: 58vh; overflow-y: auto; }
+.bk-item { padding: 13px 14px; border-radius: 14px; border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.bk-item.is-focus { border-style: solid; border-color: var(--accent); }
+.bk-item .sheet-actions { margin-top: 12px; }
+.bk-name { font-weight: 700; font-size: 16px; color: var(--fg); overflow-wrap: anywhere; }
+.bk-when { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.bk-when .mi, .bk-meta .mi, .bk-warn .mi { width: 14px; height: 14px; flex: none; }
+.bk-why { margin-top: 8px; font-size: 14px; line-height: 1.45; color: var(--fg); white-space: pre-line; overflow-wrap: anywhere; }
+.bk-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.bk-meta > * { display: inline-flex; align-items: center; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.bk-meta a { color: var(--accent); }
+.bk-warn { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--warn); }
+.bk-recent { margin-top: 16px; }
+.bk-sec-h { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.bk-done { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.bk-done-n { font-weight: 600; color: var(--fg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-done-w { color: var(--muted); flex: 1; min-width: 0; }
+.bk-done b { font-weight: 600; }
+.bk-done.st-accepted b { color: var(--ok); }
+.bk-done.st-declined b { color: var(--danger); }
+.field-err { color: var(--danger); font-size: 13px; margin-top: -6px; line-height: 1.4; }
+.sheet-form input[aria-invalid="true"] { border-color: var(--danger); }
 
 /* Feuille d'action (modale centrée) */
 .sheet-overlay {
