@@ -8,4 +8,6 @@
 window.HUB_CONFIG = {
   SUPABASE_URL: "https://dcauisdxvbmcnerjklxm.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_wvGTwUTuJJHLNR8SL2PyvQ_DN4hCMl0", // clé "publishable" (publique, sûre côté client)
+  // Clé VAPID publique des notifications (la privée est un secret de la fonction notify-sign).
+  VAPID_PUBLIC_KEY: "BAtN_bi5CcsIfmGM7TclTsQTg4wgzK3xOitMxJR4J1-KLYpn1sC9Xju_5_2zA4Dvd3NqwPRpdJLMUl1HBGy78yA",
 };

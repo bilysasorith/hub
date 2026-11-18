@@ -963,6 +963,49 @@ function cheatLine() {
   return `<div class="ctx-row"><button class="ctx-cheat" data-cheat>${ico("i-target")}<span>${txt}</span></button></div>`;
 }
 
+// ---------- Notifications « signe ton cours » (Web Push) ----------
+const PUSH_KEY = "hub.push";
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+// "on" | "off" | "denied" | "ios-browser" (iPhone hors écran d'accueil) | "unsupported"
+function pushState() {
+  if (isIOS() && !isStandalone()) return "ios-browser";
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  let on = false; try { on = localStorage.getItem(PUSH_KEY) === "1"; } catch {}
+  return on && Notification.permission === "granted" ? "on" : "off";
+}
+function pushLine() {
+  const st = pushState();
+  if (st === "on" || st === "unsupported") return "";
+  const txt = st === "ios-browser" ? "Ajoute le Hub à l'écran d'accueil pour être prévenu de signer"
+    : st === "denied" ? "Notifications bloquées : autorise-les dans les réglages"
+    : "<b>Activer</b> les rappels de signature";
+  return `<div class="ctx-row"><button class="ctx-cheat" ${st === "off" ? "data-push" : "disabled"}>${ico("i-bell")}<span>${txt}</span></button></div>`;
+}
+const b64urlToBytes = (s) => {
+  const b = atob((s + "=".repeat((4 - s.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+};
+async function enablePush() {
+  const store = await getStore();
+  if (!store?.session) return;
+  try {
+    // Doit rester dans le geste de l'utilisateur (exigence iOS) : la permission d'abord.
+    if (await Notification.requestPermission() !== "granted") { rerender(); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription())
+      || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToBytes(window.HUB_CONFIG.VAPID_PUBLIC_KEY) });
+    const j = sub.toJSON();
+    const { error } = await store.sb.from("push_subscriptions")
+      .upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: "endpoint" });
+    if (error) { oops("Notifications : " + error.message + "\n(As-tu lancé push.sql ?)"); return; }
+    try { localStorage.setItem(PUSH_KEY, "1"); } catch {}
+    sfx("toggle");
+    rerender();
+  } catch (e) { oops("Notifications impossibles : " + e.message); }
+}
+
 // Carte contexte : badge école/entreprise, prochain trou libre, compteurs.
 function ctxCard(evs, key, N, signed) {
   const items = evs.map((e) => ({ s: parisMinutes(e.start), e2: e.end ? parisMinutes(e.end) : parisMinutes(e.start) + 60 }));
@@ -973,7 +1016,7 @@ function ctxCard(evs, key, N, signed) {
   const totalMin = evs.reduce((a, e) => a + durMin(e), 0);
   const topRow = (badge || freeChip) ? `<div class="ctx-row">${badge}${freeChip}</div>` : "";
   const trainRow = trainLine(trainingForDay(key), key, signed);
-  const cheatRow = signed ? cheatLine() : "";
+  const cheatRow = (signed ? cheatLine() : "") + (signed ? pushLine() : "");
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b${typeof v === "number" ? ` data-count="${v}"` : ""}>${v}</b> ${l}</span>`;
   // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
   // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
@@ -1125,6 +1168,7 @@ function renderToday() {
   wireCapture(viewEl);
   viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
   viewEl.querySelector("[data-cheat]")?.addEventListener("click", openCheatSheet);
+  viewEl.querySelector("[data-push]")?.addEventListener("click", enablePush);
   viewEl.querySelector("#go-signin")?.addEventListener("click", () => document.querySelector('.tab[data-view="tasks"]')?.click());
   updateFab();
   // Résout l'état connecté une fois (le store charge Supabase à la demande), puis re-rend.

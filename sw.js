@@ -57,3 +57,21 @@ self.addEventListener("fetch", (e) => {
     })
   );
 });
+
+// Notifications « signe ton cours » (envoyées par la fonction Supabase notify-sign).
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch {}
+  e.waitUntil(self.registration.showNotification(d.title || "Hub", {
+    body: d.body || "",
+    tag: d.tag,
+    icon: "icons/icon-192.png",
+    badge: "icons/icon-192.png",
+    data: { url: d.url || "./" },
+  }));
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  e.waitUntil(self.clients.openWindow(e.notification.data?.url || "./"));
+});
