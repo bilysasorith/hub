@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-11-13T16:59:03.256Z",
+  "generatedAt": "2026-11-18T18:00:23.967Z",
   "items": [
+    {
+      "ts": "2026-11-18T18:00:23.967Z",
+      "type": "removed",
+      "uid": "c-903bde820b68b9d9",
+      "title": "Engineering Project",
+      "start": "2026-11-19T08:10:00.000Z",
+      "room": "Comodal"
+    },
+    {
+      "ts": "2026-11-18T18:00:23.967Z",
+      "type": "removed",
+      "uid": "c-cca07ba10061c677",
+      "title": "Engineering Project",
+      "start": "2026-11-20T08:10:00.000Z",
+      "room": "Comodal"
+    },
     {
       "ts": "2026-11-13T16:59:03.256Z",
       "type": "added",
@@ -944,22 +960,6 @@
       "title": "Une histoire de la philosophie",
       "start": "2026-11-30T10:05:00.000Z",
       "room": "Efrei Bat. H H217"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "d3714c17-0927-4402-9d59-a75bbd879e52",
-      "title": "CSR-The social and ecological transition stakes",
-      "start": "2026-11-30T12:40:00.000Z",
-      "room": "Efrei Bat. H H419, Efrei Bat. H H421, Efrei Bat. H H420"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "602f9fd4-e725-44f5-a797-8cb3b0c974cb",
-      "title": "Data Integration and Analytics",
-      "start": "2026-12-01T07:00:00.000Z",
-      "room": "Efrei Bat. H H216"
     }
   ]
 }

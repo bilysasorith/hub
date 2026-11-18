@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-18T11:12:16.854Z",
-  "count": 99,
+  "generatedAt": "2026-11-18T18:00:23.967Z",
+  "count": 97,
   "events": [
     {
       "uid": "c-ef980d3049dda144",
@@ -59,19 +59,6 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-903bde820b68b9d9",
-      "start": "2026-11-19T08:10:00.000Z",
-      "end": "2026-11-19T09:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": "GIRINSKY Olivier",
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "CM",
-      "modalite": "Comodal"
-    },
-    {
       "uid": "c-edf7f1e4e5ede06e",
       "start": "2026-11-19T09:10:00.000Z",
       "end": "2026-11-19T11:40:00.000Z",
@@ -95,19 +82,6 @@
       "groups": "I3_PROMO",
       "module": "FP2ENG-2627PSA01",
       "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
-      "uid": "c-cca07ba10061c677",
-      "start": "2026-11-20T08:10:00.000Z",
-      "end": "2026-11-20T09:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": "GIRINSKY Olivier",
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "CM",
       "modalite": "Comodal"
     },
     {
@@ -509,19 +483,6 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-038e77cf45f5a6f2",
-      "start": "2026-12-11T08:10:00.000Z",
-      "end": "2026-12-11T09:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": "GIRINSKY Olivier",
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "CM",
-      "modalite": "Comodal"
-    },
-    {
       "uid": "c-4ca55a799331c56a",
       "start": "2026-12-11T08:10:00.000Z",
       "end": "2026-12-11T11:40:00.000Z",
@@ -533,6 +494,19 @@
       "module": "RE-90-2627PSA01",
       "activity": "IE",
       "modalite": "Distanciel"
+    },
+    {
+      "uid": "c-038e77cf45f5a6f2",
+      "start": "2026-12-11T08:10:00.000Z",
+      "end": "2026-12-11T09:10:00.000Z",
+      "title": "Engineering Project",
+      "location": "Comodal",
+      "rooms": [],
+      "teacher": "GIRINSKY Olivier",
+      "groups": "I3_PROMO",
+      "module": "FP2ENG-2627PSA01",
+      "activity": "CM",
+      "modalite": "Comodal"
     },
     {
       "uid": "c-cdc1945684066317",
