@@ -140,6 +140,20 @@ if (old && Array.isArray(old.events)) {
 await writeFile(OUT, JSON.stringify(payload, null, 2) + "\n", "utf8");
 console.log(`planning.json écrit : ${kept.length} cours (sur ${events.length} au total dans le flux).`);
 
+// --- Historique des séances (page « Cours » : suis-je à jour ?) ---
+// planning.json ne garde que la semaine en cours et la suite ; ici on garde TOUT le flux, plus les
+// anciennes séances déjà connues qui seraient sorties du flux (antérieures à sa première séance).
+const COURSES_OUT = join(__dirname, "..", "courses.json");
+const slim = (e) => ({ uid: e.uid, start: e.start, end: e.end, title: e.title, activity: e.activity, module: e.module });
+const feedAll = events.filter((e) => e.start).map(slim);
+const feedFirst = feedAll.reduce((m, e) => (e.start < m ? e.start : m), "9999");
+const prevCourses = await readJson(COURSES_OUT, { sessions: [] });
+const feedIds = new Set(feedAll.map((e) => e.uid));
+const archived = (prevCourses.sessions || []).filter((e) => e.start < feedFirst && !feedIds.has(e.uid));
+const sessions = [...archived, ...feedAll].sort((a, b) => a.start.localeCompare(b.start));
+await writeFile(COURSES_OUT, JSON.stringify({ generatedAt: new Date().toISOString(), sessions }) + "\n", "utf8");
+console.log(`courses.json écrit : ${sessions.length} séances (${archived.length} archivées).`);
+
 if (fresh.length) {
   const PRUNE_MS = 21 * 24 * 3600 * 1000;
   const prev = await readJson(CHANGES_OUT, { items: [] });

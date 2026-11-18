@@ -10,7 +10,7 @@ const SHELL = [
   "fonts/plex-sans-var.woff2", "fonts/plex-mono-500.woff2", "fonts/plex-mono-600.woff2",
   "fonts/saira-condensed-600.woff2", "fonts/saira-condensed-700.woff2",
 ];
-const DATA = ["planning.json", "alternance.json", "training.json", "changes.json"];
+const DATA = ["planning.json", "alternance.json", "training.json", "changes.json", "courses.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -333,6 +333,7 @@ const liveTimeEl = document.getElementById("live-time");
 let PLANNING = null;        // { generatedAt, events: [...] }
 let ALT = null;             // alternance : { start, end, schoolSet, sgHours }
 let TRAINING = null;        // rotation muscu : { anchor:{date,index}, cycle:[...] }
+let COURSES = null;         // historique des séances (page Cours) : { sessions: [...] }
 let CHANGES = [];           // journal des changements de planning (ajout/suppr/modif), récents d'abord
 let current = "today";      // onglet actif
 let weekOffset = 0;         // 0 = semaine courante, -1 précédente, +1 suivante
@@ -372,6 +373,19 @@ async function loadPlanning() {
     try { PLANNING = JSON.parse(localStorage.getItem("hub.planning") || "null"); } catch { PLANNING = null; }
   }
   updateLive();
+}
+
+// Historique complet des séances (passées comprises) : la page Cours en a besoin pour dire
+// si l'on est à jour. Repli : planning.json (semaine en cours et suite seulement).
+async function loadCourses() {
+  try {
+    const res = await fetch("courses.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    COURSES = await res.json();
+    try { localStorage.setItem("hub.courses", JSON.stringify(COURSES)); } catch {}
+  } catch {
+    try { COURSES = JSON.parse(localStorage.getItem("hub.courses") || "null"); } catch { COURSES = null; }
+  }
 }
 
 async function loadAlternance() {
@@ -2308,7 +2322,7 @@ let _store = null;
 let _storeP = null;      // chargement de Supabase en cours ou abouti
 let _storeTried = false; // a-t-on déjà tenté d'initialiser le store (évite les boucles si hors-ligne) ?
 const SIGNED_KEY = "hub.signed", PERSO_KEY = "hub.personal";
-const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [], attendance: new Map(), bookings: [] });
+const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [], attendance: new Map(), bookings: [], progress: new Set() });
 const OFFLINE = { data: null, error: { message: "Hors ligne — réessaie quand le réseau revient." } };
 
 // Client « en attente » : utilisé tant que Supabase n'est pas chargé (ou hors ligne). Il retient
@@ -2346,7 +2360,7 @@ function seedStore() {
       custom: p.custom || [], hidden: new Set(p.hidden || []), teams: p.teams || [], skips: new Set(p.skips || []),
       seenAt: p.seenAt || null, goals: p.goals || [], reminders: new Set(p.reminders || []),
       examFlags: new Map(p.examFlags || []), cheats: p.cheats || [], attendance: new Map(p.attendance || []),
-      bookings: p.bookings || [],
+      bookings: p.bookings || [], progress: new Set(p.progress || []),
     };
   } catch { _store = null; }
 }
@@ -2357,7 +2371,7 @@ function savePersonal() {
     localStorage.setItem(PERSO_KEY, JSON.stringify({
       custom: _store.custom, hidden: [..._store.hidden], teams: _store.teams, skips: [..._store.skips], seenAt: _store.seenAt,
       goals: _store.goals, reminders: [..._store.reminders], examFlags: [..._store.examFlags], cheats: _store.cheats,
-      attendance: [..._store.attendance], bookings: _store.bookings,
+      attendance: [..._store.attendance], bookings: _store.bookings, progress: [...(_store.progress || [])],
     }));
   } catch {}
 }
@@ -2428,11 +2442,11 @@ async function refreshAfterAdd() {
 const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annulables
 const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; _store.attendance = new Map(); _store.bookings = []; return; }
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; _store.attendance = new Map(); _store.bookings = []; _store.progress = new Set(); return; }
   if (!_store.live) return; // état connu affiché ; le vrai chargement arrive avec Supabase
   // Demandes de créneau : en attente + décidées ces 28 derniers jours (sans le jeton invité).
   const bkSince = new Date(Date.now() - 28 * 24 * 3600 * 1000).toISOString();
-  const [c, o, t, s, p, g, r, x, ch, at, bk] = await Promise.all([
+  const [c, o, t, s, p, g, r, x, ch, at, bk, sp] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -2445,6 +2459,7 @@ async function refreshPersonal() {
     _store.sb.from("attendance").select("start_at,status"),
     _store.sb.from("booking_requests").select("id,start_at,end_at,name,reason,contact,email,status,decided_at,event_id,created_at")
       .or(`status.eq.pending,decided_at.gte.${bkSince}`).order("start_at", { ascending: true }),
+    _store.sb.from("session_progress").select("event_uid"),
   ]);
   _store.custom = c.error ? [] : (c.data || []).filter((x) => !_customLeaving.has(String(x.id)));
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -2459,6 +2474,8 @@ async function refreshPersonal() {
   _store.attendance = at.error ? new Map() : new Map((at.data || []).map((a) => [new Date(a.start_at).toISOString(), a.status]));
   // Table absente (bookings.sql pas lancé) : aucune demande.
   _store.bookings = bk.error ? [] : (bk.data || []);
+  // Table absente (session-progress.sql pas lancé) : rien de coché.
+  _store.progress = sp.error ? new Set() : new Set((sp.data || []).map((r) => r.event_uid));
   savePersonal();
   updateBell();
   subscribeRealtime();
@@ -2631,6 +2648,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "exam_flags" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "cheat_meals" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "booking_requests" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "session_progress" }, onPerso)
     .subscribe();
 }
 
@@ -3435,11 +3453,141 @@ function openDoneGoals() {
   ov.querySelectorAll(".goal-card[data-gid]").forEach((b) => b.addEventListener("click", () => openGoalSheet(b.dataset.gid)));
 }
 
+// ---------- Page Cours : suis-je à jour ? ----------
+// Chaque cours (regroupé par titre) liste ses séances ; on coche celles qu'on a rattrapées / revues.
+// Une séance passée non cochée = retard. Les examens (DE ou corrigés à la main) sont des repères.
+const COURSE_SKIP = new Set(["IE", "LXP"]); // amphis, forums, événements : pas des cours à suivre
+const ACT_LABEL = { CM: "Cours magistral", CTD: "Cours · TD", CTP: "Cours · TP", TD: "TD", TP: "TP", TPA: "TP encadré", PRJ: "Projet", DE: "Examen" };
+const fmtSessDay = new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
+const _coursesOpen = new Set(); // cours dépliés (survit au re-rendu)
+
+function courseList() {
+  // Historique (courses.json) + planning du moment : planning.json peut être plus récent.
+  const byUid = new Map();
+  for (const e of (COURSES?.sessions || [])) byUid.set(e.uid, e);
+  for (const e of (PLANNING?.events || [])) byUid.set(e.uid, e);
+  const groups = new Map();
+  for (const e of byUid.values()) {
+    if (!e.start || COURSE_SKIP.has(e.activity)) continue;
+    const t = (e.title || "").trim();
+    if (!groups.has(t)) groups.set(t, []);
+    groups.get(t).push(e);
+  }
+  const N = now();
+  const done = _store?.progress || new Set();
+  const out = [];
+  for (const [title, list] of groups) {
+    list.sort((a, b) => a.start.localeCompare(b.start));
+    const sessions = list.map((e) => ({ ...e, exam: isExam({ ...e, source: "course" }), past: new Date(e.start) <= N, done: done.has(e.uid) }));
+    const lessons = sessions.filter((s) => !s.exam);
+    if (!lessons.length) continue; // un examen seul n'est pas un cours à suivre
+    const past = lessons.filter((s) => s.past).length;
+    const late = lessons.filter((s) => s.past && !s.done).length;
+    const next = sessions.find((s) => !s.past);
+    out.push({ title, sessions, total: lessons.length, past, late, next });
+  }
+  // En retard d'abord (le plus de retard en tête), puis à jour, puis pas encore commencés.
+  const rank = (c) => (c.late ? 0 : c.past ? 1 : 2);
+  return out.sort((a, b) => rank(a) - rank(b) || b.late - a.late || a.title.localeCompare(b.title, "fr"));
+}
+
+function courseCard(c, signed) {
+  const status = !c.past ? `<span class="cr-pill is-soon">Pas commencé</span>`
+    : c.late ? `<span class="cr-pill is-late">${c.late} en retard</span>`
+    : `<span class="cr-pill is-ok">${ico("i-check")}À jour</span>`;
+  const pct = c.past ? Math.round(((c.past - c.late) / c.past) * 100) : 0;
+  const nextTxt = c.next ? `Prochaine : ${fmtSessDay.format(new Date(c.next.start))}${c.next.exam ? " · examen" : ""}` : "Terminé";
+  const pl = c.past > 1 ? "s" : "";
+  let n = 0;
+  const rows = c.sessions.map((s) => {
+    const d = new Date(s.start), end = s.end ? new Date(s.end) : null;
+    const when = `<span class="cr-d">${cap(fmtSessDay.format(d))}</span><span class="cr-hr">${fmtTime.format(d)}${end ? "–" + fmtTime.format(end) : ""}</span>`;
+    if (s.exam) return `<li class="cr-s is-exam${s.past ? " is-past" : ""}"><span class="cr-ex">${ico("i-alert", "")}</span><span class="cr-n"></span><span class="cr-w">${when}</span><span class="cr-a">Examen</span></li>`;
+    n++;
+    const cls = ["cr-s", s.done && "is-done", s.past ? "is-past" : "is-future", s.past && !s.done && "is-late"].filter(Boolean).join(" ");
+    return `<li class="${cls}"><button class="cr-chk" type="button" data-sess="${esc(s.uid)}" aria-pressed="${s.done}"${signed ? "" : " disabled"} aria-label="Séance ${n} du ${esc(fmtSessDay.format(d))}"><span class="check">${ico("i-check", "")}</span></button><span class="cr-n">${n}</span><span class="cr-w">${when}</span><span class="cr-a">${esc(ACT_LABEL[s.activity] || s.activity || "")}</span></li>`;
+  }).join("");
+  const bulk = signed && c.late ? `<button class="btn btn-ghost cr-bulk" type="button" data-catchup="${esc(c.title)}">${ico("i-check")}Tout marquer à jour jusqu'à aujourd'hui</button>` : "";
+  return `<details class="panel cr${c.late ? " has-late" : ""}" data-course="${esc(c.title)}"${_coursesOpen.has(c.title) ? " open" : ""}>
+    <summary class="cr-h0">
+      <span class="cr-top"><span class="cr-t">${esc(c.title)}</span>${status}</span>
+      <span class="cr-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
+      <span class="cr-meta"><span>${c.past - c.late}/${c.past} séance${pl} passée${pl} revue${pl} · ${c.total} au total</span><span>${nextTxt}</span></span>
+    </summary>
+    <ol class="cr-list">${rows}</ol>${bulk}
+  </details>`;
+}
+
+function renderCourses() {
+  titleEl.textContent = "Cours";
+  if (!COURSES && !PLANNING) {
+    dateEl.textContent = "Séances";
+    viewEl.innerHTML = `<div class="note">${illus("art-offline")}<h3>Cours indisponibles</h3><p>Pas de réseau et aucune copie en cache pour l'instant.</p></div>`;
+    return;
+  }
+  const signed = !!_store?.session;
+  const list = courseList();
+  const lateCourses = list.filter((c) => c.late).length;
+  const lateTotal = list.reduce((s, c) => s + c.late, 0);
+  dateEl.textContent = "Séances";
+  const summary = list.some((c) => c.past)
+    ? `<div class="cr-sum ${lateCourses ? "is-late" : "is-ok"}">${ico(lateCourses ? "i-alert" : "i-check")}<span>${lateCourses
+        ? `<b>${lateTotal} séance${lateTotal > 1 ? "s" : ""} à rattraper</b> sur ${lateCourses} cours`
+        : `<b>Tu es à jour</b> sur tous tes cours`}</span></div>` : "";
+  const signNote = SUPA_READY && !signed && (_store || _storeTried)
+    ? `<p class="cr-sign">Connecte-toi (onglet À faire) pour cocher les séances revues.</p>` : "";
+  viewEl.innerHTML = `${summary}${signNote}<div class="cr-grid">${list.map((c) => courseCard(c, signed)).join("")}</div>`;
+
+  viewEl.querySelectorAll("details.cr").forEach((d) => d.addEventListener("toggle", () => {
+    if (d.open) _coursesOpen.add(d.dataset.course); else _coursesOpen.delete(d.dataset.course);
+  }));
+  viewEl.querySelectorAll("[data-sess]").forEach((b) => b.addEventListener("click", () => toggleSessionDone(b.dataset.sess)));
+  viewEl.querySelectorAll("[data-catchup]").forEach((b) => b.addEventListener("click", () => catchUpCourse(b.dataset.catchup)));
+  if (SUPA_READY && !_store && !_storeTried) {
+    _storeTried = true;
+    getStore().then(() => { if (current === "courses") rerender(); });
+  }
+}
+
+// Cocher / décocher une séance. Optimiste + persistance Supabase.
+async function toggleSessionDone(uid) {
+  const store = await getStore();
+  if (!store?.session) return;
+  const had = store.progress.has(uid);
+  if (had) store.progress.delete(uid); else store.progress.add(uid);
+  sfx("toggle"); quiet(1200); rerender();
+  const { error } = had
+    ? await store.sb.from("session_progress").delete().eq("event_uid", uid)
+    : await store.sb.from("session_progress").upsert({ user_id: store.session.user.id, event_uid: uid }, { onConflict: "user_id,event_uid", ignoreDuplicates: true });
+  if (error) {
+    if (had) store.progress.add(uid); else store.progress.delete(uid);
+    rerender(); oops("Impossible : " + error.message + "\n(As-tu lancé session-progress.sql ?)");
+  } else savePersonal();
+}
+
+// « Tout marquer à jour » : coche toutes les séances passées d'un cours.
+async function catchUpCourse(title) {
+  const store = await getStore();
+  if (!store?.session) return;
+  const c = courseList().find((x) => x.title === title);
+  const uids = (c?.sessions || []).filter((s) => !s.exam && s.past && !s.done).map((s) => s.uid);
+  if (!uids.length) return;
+  uids.forEach((u) => store.progress.add(u));
+  sfx("toggle"); quiet(1500); rerender();
+  const rows = uids.map((event_uid) => ({ user_id: store.session.user.id, event_uid }));
+  const { error } = await store.sb.from("session_progress").upsert(rows, { onConflict: "user_id,event_uid", ignoreDuplicates: true });
+  if (error) {
+    uids.forEach((u) => store.progress.delete(u));
+    rerender(); oops("Impossible : " + error.message + "\n(As-tu lancé session-progress.sql ?)");
+  } else savePersonal();
+}
+
 // ---------- Navigation ----------
 function rerender() {
   viewEl.dataset.view = current;
   if (current === "today") renderToday();
   else if (current === "week") renderWeek();
+  else if (current === "courses") renderCourses();
   else renderTasks();
   updateFab();
   updateBell();
@@ -3448,7 +3596,7 @@ function rerender() {
 
 document.getElementById("notif-bell")?.addEventListener("click", openChangesSheet);
 
-// Raccourcis clavier (ordinateur) : 1/2/3 = onglets, ← → = semaine précédente/suivante,
+// Raccourcis clavier (ordinateur) : 1/2/3/4 = onglets, ← → = semaine précédente/suivante,
 // T = revenir à cette semaine, N = nouvelle tâche. Ignorés pendant la saisie ou sur une fiche ouverte.
 document.addEventListener("keydown", (e) => {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -3457,7 +3605,7 @@ document.addEventListener("keydown", (e) => {
   if (document.getElementById("sheet-ov")) return;
   const tab = (v) => document.querySelector(`.tab[data-view="${v}"]`)?.click();
   const k = e.key;
-  if (k === "1" || k === "2" || k === "3") { e.preventDefault(); tab(TAB_ORDER[+k - 1]); return; }
+  if (k >= "1" && k <= String(TAB_ORDER.length) && k.length === 1) { e.preventDefault(); tab(TAB_ORDER[+k - 1]); return; }
   if (current === "week" && (k === "ArrowLeft" || k === "ArrowRight" || k === "t" || k === "T")) {
     e.preventDefault();
     const before = weekOffset;
@@ -3475,7 +3623,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-const TAB_ORDER = ["today", "week", "tasks"];
+const TAB_ORDER = ["today", "week", "courses", "tasks"];
 const tabsEl = document.querySelector(".tabs");
 viewEl.addEventListener("animationend", (e) => { if (e.target === viewEl) viewEl.classList.remove("view-enter"); });
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -3650,10 +3798,10 @@ window.addEventListener("hub-intro-lift", () => {
 }, { once: true });
 seedStore();
 if (_store?.session) { _storeTried = true; getStore().then(() => rerender()); }
-await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges()]);
+await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges(), loadCourses()]);
 rerender();
 // Rafraîchit l'état "en cours / prochain" et les changements quand on revient sur l'app
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { Promise.all([loadPlanning(), loadChanges()]).then(rerender); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { Promise.all([loadPlanning(), loadChanges(), loadCourses()]).then(rerender); } });
 
 // Service worker (PWA installable + hors-ligne)
 if ("serviceWorker" in navigator) {
