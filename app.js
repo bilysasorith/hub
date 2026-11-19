@@ -2328,10 +2328,14 @@ function signInView() {
   return `<div class="note signin">
     ${illus("art-signin")}
     <h3>Connexion</h3>
-    <p>Reçois un lien magique par e-mail pour retrouver tes tâches sur tous tes appareils.</p>
+    <p>Reçois un code par e-mail pour retrouver tes tâches sur tous tes appareils.</p>
     <form class="add" id="signin-form">
       <input id="signin-email" type="email" required placeholder="ton e-mail" autocomplete="email" aria-label="E-mail">
       <button class="btn" type="submit">Recevoir</button>
+    </form>
+    <form class="add" id="signin-code-form" hidden>
+      <input id="signin-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" maxlength="10" required placeholder="code reçu" aria-label="Code reçu par e-mail">
+      <button class="btn" type="submit">Valider</button>
     </form>
     <p id="signin-msg" role="status"></p>
   </div>`;
@@ -2768,8 +2772,24 @@ function wireSignIn(store) {
     if (!email) return;
     msg.textContent = "Envoi…";
     const { error } = await store.sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split("#")[0] } }); // sans « # » final : sinon « ##access_token » et la connexion échoue
-    msg.textContent = error ? "Erreur : " + error.message : "Lien envoyé — vérifie ta boîte mail.";
+    msg.textContent = error ? "Erreur : " + error.message : "E-mail envoyé — tape le code ici (le lien, lui, s'ouvre dans le navigateur).";
     sfx(error ? "error" : "check");
+    if (!error) {
+      codeForm.hidden = false;
+      document.getElementById("signin-code").focus();
+    }
+  });
+  // Le lien magique ouvre le navigateur, pas l'app installée (PWA) : le code se tape directement ici.
+  const codeForm = document.getElementById("signin-code-form");
+  codeForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("signin-email").value.trim();
+    const token = document.getElementById("signin-code").value.replace(/\D/g, "");
+    if (!email || !token) return;
+    msg.textContent = "Vérification…";
+    const { error } = await store.sb.auth.verifyOtp({ email, token, type: "email" });
+    if (error) { msg.textContent = "Code invalide ou expiré : " + error.message; sfx("error"); }
+    // Succès : onAuthStateChange prend le relais et réaffiche la vue.
   });
 }
 

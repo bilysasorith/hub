@@ -1086,6 +1086,8 @@ html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
 .panel .ill { --ill-bg: var(--surface); }
 .signin .add { margin-top: 16px; }
 .signin #signin-msg { margin-top: 10px; min-height: 1.5em; }
+.signin #signin-code-form { margin-top: 10px; }
+.signin #signin-code { letter-spacing: .2em; }
 .empty-ill .ei-btn { height: 40px; margin-top: 10px; }
 
 /* Survol : un bloc tronqué (conflit, événement court) se déploie pour tout afficher. */
