@@ -3,7 +3,7 @@
 // - Coquille (HTML/JS/CSS/icônes) : « stale-while-revalidate » — on sert la copie en cache
 //   tout de suite et on la remplace en arrière-plan. Un déploiement arrive donc tout seul au
 //   chargement suivant, sans avoir à changer CACHE. Ne bumper CACHE que pour purger l'ancien cache.
-const CACHE = "hub-v23";
+const CACHE = "hub-v24";
 const SHELL = [
   ".", "index.html", "styles.css", "app.js", "lib/cheat-stats.js", "lib/drag-math.js", "lib/booking.js", "config.js", "manifest.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",

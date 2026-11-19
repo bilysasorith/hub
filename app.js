@@ -263,6 +263,11 @@ function endOfWeekKey() {
   const dow = (new Date(todayK + "T12:00:00Z").getUTCDay() + 6) % 7; // lundi = 0
   return addDays(todayK, 6 - dow);
 }
+// Tâches lointaines (échéance à plus de FAR_DAYS jours) : masquées par défaut, elles
+// reviennent d'elles-mêmes à l'approche de l'échéance. Choix d'affichage gardé sur l'appareil.
+const FAR_DAYS = 30;
+const isFarTask = (t, todayK) => !!t.due_date && t.due_date > addDays(todayK, FAR_DAYS);
+let _showFarTasks = (() => { try { return localStorage.getItem("hub.farTasks") === "1"; } catch { return false; } })();
 // Étiquettes de tâche. Couleurs alignées sur les sources d'événements.
 const TASK_TAGS = {
   efrei:     { label: "EFREI",     cls: "tg-efrei" },
@@ -1225,7 +1230,7 @@ async function renderDashTasks() {
   const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK).sort(byDue);
   const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
   const soon = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK && t.due_date <= weekEnd).sort(byDue);
-  const later = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd).sort(byDue);
+  const later = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd && !isFarTask(t, todayK)).sort(byDue);
   const total = late.length + today.length + soon.length + later.length;
 
   // Progression du jour : tâches datées d'aujourd'hui (faites / total).
@@ -2243,14 +2248,21 @@ async function renderTasks() {
   const late = todos.filter((t) => !t.done && t.due_date && t.due_date < todayK).sort(byDue);
   const today = todos.filter((t) => !t.done && (!t.due_date || t.due_date === todayK));
   const soon = todos.filter((t) => !t.done && t.due_date && t.due_date > todayK && t.due_date <= weekEnd).sort(byDue);
-  const later = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd).sort(byDue);
+  const pending = todos.filter((t) => !t.done && t.due_date && t.due_date > weekEnd).sort(byDue);
+  const later = pending.filter((t) => !isFarTask(t, todayK));
+  const far = pending.filter((t) => isFarTask(t, todayK));
   const done = todos.filter((t) => t.done).slice(-30).reverse();
 
   const section = (label, list, cls = "") => list.length
     ? `<p class="section-label${cls ? " " + cls : ""}">${label} · ${list.length}</p><div>${list.map(todoRow).join("")}</div>` : "";
 
-  const body = (late.length + today.length + soon.length + later.length)
+  const farToggle = far.length
+    ? `<button class="btn btn-ghost cr-more" type="button" id="td-far" aria-expanded="${_showFarTasks}">${_showFarTasks
+        ? "Masquer les tâches dans plus d'un mois"
+        : `Afficher ${far.length} tâche${far.length > 1 ? "s" : ""} dans plus d'un mois`}</button>` : "";
+  const body = (late.length + today.length + soon.length + later.length + far.length)
     ? section("En retard", late, "is-late") + section("Aujourd'hui", today) + section("Cette semaine", soon) + section("Plus tard", later)
+      + (_showFarTasks ? section("Dans plus d'un mois", far) : "") + farToggle
     : `<div class="note">${illus("art-empty")}<h3>Rien en attente</h3><p>Ajoute une tâche ci-dessus.</p></div>`;
 
   viewEl.innerHTML = `
@@ -2269,6 +2281,11 @@ async function renderTasks() {
   wireGoals(viewEl, store);
   wireAdd(store);
   wireTodos(viewEl, store);
+  viewEl.querySelector("#td-far")?.addEventListener("click", () => {
+    _showFarTasks = !_showFarTasks;
+    try { localStorage.setItem("hub.farTasks", _showFarTasks ? "1" : "0"); } catch {}
+    sfx("toggle"); rerender();
+  });
 }
 
 function todoRow(t) {
