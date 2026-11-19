@@ -273,21 +273,24 @@ const TASK_TAGS = {
 const tagChip = (tag) => TASK_TAGS[tag] ? `<span class="tg ${TASK_TAGS[tag].cls}">${TASK_TAGS[tag].label}</span>` : "";
 const tagPickHtml = (sel) => Object.entries(TASK_TAGS).map(([k, m]) =>
   `<button type="button" class="tg-opt ${m.cls}${sel === k ? " on" : ""}" data-tag="${k}">${m.label}</button>`).join("");
-// Récurrence de tâche. « monthly » : même jour le mois suivant (31 -> dernier jour du mois).
-const REPEATS = { "": "Une fois", monthly: "Tous les mois" };
+// Récurrence de tâche : même jour N mois plus tard (31 -> dernier jour du mois visé).
+const REPEATS = { "": "Une fois", monthly: "Tous les mois", semiannual: "Tous les 6 mois", yearly: "Tous les ans" };
+const REPEAT_MONTHS = { monthly: 1, semiannual: 6, yearly: 12 };
+const REPEAT_PILL = { monthly: "chaque mois", semiannual: "tous les 6 mois", yearly: "chaque année" };
 const repeatPickHtml = (sel) => Object.entries(REPEATS).map(([k, label]) =>
   `<button type="button" class="tg-opt rp${(sel || "") === k ? " on" : ""}" data-rep="${k}">${label}</button>`).join("");
-const repeatPill = (t) => t.repeat === "monthly" && !t.done ? `<span class="pill">${ico("i-repeat")}chaque mois</span>` : "";
-function nextMonthly(due) {
+const repeatPill = (t) => REPEAT_PILL[t.repeat] && !t.done ? `<span class="pill">${ico("i-repeat")}${REPEAT_PILL[t.repeat]}</span>` : "";
+function addMonths(due, n) {
   const [Y, M, D] = (due || dayKey(now())).split("-").map(Number);
-  const last = new Date(Date.UTC(Y, M + 1, 0)).getUTCDate(); // dernier jour du mois suivant
-  const x = new Date(Date.UTC(Y, M, Math.min(D, last)));
+  const last = new Date(Date.UTC(Y, M - 1 + n + 1, 0)).getUTCDate(); // dernier jour du mois visé
+  const x = new Date(Date.UTC(Y, M - 1 + n, Math.min(D, last)));
   return `${x.getUTCFullYear()}-${String(x.getUTCMonth() + 1).padStart(2, "0")}-${String(x.getUTCDate()).padStart(2, "0")}`;
 }
 // Tâche récurrente cochée : crée l'occurrence suivante (sous-tâches remises à zéro), sans doublon.
 async function spawnNextRepeat(store, t) {
-  if (t.repeat !== "monthly") return;
-  const due_date = nextMonthly(t.due_date);
+  const n = REPEAT_MONTHS[t.repeat];
+  if (!n) return;
+  const due_date = addMonths(t.due_date, n);
   if (store.todos.some((x) => !x.done && x.title === t.title && x.due_date === due_date)) return;
   const row = { title: t.title, due_date, tag: t.tag || null, repeat: t.repeat };
   const subs = Array.isArray(t.subtasks) ? t.subtasks : [];
