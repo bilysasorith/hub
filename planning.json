@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-19T02:17:52.341Z",
+  "generatedAt": "2026-11-19T11:10:39.077Z",
   "count": 97,
   "events": [
     {
@@ -343,7 +343,7 @@
         "Efrei Bat. A A201"
       ],
       "teacher": "BONNET Nolwenn",
-      "groups": "B1-CDI, B3-CDI, B2-CS, M1-UX, M1-DE, B2-MDC, M2-MD, B3-DEV, B3-CS, B2-ICS, I2-NEW, M1-DM, M1-MDT, M2-CSD, M1-CSM, P1-SC, M1-MD, M2-CSM, B1-DEV, M1-CS, B3-IM, B2-DEV, B1-MDC, P1-BN, B3-IN, B1-ICS, P2-PLUS, M2-CSAI, B2-IN, I3-ING, B3-ICS, I1-NEW, I3-PRO, M1-DEV, M2-UX, B2-IM, M2-DE, P2-BN, M2-ICT, P2-INT, B1-IN, M1-CSD, M1-MTD, M2-DEV, P1-DEC, P1-INT, B1-IM, P2-SC, I1-AFR, M2-MTD, M2-CSC, B1-CS, B3-MDC",
+      "groups": "B1-CDI, B3-CDI, B2-CS, M1-UX, M1-DE, B2-MDC, M2-MD, B3-DEV, B3-CS, B2-ICS, I2-NEW, M1-DM, M1-MDT, M2-CSD, M1-CSM, P1-SC, M1-MD, M2-CSM, B1-DEV, M1-CS, B3-IM, B2-DEV, B1-MDC, P1-BN, B3-IN, B1-ICS, P2-PLUS, M2-CSAI, B2-IN, I3-ING, B3-ICS, I1-NEW, I3-PRO, M1-DEV, M2-UX, B2-IM, M2-DE, P2-BN, M2-ICT, P2-INT, B1-IN, M1-CSD, M1-MTD, M2-DEV, P1-DEC, M2-MDT, P1-INT, B1-IM, P2-SC, I1-AFR, M2-MTD, M2-CSC, B1-CS, B3-MDC",
       "module": "LXP-4GOOD-2627PSA01",
       "activity": "LXP",
       "modalite": "Présentiel"
@@ -522,19 +522,6 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "c-b39acdbc26a0250d",
-      "start": "2026-12-11T12:40:00.000Z",
-      "end": "2026-12-11T16:10:00.000Z",
-      "title": "Forum 1er emploi",
-      "location": "Distanciel",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3-ING, I3-PRO",
-      "module": "RE-90-2627PSA01",
-      "activity": "IE",
-      "modalite": "Distanciel"
-    },
-    {
       "uid": "c-5b40e15db2bb57d3",
       "start": "2026-12-11T12:40:00.000Z",
       "end": "2026-12-11T16:10:00.000Z",
@@ -546,6 +533,19 @@
       "module": "FP2ENG-2627PSA01",
       "activity": "TPA",
       "modalite": "Comodal"
+    },
+    {
+      "uid": "c-b39acdbc26a0250d",
+      "start": "2026-12-11T12:40:00.000Z",
+      "end": "2026-12-11T16:10:00.000Z",
+      "title": "Forum 1er emploi",
+      "location": "Distanciel",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3-ING, I3-PRO",
+      "module": "RE-90-2627PSA01",
+      "activity": "IE",
+      "modalite": "Distanciel"
     },
     {
       "uid": "c-2ec40b7e5846ee27",
