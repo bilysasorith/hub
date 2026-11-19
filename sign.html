@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Signer · Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D1013">
+<!-- Ouverte par la notification « Signe ton cours ».
+     iPhone : lance le raccourci « SWS » (Ouvrir l'app → SoWeSoft Student), l'app SoWeSoft
+     n'ayant ni lien universel ni adresse sowesoft://. Ailleurs : version web de SoWeSign. -->
+<script>
+  var WEB = "https://app.sowesign.com/student/next-course";
+  var SHORTCUT = "shortcuts://run-shortcut?name=" + encodeURIComponent("SWS");
+  var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (IOS) location.href = SHORTCUT; else location.replace(WEB);
+</script>
+<style>
+  :root { color-scheme: dark; --bg: #0D1013; --surface: #161B20; --line: #2B333C; --text: #E6EAEE; --muted: #8B96A1; }
+  @media (prefers-color-scheme: light) {
+    :root { color-scheme: light; --bg: #F1F3F5; --surface: #FFFFFF; --line: #D4DAE0; --text: #14191E; --muted: #5C6773; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100dvh; display: grid; place-items: center;
+    padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    background: var(--bg); color: var(--text);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  main { width: 100%; max-width: 360px; display: grid; gap: 12px; text-align: center; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+  a {
+    display: block; padding: 14px 16px; border-radius: 14px; text-decoration: none; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--line); color: var(--text);
+  }
+  a.primary { background: #2d5bd0; border-color: #2d5bd0; color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Signe ton cours</h1>
+  <p>Si l'app SoWeSoft ne s'est pas ouverte, vérifie que le raccourci s'appelle bien « SWS ».</p>
+  <a class="primary" id="app" href="#">Ouvrir SoWeSoft</a>
+  <a id="web" href="#">Version web</a>
+  <a href="./">Retour au Hub</a>
+</main>
+<script>
+  document.getElementById("app").href = SHORTCUT;
+  document.getElementById("web").href = WEB;
+</script>
+</body>
+</html>

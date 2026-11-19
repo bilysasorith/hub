@@ -5,7 +5,7 @@
 //   chargement suivant, sans avoir à changer CACHE. Ne bumper CACHE que pour purger l'ancien cache.
 const CACHE = "hub-v24";
 const SHELL = [
-  ".", "index.html", "styles.css", "app.js", "lib/cheat-stats.js", "lib/drag-math.js", "lib/booking.js", "config.js", "manifest.json",
+  ".", "index.html", "sign.html", "styles.css", "app.js", "lib/cheat-stats.js", "lib/drag-math.js", "lib/booking.js", "config.js", "manifest.json",
   "icons/icon.svg", "icons/icon-192.png", "icons/icon-512.png",
   "fonts/plex-sans-var.woff2", "fonts/plex-mono-500.woff2", "fonts/plex-mono-600.woff2",
   "fonts/saira-condensed-600.woff2", "fonts/saira-condensed-700.woff2",
@@ -71,7 +71,10 @@ self.addEventListener("push", (e) => {
   }));
 });
 
+// Notif de signature → sign.html (dans le Hub), qui ouvre l'app SoWeSoft via le raccourci
+// iOS « SWS », ou la version web ailleurs.
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  e.waitUntil(self.clients.openWindow(e.notification.data?.url || "./"));
+  const url = e.notification.data?.url || "./";
+  e.waitUntil(self.clients.openWindow(url.startsWith("https://app.sowesign.com") ? "sign.html" : url));
 });
