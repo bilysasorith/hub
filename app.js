@@ -2763,9 +2763,28 @@ function closesTheDay(todos, t) {
   return inDay(t) && !others.some(inDay);
 }
 
+// E-mail en attente de code : survit au rechargement de l'app quand on part lire ses mails.
+const OTP_KEY = "hub-otp-pending";
+const OTP_TTL = 60 * 60 * 1000;
+function pendingOtp() {
+  try {
+    const p = JSON.parse(localStorage.getItem(OTP_KEY) || "null");
+    return p && Date.now() - p.at < OTP_TTL ? p.email : null;
+  } catch { return null; }
+}
+function setPendingOtp(email) {
+  try { email ? localStorage.setItem(OTP_KEY, JSON.stringify({ email, at: Date.now() })) : localStorage.removeItem(OTP_KEY); } catch {}
+}
+
 function wireSignIn(store) {
   const form = document.getElementById("signin-form");
   const msg = document.getElementById("signin-msg");
+  const waiting = pendingOtp();
+  if (waiting) {
+    document.getElementById("signin-email").value = waiting;
+    document.getElementById("signin-code-form").hidden = false;
+    msg.textContent = "Code envoyé à " + waiting + " — tape-le ci-dessous (ou « Recevoir » pour en redemander un).";
+  }
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("signin-email").value.trim();
@@ -2775,6 +2794,7 @@ function wireSignIn(store) {
     msg.textContent = error ? "Erreur : " + error.message : "E-mail envoyé — tape le code ici (le lien, lui, s'ouvre dans le navigateur).";
     sfx(error ? "error" : "check");
     if (!error) {
+      setPendingOtp(email);
       codeForm.hidden = false;
       document.getElementById("signin-code").focus();
     }
@@ -2788,7 +2808,8 @@ function wireSignIn(store) {
     if (!email || !token) return;
     msg.textContent = "Vérification…";
     const { error } = await store.sb.auth.verifyOtp({ email, token, type: "email" });
-    if (error) { msg.textContent = "Code invalide ou expiré : " + error.message; sfx("error"); }
+    if (error) { msg.textContent = "Code invalide ou expiré : " + error.message; sfx("error"); return; }
+    setPendingOtp(null);
     // Succès : onAuthStateChange prend le relais et réaffiche la vue.
   });
 }
