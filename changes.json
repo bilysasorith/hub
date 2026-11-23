@@ -1,6 +1,27 @@
 {
-  "generatedAt": "2026-11-18T18:00:23.967Z",
+  "generatedAt": "2026-11-23T23:25:51.362Z",
   "items": [
+    {
+      "ts": "2026-11-23T23:25:51.362Z",
+      "type": "removed",
+      "uid": "c-dbedcf5ded60e75a",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-26T07:00:00.000Z",
+      "room": "Efrei Bat. H H404"
+    },
+    {
+      "ts": "2026-11-23T23:25:51.362Z",
+      "type": "modified",
+      "uid": "c-e12f64803da3f0dc",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-25T07:00:00.000Z",
+      "changes": {
+        "room": {
+          "from": "Efrei Bat. A A303",
+          "to": "Efrei Bat. H H319"
+        }
+      }
+    },
     {
       "ts": "2026-11-18T18:00:23.967Z",
       "type": "removed",
@@ -944,22 +965,6 @@
       "title": "Engineering Project",
       "start": "2026-11-27T09:10:00.000Z",
       "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "3c55f056-fa64-4a31-a6c2-65412da06764",
-      "title": "Engineering Project",
-      "start": "2026-11-27T12:40:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "9a44c615-2df5-4a09-b853-9d1c91fd29c8",
-      "title": "Une histoire de la philosophie",
-      "start": "2026-11-30T10:05:00.000Z",
-      "room": "Efrei Bat. H H217"
     }
   ]
 }
