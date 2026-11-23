@@ -1,115 +1,7 @@
 {
-  "generatedAt": "2026-11-22T19:05:50.985Z",
-  "count": 97,
+  "generatedAt": "2026-11-23T01:25:22.896Z",
+  "count": 89,
   "events": [
-    {
-      "uid": "c-ef980d3049dda144",
-      "start": "2026-11-16T10:05:00.000Z",
-      "end": "2026-11-16T11:50:00.000Z",
-      "title": "Une histoire de la philosophie",
-      "location": "Efrei Bat. K K102",
-      "rooms": [],
-      "teacher": "GIRAT-MAGIN Alexandra",
-      "groups": "I3_SHC-EL11-3",
-      "module": "FH2HP-2627PSA01",
-      "activity": "CTD",
-      "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-7304317b41105188",
-      "start": "2026-11-16T12:40:00.000Z",
-      "end": "2026-11-16T16:40:00.000Z",
-      "title": "Data Integration and Analytics",
-      "location": "Efrei Bat. N N005",
-      "rooms": [],
-      "teacher": "MOKDAD Anais",
-      "groups": "I3-BIA",
-      "module": "ST2AAN-2627PSA01",
-      "activity": "CTP",
-      "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-035ac4f32102648f",
-      "start": "2026-11-17T12:40:00.000Z",
-      "end": "2026-11-17T16:40:00.000Z",
-      "title": "Machine Learning for Data Analysts",
-      "location": "Efrei Bat. E E101",
-      "rooms": [],
-      "teacher": "MADDOURI Mondher",
-      "groups": "I3-BIA",
-      "module": "ST2AML-2627PSA01",
-      "activity": "CTP",
-      "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-03f462c43ef0f190",
-      "start": "2026-11-18T08:10:00.000Z",
-      "end": "2026-11-18T11:10:00.000Z",
-      "title": "CSR-The social and ecological transition stakes",
-      "location": "Salles multiples",
-      "rooms": [
-        "Efrei Bat. H H420",
-        "Efrei Bat. H H421",
-        "Efrei Bat. H H419"
-      ],
-      "teacher": "AKAKPO Sarah, SEDIRI Zohair, HARAKE Mohamad Fadl",
-      "groups": "I3-DAI, I3-ITF, I3-BIA",
-      "module": "FG2CSR-2627PSA01",
-      "activity": "CTD",
-      "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-edf7f1e4e5ede06e",
-      "start": "2026-11-19T09:10:00.000Z",
-      "end": "2026-11-19T11:40:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
-      "uid": "c-d4fc428cef52c219",
-      "start": "2026-11-19T12:40:00.000Z",
-      "end": "2026-11-19T16:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
-      "uid": "c-0e06c2bc6b78ca2d",
-      "start": "2026-11-20T09:10:00.000Z",
-      "end": "2026-11-20T11:40:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
-      "uid": "c-9885065727ea528d",
-      "start": "2026-11-20T12:40:00.000Z",
-      "end": "2026-11-20T16:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
     {
       "uid": "c-8e7986cb3121fc81",
       "start": "2026-11-23T10:05:00.000Z",
@@ -522,19 +414,6 @@
       "modalite": "Comodal"
     },
     {
-      "uid": "c-5b40e15db2bb57d3",
-      "start": "2026-12-11T12:40:00.000Z",
-      "end": "2026-12-11T16:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
-      "modalite": "Comodal"
-    },
-    {
       "uid": "c-b39acdbc26a0250d",
       "start": "2026-12-11T12:40:00.000Z",
       "end": "2026-12-11T16:10:00.000Z",
@@ -546,6 +425,19 @@
       "module": "RE-90-2627PSA01",
       "activity": "IE",
       "modalite": "Distanciel"
+    },
+    {
+      "uid": "c-5b40e15db2bb57d3",
+      "start": "2026-12-11T12:40:00.000Z",
+      "end": "2026-12-11T16:10:00.000Z",
+      "title": "Engineering Project",
+      "location": "Comodal",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3_PROMO",
+      "module": "FP2ENG-2627PSA01",
+      "activity": "TPA",
+      "modalite": "Comodal"
     },
     {
       "uid": "c-2ec40b7e5846ee27",
