@@ -1,6 +1,22 @@
 {
-  "generatedAt": "2026-11-23T23:25:51.362Z",
+  "generatedAt": "2026-11-24T19:57:14.118Z",
   "items": [
+    {
+      "ts": "2026-11-24T19:57:14.118Z",
+      "type": "added",
+      "uid": "c-dbedcf5ded60e75a",
+      "title": "Data Integration and Analytics",
+      "start": "2026-11-26T07:00:00.000Z",
+      "room": "Efrei Bat. H H404"
+    },
+    {
+      "ts": "2026-11-24T19:57:14.118Z",
+      "type": "added",
+      "uid": "c-7fa0e247621b216f",
+      "title": "Machine Learning for Data Analysts",
+      "start": "2026-12-08T07:00:00.000Z",
+      "room": "Efrei Bat. H H218"
+    },
     {
       "ts": "2026-11-23T23:25:51.362Z",
       "type": "removed",
@@ -949,22 +965,6 @@
       "title": "Data Integration and Analytics",
       "start": "2026-11-26T07:00:00.000Z",
       "room": "Efrei Bat. H H404"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "3af35f93-b3e1-4813-98c1-174e11803fdf",
-      "title": "Engineering Project",
-      "start": "2026-11-27T08:10:00.000Z",
-      "room": "Comodal"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "803b74a6-4294-48cf-8e5c-b4205f59267f",
-      "title": "Engineering Project",
-      "start": "2026-11-27T09:10:00.000Z",
-      "room": "Comodal"
     }
   ]
 }

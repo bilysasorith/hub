@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-24T08:36:37.439Z",
-  "count": 88,
+  "generatedAt": "2026-11-24T19:57:14.118Z",
+  "count": 90,
   "events": [
     {
       "uid": "c-8e7986cb3121fc81",
@@ -26,24 +26,24 @@
         "Efrei Bat. H H421",
         "Efrei Bat. H H419"
       ],
-      "teacher": "SEDIRI Zohair, HARAKE Mohamad Fadl, AKAKPO Sarah",
+      "teacher": "HARAKE Mohamad Fadl, AKAKPO Sarah, SEDIRI Zohair",
       "groups": "I3-BIA, I3-DAI, I3-ITF",
       "module": "FG2CSR-2627PSA01",
       "activity": "CTD",
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-b1a9b114d38db52c",
+      "uid": "c-b9bae306db6ae268",
       "start": "2026-11-24T12:40:00.000Z",
-      "end": "2026-11-24T16:40:00.000Z",
-      "title": "Machine Learning for Data Analysts",
-      "location": "Efrei Bat. B B107",
+      "end": "2026-11-24T14:40:00.000Z",
+      "title": "Data Integration and Analytics",
+      "location": "Distanciel",
       "rooms": [],
-      "teacher": "MADDOURI Mondher",
+      "teacher": null,
       "groups": "I3-BIA",
-      "module": "ST2AML-2627PSA01",
-      "activity": "CTP",
-      "modalite": "Présentiel"
+      "module": "ST2AAN-2627PSA01",
+      "activity": "TPA",
+      "modalite": "Distanciel"
     },
     {
       "uid": "c-e12f64803da3f0dc",
@@ -51,6 +51,19 @@
       "end": "2026-11-25T11:00:00.000Z",
       "title": "Data Integration and Analytics",
       "location": "Efrei Bat. H H319",
+      "rooms": [],
+      "teacher": "MOKDAD Anais",
+      "groups": "I3-BIA",
+      "module": "ST2AAN-2627PSA01",
+      "activity": "CTP",
+      "modalite": "Présentiel"
+    },
+    {
+      "uid": "c-dbedcf5ded60e75a",
+      "start": "2026-11-26T07:00:00.000Z",
+      "end": "2026-11-26T11:00:00.000Z",
+      "title": "Data Integration and Analytics",
+      "location": "Efrei Bat. H H404",
       "rooms": [],
       "teacher": "MOKDAD Anais",
       "groups": "I3-BIA",
@@ -121,7 +134,7 @@
         "Efrei Bat. H H421",
         "Efrei Bat. H H420"
       ],
-      "teacher": "HARAKE Mohamad Fadl, AKAKPO Sarah, SEDIRI Zohair",
+      "teacher": "AKAKPO Sarah, HARAKE Mohamad Fadl, SEDIRI Zohair",
       "groups": "I3-BIA, I3-ITF, I3-DAI",
       "module": "FG2CSR-2627PSA01",
       "activity": "CTD",
@@ -297,6 +310,19 @@
       "modalite": "Présentiel"
     },
     {
+      "uid": "c-7fa0e247621b216f",
+      "start": "2026-12-08T07:00:00.000Z",
+      "end": "2026-12-08T11:00:00.000Z",
+      "title": "Machine Learning for Data Analysts",
+      "location": "Efrei Bat. H H218",
+      "rooms": [],
+      "teacher": "MADDOURI Mondher",
+      "groups": "I3-BIA",
+      "module": "ST2AML-2627PSA01",
+      "activity": "CTP",
+      "modalite": "Présentiel"
+    },
+    {
       "uid": "c-d3a1039d62e45728",
       "start": "2026-12-08T12:40:00.000Z",
       "end": "2026-12-08T16:40:00.000Z",
@@ -362,19 +388,6 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-4ca55a799331c56a",
-      "start": "2026-12-11T08:10:00.000Z",
-      "end": "2026-12-11T11:40:00.000Z",
-      "title": "Forum 1er emploi",
-      "location": "Distanciel",
-      "rooms": [],
-      "teacher": null,
-      "groups": "I3-PRO, I3-ING",
-      "module": "RE-90-2627PSA01",
-      "activity": "IE",
-      "modalite": "Distanciel"
-    },
-    {
       "uid": "c-038e77cf45f5a6f2",
       "start": "2026-12-11T08:10:00.000Z",
       "end": "2026-12-11T09:10:00.000Z",
@@ -386,6 +399,19 @@
       "module": "FP2ENG-2627PSA01",
       "activity": "CM",
       "modalite": "Comodal"
+    },
+    {
+      "uid": "c-4ca55a799331c56a",
+      "start": "2026-12-11T08:10:00.000Z",
+      "end": "2026-12-11T11:40:00.000Z",
+      "title": "Forum 1er emploi",
+      "location": "Distanciel",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3-PRO, I3-ING",
+      "module": "RE-90-2627PSA01",
+      "activity": "IE",
+      "modalite": "Distanciel"
     },
     {
       "uid": "c-cdc1945684066317",
