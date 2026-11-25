@@ -1,6 +1,27 @@
 {
-  "generatedAt": "2026-11-24T19:57:14.118Z",
+  "generatedAt": "2026-11-25T16:51:06.126Z",
   "items": [
+    {
+      "ts": "2026-11-25T16:51:06.126Z",
+      "type": "removed",
+      "uid": "c-02f721079fcdc18c",
+      "title": "Big Data Processing",
+      "start": "2026-12-10T07:00:00.000Z",
+      "room": "Efrei Bat. H H419"
+    },
+    {
+      "ts": "2026-11-25T16:51:06.126Z",
+      "type": "modified",
+      "uid": "c-db95a7a4abfb9f25",
+      "title": "Big Data Processing",
+      "start": "2027-01-26T07:00:00.000Z",
+      "changes": {
+        "room": {
+          "from": "Efrei Bat. BDX 217",
+          "to": "Efrei Bat. A A207"
+        }
+      }
+    },
     {
       "ts": "2026-11-24T19:57:14.118Z",
       "type": "added",
@@ -949,22 +970,6 @@
       "title": "Machine Learning for Data Analysts",
       "start": "2026-11-24T12:40:00.000Z",
       "room": "Efrei Bat. B B107"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "6467e20f-8444-4324-990f-3c16676b2934",
-      "title": "Data Integration and Analytics",
-      "start": "2026-11-25T07:00:00.000Z",
-      "room": "Efrei Bat. A A303"
-    },
-    {
-      "ts": "2026-11-13T16:59:03.256Z",
-      "type": "removed",
-      "uid": "4719499a-90e5-44f0-b9a5-0d47765c6ef7",
-      "title": "Data Integration and Analytics",
-      "start": "2026-11-26T07:00:00.000Z",
-      "room": "Efrei Bat. H H404"
     }
   ]
 }

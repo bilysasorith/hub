@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-25T03:57:48.078Z",
-  "count": 90,
+  "generatedAt": "2026-11-25T16:51:06.126Z",
+  "count": 89,
   "events": [
     {
       "uid": "c-8e7986cb3121fc81",
@@ -26,7 +26,7 @@
         "Efrei Bat. H H421",
         "Efrei Bat. H H419"
       ],
-      "teacher": "HARAKE Mohamad Fadl, AKAKPO Sarah, SEDIRI Zohair",
+      "teacher": "SEDIRI Zohair, HARAKE Mohamad Fadl, AKAKPO Sarah",
       "groups": "I3-BIA, I3-DAI, I3-ITF",
       "module": "FG2CSR-2627PSA01",
       "activity": "CTD",
@@ -134,7 +134,7 @@
         "Efrei Bat. H H421",
         "Efrei Bat. H H420"
       ],
-      "teacher": "AKAKPO Sarah, HARAKE Mohamad Fadl, SEDIRI Zohair",
+      "teacher": "HARAKE Mohamad Fadl, AKAKPO Sarah, SEDIRI Zohair",
       "groups": "I3-BIA, I3-ITF, I3-DAI",
       "module": "FG2CSR-2627PSA01",
       "activity": "CTD",
@@ -362,19 +362,6 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-02f721079fcdc18c",
-      "start": "2026-12-10T07:00:00.000Z",
-      "end": "2026-12-10T11:00:00.000Z",
-      "title": "Big Data Processing",
-      "location": "Efrei Bat. H H419",
-      "rooms": [],
-      "teacher": "ZOGHLAMI Manel",
-      "groups": "I3-BIA",
-      "module": "ST2BIG-2627PSA01",
-      "activity": "CTP",
-      "modalite": "Présentiel"
-    },
-    {
       "uid": "c-3e94f1501f0f7bce",
       "start": "2026-12-10T12:40:00.000Z",
       "end": "2026-12-10T16:40:00.000Z",
@@ -386,19 +373,6 @@
       "module": "ST2CGAI-2627PSA01",
       "activity": "CTP",
       "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-038e77cf45f5a6f2",
-      "start": "2026-12-11T08:10:00.000Z",
-      "end": "2026-12-11T09:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": "GIRINSKY Olivier",
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "CM",
-      "modalite": "Comodal"
     },
     {
       "uid": "c-4ca55a799331c56a",
@@ -414,22 +388,22 @@
       "modalite": "Distanciel"
     },
     {
-      "uid": "c-cdc1945684066317",
-      "start": "2026-12-11T09:10:00.000Z",
-      "end": "2026-12-11T11:40:00.000Z",
+      "uid": "c-038e77cf45f5a6f2",
+      "start": "2026-12-11T08:10:00.000Z",
+      "end": "2026-12-11T09:10:00.000Z",
       "title": "Engineering Project",
       "location": "Comodal",
       "rooms": [],
-      "teacher": null,
+      "teacher": "GIRINSKY Olivier",
       "groups": "I3_PROMO",
       "module": "FP2ENG-2627PSA01",
-      "activity": "TPA",
+      "activity": "CM",
       "modalite": "Comodal"
     },
     {
-      "uid": "c-5b40e15db2bb57d3",
-      "start": "2026-12-11T12:40:00.000Z",
-      "end": "2026-12-11T16:10:00.000Z",
+      "uid": "c-cdc1945684066317",
+      "start": "2026-12-11T09:10:00.000Z",
+      "end": "2026-12-11T11:40:00.000Z",
       "title": "Engineering Project",
       "location": "Comodal",
       "rooms": [],
@@ -451,6 +425,19 @@
       "module": "RE-90-2627PSA01",
       "activity": "IE",
       "modalite": "Distanciel"
+    },
+    {
+      "uid": "c-5b40e15db2bb57d3",
+      "start": "2026-12-11T12:40:00.000Z",
+      "end": "2026-12-11T16:10:00.000Z",
+      "title": "Engineering Project",
+      "location": "Comodal",
+      "rooms": [],
+      "teacher": null,
+      "groups": "I3_PROMO",
+      "module": "FP2ENG-2627PSA01",
+      "activity": "TPA",
+      "modalite": "Comodal"
     },
     {
       "uid": "c-2ec40b7e5846ee27",
@@ -899,7 +886,7 @@
       "start": "2027-01-26T07:00:00.000Z",
       "end": "2027-01-26T11:00:00.000Z",
       "title": "Big Data Processing",
-      "location": "Efrei Bat. BDX 217",
+      "location": "Efrei Bat. A A207",
       "rooms": [],
       "teacher": "ZOGHLAMI Manel",
       "groups": "I3-BIA",
