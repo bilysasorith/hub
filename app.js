@@ -4,6 +4,7 @@
 import { cheatStats } from "./lib/cheat-stats.js";
 import { moveRange, resizeEnd } from "./lib/drag-math.js";
 import { validateRequest, conflictsWith, loadGuest, rememberRequest } from "./lib/booking.js";
+import { SUIVI_RAW, CHECK_FROM, ALERT_AT, parseSuivi, minutesByDay, monthTotal, pendingDays, hm as hmFl, parseDuration } from "./lib/freelance.js";
 
 const SUPABASE_VERSION = "2.47.10";
 const cfg = window.HUB_CONFIG || {};
@@ -412,6 +413,26 @@ async function loadTraining() {
     const j = await res.json();
     if (j?.anchor?.date && Array.isArray(j.cycle) && j.cycle.length) TRAINING = j;
   } catch { TRAINING = null; }
+}
+
+// Heures freelance : data.js du dépôt suivi-heures (le site que consulte l'employeur).
+// Lecture directe ; l'écriture passe par la fonction Supabase « freelance ».
+let FL = null;            // { goal: minutes/mois, entries: [{ date, min, note }] }
+let _flFreshUntil = 0;    // après une écriture, sa réponse fait foi le temps que le CDN GitHub suive
+async function loadFreelance() {
+  try {
+    const res = await fetch(`${SUIVI_RAW}?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const p = parseSuivi(await res.text());
+    if (Date.now() < _flFreshUntil) return;
+    setFreelance(p);
+  } catch {
+    if (!FL) try { FL = JSON.parse(localStorage.getItem("hub.freelance") || "null"); } catch { FL = null; }
+  }
+}
+function setFreelance(p) {
+  FL = p;
+  try { localStorage.setItem("hub.freelance", JSON.stringify(FL)); } catch {}
 }
 
 const SEEN_KEY = "hub.changesSeen";
@@ -986,6 +1007,24 @@ function cheatLine() {
   return `<div class="ctx-row"><button class="ctx-cheat" data-cheat>${ico("i-target")}<span>${txt}</span></button></div>`;
 }
 
+// Ligne « freelance » : jours à valider (alerte dès ALERT_AT), sinon heures du jour / du mois.
+function flState() {
+  const today = dayKey(now());
+  const byDay = minutesByDay(FL?.entries || []);
+  return { today, byDay, pending: pendingDays(byDay, _store?.flZero || new Set(), today) };
+}
+function freelanceLine() {
+  if (!FL) return "";
+  const { today, byDay, pending } = flState();
+  const n = pending.length;
+  const tm = byDay.get(today) || 0;
+  const mo = monthTotal(byDay, today.slice(0, 7)).min;
+  const txt = n
+    ? `<b data-count="${n}">${n}</b> ${n > 1 ? "jours" : "jour"} freelance à valider`
+    : `Freelance · ${tm ? `<b>${hmFl(tm)}</b> aujourd'hui · ` : ""}${hmFl(mo)}${FL.goal ? ` / ${hmFl(FL.goal)}` : ""} ce mois`;
+  return `<div class="ctx-row"><button class="ctx-cheat ctx-fl${n >= ALERT_AT ? " is-alert" : ""}" data-freelance>${ico(n ? "i-alert" : "i-brief")}<span>${txt}</span></button></div>`;
+}
+
 // ---------- Notifications « signe ton cours » (Web Push) ----------
 const PUSH_KEY = "hub.push";
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1048,6 +1087,7 @@ function ctxCard(evs, key, N, signed) {
   const trainRow = trainLine(trainingForDay(key), key, signed);
   const cheatRow = (signed ? cheatLine() : "") + (signed ? pushLine() : "");
   const bookRow = signed ? bookingLine() : "";
+  const flRow = signed ? freelanceLine() : "";
   const stat = (icn, v, l) => `<span class="ctx-stat">${ico(icn)}<b${typeof v === "number" ? ` data-count="${v}"` : ""}>${v}</b> ${l}</span>`;
   // Pas de compteurs à zéro : sur une journée libre ils n'apprennent rien.
   // Le nombre de tâches n'est plus répété ici : la liste est juste à côté.
@@ -1058,6 +1098,7 @@ function ctxCard(evs, key, N, signed) {
   return `<div class="hero-ctx"><div class="ctx-card">
     ${free}
     ${bookRow}
+    ${flRow}
     ${topRow}
     ${trainRow}
     ${cheatRow}
@@ -1201,6 +1242,7 @@ function renderToday() {
   wireCapture(viewEl);
   viewEl.querySelector("[data-skip]")?.addEventListener("click", (e) => toggleTrainingSkip(e.currentTarget.dataset.skip));
   viewEl.querySelector("[data-cheat]")?.addEventListener("click", openCheatSheet);
+  viewEl.querySelector("[data-freelance]")?.addEventListener("click", () => openFreelanceSheet());
   viewEl.querySelector("[data-push]")?.addEventListener("click", enablePush);
   viewEl.querySelector("[data-bookings]")?.addEventListener("click", () => openBookingsSheet());
   viewEl.querySelector("#go-signin")?.addEventListener("click", () => document.querySelector('.tab[data-view="tasks"]')?.click());
@@ -2346,7 +2388,7 @@ let _store = null;
 let _storeP = null;      // chargement de Supabase en cours ou abouti
 let _storeTried = false; // a-t-on déjà tenté d'initialiser le store (évite les boucles si hors-ligne) ?
 const SIGNED_KEY = "hub.signed", PERSO_KEY = "hub.personal";
-const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [], attendance: new Map(), bookings: [], progress: new Set() });
+const blankPersonal = () => ({ todos: [], custom: [], hidden: new Set(), teams: [], skips: new Set(), seenAt: null, goals: [], reminders: new Set(), examFlags: new Map(), cheats: [], attendance: new Map(), bookings: [], progress: new Set(), flZero: new Set() });
 const OFFLINE = { data: null, error: { message: "Hors ligne — réessaie quand le réseau revient." } };
 
 // Client « en attente » : utilisé tant que Supabase n'est pas chargé (ou hors ligne). Il retient
@@ -2384,7 +2426,7 @@ function seedStore() {
       custom: p.custom || [], hidden: new Set(p.hidden || []), teams: p.teams || [], skips: new Set(p.skips || []),
       seenAt: p.seenAt || null, goals: p.goals || [], reminders: new Set(p.reminders || []),
       examFlags: new Map(p.examFlags || []), cheats: p.cheats || [], attendance: new Map(p.attendance || []),
-      bookings: p.bookings || [], progress: new Set(p.progress || []),
+      bookings: p.bookings || [], progress: new Set(p.progress || []), flZero: new Set(p.flZero || []),
     };
   } catch { _store = null; }
 }
@@ -2396,6 +2438,7 @@ function savePersonal() {
       custom: _store.custom, hidden: [..._store.hidden], teams: _store.teams, skips: [..._store.skips], seenAt: _store.seenAt,
       goals: _store.goals, reminders: [..._store.reminders], examFlags: [..._store.examFlags], cheats: _store.cheats,
       attendance: [..._store.attendance], bookings: _store.bookings, progress: [...(_store.progress || [])],
+      flZero: [...(_store.flZero || [])],
     }));
   } catch {}
 }
@@ -2466,11 +2509,11 @@ async function refreshAfterAdd() {
 const _cheatLeaving = new Set();  // ids d'écarts supprimés mais encore annulables
 const _customLeaving = new Set(); // ids d'événements perso supprimés mais encore annulables
 async function refreshPersonal() {
-  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; _store.attendance = new Map(); _store.bookings = []; _store.progress = new Set(); return; }
+  if (!_store?.session) { _store.custom = []; _store.hidden = new Set(); _store.teams = []; _store.skips = new Set(); _store.seenAt = null; _store.goals = []; _store.reminders = new Set(); _store.examFlags = new Map(); _store.cheats = []; _store.attendance = new Map(); _store.bookings = []; _store.progress = new Set(); _store.flZero = new Set(); return; }
   if (!_store.live) return; // état connu affiché ; le vrai chargement arrive avec Supabase
   // Demandes de créneau : en attente + décidées ces 28 derniers jours (sans le jeton invité).
   const bkSince = new Date(Date.now() - 28 * 24 * 3600 * 1000).toISOString();
-  const [c, o, t, s, p, g, r, x, ch, at, bk, sp] = await Promise.all([
+  const [c, o, t, s, p, g, r, x, ch, at, bk, sp, fz] = await Promise.all([
     _store.sb.from("custom_events").select("*").order("start_at", { ascending: true }),
     _store.sb.from("event_overrides").select("event_uid,hidden"),
     _store.sb.from("calendar_events").select("*").order("start_at", { ascending: true }),
@@ -2484,6 +2527,7 @@ async function refreshPersonal() {
     _store.sb.from("booking_requests").select("id,start_at,end_at,name,reason,contact,email,status,decided_at,event_id,created_at")
       .or(`status.eq.pending,decided_at.gte.${bkSince}`).order("start_at", { ascending: true }),
     _store.sb.from("session_progress").select("event_uid"),
+    _store.sb.from("freelance_days").select("day"),
   ]);
   _store.custom = c.error ? [] : (c.data || []).filter((x) => !_customLeaving.has(String(x.id)));
   _store.hidden = o.error ? new Set() : new Set((o.data || []).filter((r) => r.hidden).map((r) => r.event_uid));
@@ -2500,6 +2544,8 @@ async function refreshPersonal() {
   _store.bookings = bk.error ? [] : (bk.data || []);
   // Table absente (session-progress.sql pas lancé) : rien de coché.
   _store.progress = sp.error ? new Set() : new Set((sp.data || []).map((r) => r.event_uid));
+  // Table absente (freelance.sql pas lancé) : aucun jour validé « 0h ».
+  _store.flZero = fz.error ? new Set() : new Set((fz.data || []).map((r) => String(r.day).slice(0, 10)));
   savePersonal();
   updateBell();
   subscribeRealtime();
@@ -2673,6 +2719,7 @@ function subscribeRealtime() {
     .on(pg, { event: "*", schema: "public", table: "cheat_meals" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "booking_requests" }, onPerso)
     .on(pg, { event: "*", schema: "public", table: "session_progress" }, onPerso)
+    .on(pg, { event: "*", schema: "public", table: "freelance_days" }, onPerso)
     .subscribe();
 }
 
@@ -3086,6 +3133,160 @@ function openCheatSheet() {
           redraw();
           if (error) { oops("Suppression impossible : " + error.message); return false; }
           return true;
+        },
+      });
+    }));
+  };
+  wire();
+}
+
+// Fiche « Freelance » : calendrier du mois (heures par jour), validation « 0h », ajout de séances.
+// Les séances sont écrites dans data.js (suivi-heures) par la fonction Supabase « freelance ».
+async function flCall(body) {
+  const { data, error } = await _store.sb.functions.invoke("freelance", { body });
+  if (error) {
+    let msg = error.message;
+    try { msg = (await error.context.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  if (data?.error) throw new Error(data.error);
+  setFreelance({ ...FL, entries: data.entries });
+  _flFreshUntil = Date.now() + 6 * 60_000;
+}
+function openFreelanceSheet(selDay) {
+  if (!_store?.session || !FL) return;
+  const fmtLong = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" });
+  const fmtShortD = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" });
+  const fmtMonth = new Intl.DateTimeFormat("fr-FR", { timeZone: "UTC", month: "long", year: "numeric" });
+  const D = (k) => new Date(k + "T12:00:00Z");
+  let { today, pending } = flState();
+  let sel = selDay || pending[0] || today;
+  let ym = sel.slice(0, 7);
+  let busy = false;
+
+  const body = () => {
+    const st0 = flState();
+    today = st0.today; pending = st0.pending;
+    const byDay = st0.byDay;
+    const zero = _store.flZero || new Set();
+    const tot = monthTotal(byDay, ym);
+    const goal = FL.goal || 0;
+    const pct = goal ? Math.min(100, Math.round(tot.min / goal * 100)) : 0;
+    const [y, m] = ym.split("-").map(Number);
+    const first = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const nDays = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = [];
+    for (let i = 0; i < first; i++) cells.push(`<span class="fl-d is-pad"></span>`);
+    for (let d = 1; d <= nDays; d++) {
+      const k = `${ym}-${String(d).padStart(2, "0")}`;
+      const mn = byDay.get(k) || 0;
+      const z = zero.has(k);
+      const st = mn ? "is-work" : z ? "is-zero" : k > today ? "is-future" : k < today && k >= CHECK_FROM ? "is-todo" : "";
+      const v = mn ? hmFl(mn).replace(" min", "m") : z ? "0h" : st === "is-todo" ? "?" : "";
+      const label = `${fmtLong.format(D(k))} : ${mn ? hmFl(mn) : z ? "pas travaillé" : st === "is-todo" ? "à valider" : "rien"}`;
+      cells.push(`<button type="button" class="fl-d ${st}${k === today ? " is-today" : ""}${k === sel ? " is-sel" : ""}" data-day="${k}" ${k > today ? "disabled" : ""} aria-label="${esc(label)}"><span class="n">${d}</span><span class="v">${v}</span></button>`);
+    }
+    const dayEntries = (FL.entries || []).map((e, i) => ({ ...e, i })).filter((e) => e.date === sel);
+    const isZero = zero.has(sel);
+    const list = dayEntries.length
+      ? `<ul class="fl-list">${dayEntries.map((e) => `<li><span class="fl-t">${hmFl(e.min)}</span><span class="fl-n">${e.note ? esc(e.note) : "—"}</span><button type="button" class="cheat-x" data-del="${e.i}" aria-label="Retirer cette séance">${ico("i-x")}</button></li>`).join("")}</ul>`
+      : isZero
+        ? `<p class="fl-zero-ok">${ico("i-check")}<span>Validé : pas travaillé</span><button type="button" class="fl-link" data-unzero>Annuler</button></p>`
+        : `<button type="button" class="btn btn-ghost fl-zero-btn" data-zero>Pas travaillé ce jour-là (0h)</button>`;
+    const pend = pending.length
+      ? `<button type="button" class="fl-pending${pending.length >= ALERT_AT ? " is-alert" : ""}" data-jump>${ico("i-alert")}<span><b>${pending.length}</b> ${pending.length > 1 ? "jours" : "jour"} à valider · depuis ${esc(fmtShortD.format(D(pending[0])))}</span></button>`
+      : `<p class="fl-allok">${ico("i-check")}<span>Tout est à jour</span></p>`;
+    return `${pend}
+      <div class="fl-head">
+        <button type="button" class="icon-btn" data-mo="-1" aria-label="Mois précédent">‹</button>
+        <div class="fl-mo"><b>${esc(fmtMonth.format(D(ym + "-01")))}</b><span>${hmFl(tot.min)}${goal ? ` / ${hmFl(goal)}` : ""} · ${tot.days} ${tot.days > 1 ? "jours" : "jour"}</span></div>
+        <button type="button" class="icon-btn" data-mo="1" aria-label="Mois suivant" ${ym >= today.slice(0, 7) ? "disabled" : ""}>›</button>
+      </div>
+      ${goal ? `<div class="fl-bar" role="progressbar" aria-label="Objectif du mois" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>` : ""}
+      <div class="fl-cal">${["L", "M", "M", "J", "V", "S", "D"].map((w) => `<span class="fl-w">${w}</span>`).join("")}${cells.join("")}</div>
+      <div class="fl-day">
+        <h4 class="fl-day-h">${esc(fmtLong.format(D(sel)))}</h4>
+        ${list}
+        <form id="fl-form" class="sheet-form fl-form">
+          <div class="fl-row">
+            <label>Durée<input id="fl-dur" autocomplete="off" placeholder="1h30, 45min" required></label>
+            <label>Tâche<input id="fl-note" maxlength="200" autocomplete="off" placeholder="Ce que tu as fait" required></label>
+          </div>
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="fl-close">Fermer</button>
+            <button type="submit" class="btn" ${busy ? "disabled" : ""}>${busy ? "Envoi…" : "Ajouter"}</button>
+          </div>
+          <p class="sheet-note fl-hint">Ajouté directement au suivi des heures (visible par ton employeur en ~1 min).</p>
+        </form>
+      </div>`;
+  };
+
+  const ov = openSheet(`<h3 class="sheet-h">Freelance</h3><div id="fl-body">${body()}</div>`);
+  const box = ov.querySelector("#fl-body");
+  const redraw = () => { if (box.isConnected) { box.innerHTML = body(); wire(); } rerender(); };
+  const setZero = async (on) => {
+    const day = sel;
+    if (on) _store.flZero.add(day); else _store.flZero.delete(day);
+    savePersonal(); redraw();
+    const { error } = on
+      ? await _store.sb.from("freelance_days").insert({ day })
+      : await _store.sb.from("freelance_days").delete().eq("day", day);
+    if (error && !(on && error.code === "23505")) {
+      if (on) _store.flZero.delete(day); else _store.flZero.add(day);
+      savePersonal(); redraw();
+      oops("Validation impossible : " + error.message + "\n(As-tu lancé freelance.sql ?)");
+      return;
+    }
+    sfx(on ? "add" : "toggle");
+    // Jour validé : on passe directement au suivant à valider.
+    if (on && pending.length) { sel = pending[0]; ym = sel.slice(0, 7); redraw(); }
+  };
+  const wire = () => {
+    box.querySelector("#fl-close").onclick = closeSheet;
+    box.querySelectorAll("[data-mo]").forEach((b) => b.addEventListener("click", () => {
+      const [y, m] = ym.split("-").map(Number);
+      ym = new Date(Date.UTC(y, m - 1 + Number(b.dataset.mo), 1)).toISOString().slice(0, 7);
+      redraw();
+    }));
+    box.querySelectorAll("[data-day]").forEach((b) => b.addEventListener("click", () => { sel = b.dataset.day; redraw(); }));
+    box.querySelector("[data-jump]")?.addEventListener("click", () => { sel = pending[0]; ym = sel.slice(0, 7); redraw(); });
+    box.querySelector("[data-zero]")?.addEventListener("click", () => setZero(true));
+    box.querySelector("[data-unzero]")?.addEventListener("click", () => setZero(false));
+    box.querySelector("#fl-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      const durIn = box.querySelector("#fl-dur");
+      const dur = durIn.value;
+      const min = parseDuration(dur);
+      if (!min || min > 24 * 60) { durIn.setAttribute("aria-invalid", "true"); durIn.focus(); return; }
+      const note = box.querySelector("#fl-note").value.trim();
+      if (!note) return;
+      const day = sel;
+      busy = true; redraw();
+      try {
+        await flCall({ action: "add", date: day, min, note });
+        sfx("add");
+        // Le jour a des heures : un éventuel « 0h » n'a plus de sens.
+        if (_store.flZero.has(day)) { _store.flZero.delete(day); savePersonal(); _store.sb.from("freelance_days").delete().eq("day", day).then(() => {}); }
+        busy = false; redraw();
+      } catch (err) {
+        busy = false; redraw();
+        box.querySelector("#fl-dur").value = dur;
+        box.querySelector("#fl-note").value = note;
+        oops("Ajout impossible : " + err.message);
+      }
+    });
+    box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
+      const idx = Number(b.dataset.del);
+      const entry = FL.entries[idx];
+      if (!entry) return;
+      deferDelete({
+        label: `${hmFl(entry.min)} retirées du suivi`,
+        hide: () => { FL = { ...FL, entries: FL.entries.filter((_, i) => i !== idx) }; redraw(); },
+        restore: () => { const e2 = [...FL.entries]; e2.splice(Math.min(idx, e2.length), 0, entry); FL = { ...FL, entries: e2 }; redraw(); },
+        commit: async () => {
+          try { await flCall({ action: "del", date: entry.date, min: entry.min, note: entry.note }); redraw(); return true; }
+          catch (err) { oops("Suppression impossible : " + err.message); return false; }
         },
       });
     }));
@@ -3860,8 +4061,7 @@ syncThemeUI();
 
 // Outil de dev (localhost seulement) : simuler une autre date/heure pour tester le tableau de bord.
 if (location.hostname === "localhost") {
-  window.__setNow = (iso) => { nowRef = iso ? new Date(iso) : null; rerender(); };
-}
+  window.__setNow = (iso) => { nowRef = iso ? new Date(iso) : null; rerender(); };}
 
 // ---------- Démarrage ----------
 // Au lever de l'écran d'entrée (index.html) : les cartes arrivent en cascade, les compteurs défilent.
@@ -3872,10 +4072,15 @@ window.addEventListener("hub-intro-lift", () => {
 }, { once: true });
 seedStore();
 if (_store?.session) { _storeTried = true; getStore().then(() => rerender()); }
-await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges(), loadCourses()]);
+await Promise.all([loadPlanning(), loadAlternance(), loadTraining(), loadChanges(), loadCourses(), loadFreelance()]);
 rerender();
+// Ouverte depuis la notif « heures freelance à remplir » (./#freelance).
+if (location.hash === "#freelance") {
+  history.replaceState(null, "", location.pathname + location.search);
+  getStore().then(() => openFreelanceSheet());
+}
 // Rafraîchit l'état "en cours / prochain" et les changements quand on revient sur l'app
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { Promise.all([loadPlanning(), loadChanges(), loadCourses()]).then(rerender); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { Promise.all([loadPlanning(), loadChanges(), loadCourses(), loadFreelance()]).then(rerender); } });
 
 // Service worker (PWA installable + hors-ligne)
 if ("serviceWorker" in navigator) {

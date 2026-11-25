@@ -1274,6 +1274,50 @@ html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
 .sheet-form label:has(> .opt) > :is(input, select, textarea) { grid-column: 1 / -1; }
 .cheat-x:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
 
+/* Freelance : ligne sur la carte contexte + fiche calendrier */
+.ctx-fl .mi { color: var(--ev-fl); }
+.ctx-fl.is-alert, .ctx-fl.is-alert b, .ctx-fl.is-alert .mi { color: var(--warn); }
+.fl-pending, .fl-allok { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 600; text-align: left; }
+.fl-pending { color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); }
+.fl-pending.is-alert { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.fl-pending b { font-family: var(--f-display); font-size: 16px; }
+.fl-allok { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+.fl-pending .mi, .fl-allok .mi { width: 17px; height: 17px; flex: none; }
+.fl-head { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.fl-head .icon-btn { flex: none; font-size: 20px; line-height: 1; }
+.fl-head .icon-btn:disabled { opacity: .35; }
+.fl-mo { flex: 1; display: grid; justify-items: center; gap: 2px; }
+.fl-mo b { font-family: var(--f-display); font-size: 18px; font-weight: 600; text-transform: capitalize; }
+.fl-mo span { font-size: 13px; color: var(--muted); }
+.fl-bar { height: 5px; margin-top: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.fl-bar i { display: block; height: 100%; background: var(--ev-fl); border-radius: inherit; }
+.fl-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+.fl-w { text-align: center; font-size: 11px; font-weight: 600; color: var(--muted); padding-bottom: 2px; }
+.fl-d { display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 44px; border-radius: 9px; background: var(--surface-2); border: 1px solid transparent; color: var(--fg); }
+.fl-d.is-pad { background: none; }
+.fl-d .n { font-size: 12px; color: var(--muted); }
+.fl-d .v { font-family: var(--f-display); font-size: 13.5px; font-weight: 700; min-height: 1em; line-height: 1; }
+.fl-d.is-work { background: color-mix(in srgb, var(--ev-fl) 22%, var(--surface)); }
+.fl-d.is-work .v { color: var(--ev-fl); }
+.fl-d.is-zero .v { color: var(--muted); font-weight: 600; }
+.fl-d.is-todo { background: color-mix(in srgb, var(--warn) 10%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.fl-d.is-todo .v { color: var(--warn); }
+.fl-d.is-future { opacity: .4; }
+.fl-d.is-today .n { color: var(--fg); font-weight: 700; }
+.fl-d.is-sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fl-day { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.fl-day-h { font-size: 15px; font-weight: 600; text-transform: capitalize; }
+.fl-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.fl-list li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.fl-t { flex: none; min-width: 52px; font-family: var(--f-display); font-weight: 700; font-size: 15px; color: var(--ev-fl); }
+.fl-n { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.fl-zero-btn { width: 100%; margin-top: 10px; }
+.fl-zero-ok { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+.fl-zero-ok .mi { width: 16px; height: 16px; color: var(--ok); }
+.fl-link { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+.fl-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; }
+.fl-hint { font-size: 12.5px; margin-top: 4px; }
+
 /* === Glisser / redimensionner les événements perso (vue Semaine) === */
 .cal .ev.src-perso { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 /* Poignée de durée : bande de 8 px au bas du bloc, trait discret au centre. */

@@ -7,3 +7,8 @@ verify_jwt = false
 
 [functions.booking-email]
 verify_jwt = true
+
+[functions.freelance]
+# Appelée par pg_cron sans jeton pour le rappel ; l'écriture vérifie elle-même le jeton
+# et l'e-mail du propriétaire (secret FREELANCE_EMAIL).
+verify_jwt = false
