@@ -1025,6 +1025,18 @@ function freelanceLine() {
   return `<div class="ctx-row"><button class="ctx-cheat ctx-fl${n >= ALERT_AT ? " is-alert" : ""}" data-freelance>${ico(n ? "i-alert" : "i-brief")}<span>${txt}</span></button></div>`;
 }
 
+// Puce freelance sous chaque jour de la vue Semaine (ouvre la fiche sur ce jour).
+function flChip(key, { today, byDay }, pendingSet) {
+  if (key > today) return "";
+  const mn = byDay.get(key) || 0;
+  const zero = _store?.flZero?.has(key);
+  const [cls, txt, lab] = mn ? ["", hmFl(mn).replace(" min", "m"), `${hmFl(mn)} freelance`]
+    : zero ? [" is-zero", "0h", "pas travaillé"]
+    : pendingSet.has(key) ? [" is-todo", "?", "heures freelance à valider"]
+    : [" is-add", "+", "ajouter des heures freelance"];
+  return `<button type="button" class="fl-chip${cls}" data-fl-day="${key}" title="${lab}" aria-label="${lab}">${ico("i-brief", "fci")}<span>${txt}</span></button>`;
+}
+
 // ---------- Notifications « signe ton cours » (Web Push) ----------
 const PUSH_KEY = "hub.push";
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -1580,6 +1592,7 @@ function renderWeek() {
     });
   });
   wirePills();
+  viewEl.querySelectorAll("[data-fl-day]").forEach((b) => b.addEventListener("click", () => openFreelanceSheet(b.dataset.flDay)));
   wireEventTaps(viewEl);
   wireBookingTaps(viewEl);
   wireCalAdd(days);
@@ -2208,11 +2221,13 @@ function weekGrid(days, perDay, sel, bgDay = days.map(() => [])) {
   const dow = (key) => new Date(key + "T12:00:00Z").getUTCDay();
   const wd = (date) => cap(fmtWdShort.format(date)).replace(/\.$/, "");
 
+  const fl = _store?.session && FL ? flState() : null;
+  const pendingSet = new Set(fl?.pending || []);
   const head = `<div class="cal-corner"></div>` + days.map((d, i) => {
     const t = d.key === todayK, we = dow(d.key) === 0 || dow(d.key) === 6;
     const hide = mobile && i !== sel ? " is-hiddenM" : "";
     return `<div class="cal-colh${t ? " is-today" : ""}${we ? " we" : ""}${hide}">
-      <div class="cd">${wd(d.date)}</div><div class="cn num">${fmtDayNum.format(d.date)}</div>${modeBadge(d.key, { compact: true })}${trainChip(trainingForDay(d.key))}</div>`;
+      <div class="cd">${wd(d.date)}</div><div class="cn num">${fmtDayNum.format(d.date)}</div>${modeBadge(d.key, { compact: true })}${trainChip(trainingForDay(d.key))}${fl ? flChip(d.key, fl, pendingSet) : ""}</div>`;
   }).join("");
 
   const slots = Array.from({ length: rows }, () => `<div class="cal-slot"></div>`).join("");

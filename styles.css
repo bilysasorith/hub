@@ -1276,6 +1276,11 @@ html.intro-on.intro-lift .tabs { opacity: 1; transition: opacity .5s .2s ease; }
 
 /* Freelance : ligne sur la carte contexte + fiche calendrier */
 .ctx-fl .mi { color: var(--ev-fl); }
+.fl-chip { display: inline-flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; margin-top: 5px; padding: 2px 7px; border-radius: 8px; font-size: 10.5px; font-weight: 700; line-height: 1.25; color: var(--ev-fl); background: color-mix(in srgb, var(--ev-fl) 13%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ev-fl) 30%, transparent); }
+.fl-chip .fci { width: 11px; height: 11px; flex: none; }
+.fl-chip:hover { border-color: var(--ev-fl); }
+.fl-chip.is-zero, .fl-chip.is-add { color: var(--muted); background: color-mix(in srgb, var(--muted) 10%, var(--surface)); border-color: var(--line); font-weight: 500; }
+.fl-chip.is-todo { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
 .ctx-fl.is-alert, .ctx-fl.is-alert b, .ctx-fl.is-alert .mi { color: var(--warn); }
 .fl-pending, .fl-allok { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 12px; padding: 10px 12px; border-radius: var(--r-sm); font-size: 13.5px; font-weight: 600; text-align: left; }
 .fl-pending { color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); }
