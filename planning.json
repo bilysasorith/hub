@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T11:56:15.121Z",
-  "count": 90,
+  "generatedAt": "2026-11-26T21:05:35.557Z",
+  "count": 89,
   "events": [
     {
       "uid": "c-8e7986cb3121fc81",
@@ -70,19 +70,6 @@
       "module": "ST2AAN-2627PSA01",
       "activity": "CTP",
       "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-524a32e4e665c820",
-      "start": "2026-11-27T08:10:00.000Z",
-      "end": "2026-11-27T09:10:00.000Z",
-      "title": "Engineering Project",
-      "location": "Comodal",
-      "rooms": [],
-      "teacher": "GIRINSKY Olivier",
-      "groups": "I3_PROMO",
-      "module": "FP2ENG-2627PSA01",
-      "activity": "CM",
-      "modalite": "Comodal"
     },
     {
       "uid": "c-c6332ae7b1e4b551",
@@ -1116,9 +1103,9 @@
       "modalite": "Présentiel"
     },
     {
-      "uid": "c-c6dffc36673b2d13",
-      "start": "2027-02-24T07:45:00.000Z",
-      "end": "2027-02-24T08:40:00.000Z",
+      "uid": "c-c0c1a8dfcbb4c253",
+      "start": "2027-02-24T14:00:00.000Z",
+      "end": "2027-02-24T14:55:00.000Z",
       "title": "Une histoire de la philosophie",
       "location": "Efrei Bat. H H422",
       "rooms": [],
@@ -1168,6 +1155,19 @@
       "modalite": "Présentiel"
     },
     {
+      "uid": "c-71a49f916fbfeb26",
+      "start": "2027-03-03T12:40:00.000Z",
+      "end": "2027-03-03T16:40:00.000Z",
+      "title": "Big Data Processing",
+      "location": "Efrei Bat. B B010",
+      "rooms": [],
+      "teacher": "ZOGHLAMI Manel",
+      "groups": "I3-BIA",
+      "module": "ST2BIG-2627PSA01",
+      "activity": "CTP",
+      "modalite": "Présentiel"
+    },
+    {
       "uid": "c-54c8a5b02f28c4ed",
       "start": "2027-03-04T08:10:00.000Z",
       "end": "2027-03-04T11:40:00.000Z",
@@ -1199,19 +1199,6 @@
       "end": "2027-03-05T11:00:00.000Z",
       "title": "Big Data Processing",
       "location": "Efrei Bat. H H420",
-      "rooms": [],
-      "teacher": "ZOGHLAMI Manel",
-      "groups": "I3-BIA",
-      "module": "ST2BIG-2627PSA01",
-      "activity": "CTP",
-      "modalite": "Présentiel"
-    },
-    {
-      "uid": "c-fd8e09ff74484687",
-      "start": "2027-03-05T12:40:00.000Z",
-      "end": "2027-03-05T16:40:00.000Z",
-      "title": "Big Data Processing",
-      "location": "Efrei Bat. H H422",
       "rooms": [],
       "teacher": "ZOGHLAMI Manel",
       "groups": "I3-BIA",
