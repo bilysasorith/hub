@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-26T01:37:13.219Z",
-  "count": 89,
+  "generatedAt": "2026-11-26T11:56:15.121Z",
+  "count": 90,
   "events": [
     {
       "uid": "c-8e7986cb3121fc81",
@@ -879,6 +879,19 @@
       "groups": "I3_SHC-EL11-3",
       "module": "FH2HP-2627PSA01",
       "activity": "CTD",
+      "modalite": "Présentiel"
+    },
+    {
+      "uid": "c-bf01d457668322e8",
+      "start": "2027-01-25T13:00:00.000Z",
+      "end": "2027-01-25T17:00:00.000Z",
+      "title": "Big Data Processing",
+      "location": "Efrei Bat. H H102",
+      "rooms": [],
+      "teacher": "ZOGHLAMI Manel",
+      "groups": "I3-BIA",
+      "module": "ST2BIG-2627PSA01",
+      "activity": "CTP",
       "modalite": "Présentiel"
     },
     {
